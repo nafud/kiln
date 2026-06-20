@@ -1,0 +1,14 @@
+site_name: angmar Notes
+site_description: Personal technical notes
+site_url: https://YOUR_GITHUB_USERNAME.github.io/notes-portal/
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - search.highlight
+    - content.code.copy
+
+nav:
+  - Home: index.md
