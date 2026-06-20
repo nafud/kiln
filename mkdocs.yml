@@ -1,15 +1,23 @@
-site_name: angmar Notes
+site_name: skullcrushers
 site_description: Reverse Engineering, Assembly, Systems Programming and Debugging Notes
 site_url: https://skllcrshrs.github.io/notes-portal/
 
 theme:
   name: material
   font: false
+  logo: assets/logo.png
+  favicon: assets/logo.png
+  palette:
+    scheme: default
+    primary: white
+    accent: indigo
   features:
     - navigation.instant
-    - navigation.tabs
+    - navigation.tracking
     - navigation.sections
     - navigation.expand
+    - navigation.indexes
+    - toc.follow
     - search.highlight
     - search.suggest
     - content.code.copy
@@ -21,11 +29,17 @@ plugins:
   - search
 
 nav:
-  - Home: index.md
-  - RE: re/index.md
-  - RE4B: re4b/index.md
-  - CSAPP: csapp/index.md
-  - Modern x86: modern-x86/index.md
-  - PBA: pba/index.md
-  - Reversing: reversing/index.md
-  - Radare2: radare2/index.md
+  - RE:
+      - re/index.md
+  - RE4B:
+      - re4b/index.md
+  - CSAPP:
+      - csapp/index.md
+  - Modern x86:
+      - modern-x86/index.md
+  - PBA:
+      - pba/index.md
+  - Reversing:
+      - reversing/index.md
+  - Radare2:
+      - radare2/index.md
