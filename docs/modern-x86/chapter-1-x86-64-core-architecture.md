@@ -2,7 +2,7 @@
 
 ## Historical Overview
 
-<pre>
+<pre class="ascii-diagram">
 x86-32
 │
 ├─ 1985  Intel 80386 -> 32-bit architecture

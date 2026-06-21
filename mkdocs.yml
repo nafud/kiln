@@ -38,7 +38,7 @@ nav:
 
   - Modern x86:
       - Overview: modern-x86/index.md
-      - Historical Overview: modern-x86/chapter-1-x86-64-core-architecture.md
+      - Chapter 1: modern-x86/chapter-1-x86-64-core-architecture.md
 
   - PBA:
       - Overview: pba/index.md

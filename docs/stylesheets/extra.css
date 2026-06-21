@@ -153,6 +153,16 @@ tt {
   box-shadow: none;
 }
 
+.ascii-diagram {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  overflow-x: visible !important;
+  white-space: pre !important;
+  font-family: "JetBrains Mono", monospace !important;
+}
+
 /* Tables */
 
 .md-typeset table:not([class]) {
