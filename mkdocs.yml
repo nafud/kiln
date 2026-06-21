@@ -14,7 +14,6 @@ theme:
     - navigation.instant
     - navigation.tracking
     - navigation.sections
-    - navigation.expand
     - navigation.indexes
     - toc.follow
     - search.highlight
@@ -29,23 +28,23 @@ plugins:
 
 nav:
   - RE:
-      - Overview: re/index.md
+      - RE: re/index.md
 
   - RE4B:
-      - Overview: re4b/index.md
+      - RE4B: re4b/index.md
 
   - CSAPP:
-      - Overview: csapp/index.md
+      - CSAPP: csapp/index.md
 
   - Modern x86:
-      - Overview: modern-x86/index.md
+      - Modern x86: modern-x86/index.md
       - Chapter 1: modern-x86/chapter-1-x86-64-core-architecture.md
 
   - PBA:
-      - Overview: pba/index.md
+      - PBA: pba/index.md
 
   - Reversing:
-      - Overview: reversing/index.md
+      - Reversing: reversing/index.md
 
   - Radare2:
-      - Overview: radare2/index.md
+      - Radare2: radare2/index.md
