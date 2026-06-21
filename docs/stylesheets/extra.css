@@ -367,3 +367,18 @@ tt {
   position: relative;
   z-index: 2;
 }
+
+/* Binary header background */
+
+.md-header {
+  background-color: #ffffff !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='52' viewBox='0 0 220 52'%3E%3Ctext x='0' y='14' font-family='monospace' font-size='12' fill='%232563eb' fill-opacity='0.10'%3E0 1 1 0 1 0 0 1 1 0 1%3C/text%3E%3Ctext x='18' y='34' font-family='monospace' font-size='12' fill='%232563eb' fill-opacity='0.07'%3E1 0 0 1 0 1 1 0 0 1 0%3C/text%3E%3Ctext x='6' y='50' font-family='monospace' font-size='12' fill='%232563eb' fill-opacity='0.05'%3E0 0 1 1 0 1 0 1 1 0 0%3C/text%3E%3C/svg%3E") !important;
+  background-repeat: repeat !important;
+  background-size: 220px 52px !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  box-shadow: none !important;
+}
+
+.md-header__inner {
+  background: transparent !important;
+}
