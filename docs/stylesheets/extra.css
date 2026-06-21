@@ -377,6 +377,10 @@ tt {
 /* Only left navigation sidebar */
 
 .md-sidebar--primary .md-sidebar__scrollwrap {
-    background: #efefef;
+    background: #f3f4f6;
     border-radius: 4px;
+}
+
+.md-sidebar--primary .md-nav__title {
+    background: #f3f4f6 !important;
 }
