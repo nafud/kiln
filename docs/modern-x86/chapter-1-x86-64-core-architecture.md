@@ -25,10 +25,10 @@ x86-32
 
 | ┌63-bit | ┌31-bit | ┌15-bit | ┌7-bit&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0┐ |
 |---------|---------|---------|------------------|
-| RAX | EAX | AX&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AL|AH |
-| RBX | EBX | BX | [BL / BH] |
-| RCX | ECX | CX | [CL / CH] |
-| RDX | EDX | DX | [DL / DH] |
+| RAX | EAX | AX&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AH | AL |
+| RBX | EBX | BX&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BH | BL |
+| RCX | ECX | CX&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CH | CL |
+| RDX | EDX | DX&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DH | DL |
 | RSI | ESI | SI | SIL |
 | RDI | EDI | DI | DIL |
 | RBP | EBP | BP | BPL |
