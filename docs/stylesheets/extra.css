@@ -374,13 +374,12 @@ tt {
   pointer-events: none;
 }
 
-/* Only left navigation sidebar */
+/* Left sidebar */
 
-.md-sidebar--primary .md-sidebar__scrollwrap {
-    background: #f3f4f6;
-    border-radius: 4px;
-}
-
-.md-sidebar--primary .md-nav__title {
+.md-sidebar--primary,
+.md-sidebar--primary .md-sidebar__scrollwrap,
+.md-sidebar--primary .md-nav,
+.md-sidebar--primary .md-nav__title,
+.md-sidebar--primary .md-nav__list {
     background: #f3f4f6 !important;
 }
