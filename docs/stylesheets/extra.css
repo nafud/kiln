@@ -3,38 +3,49 @@
 :root {
   --md-text-font: "JetBrains Mono";
   --md-code-font: "JetBrains Mono";
+  --md-primary-fg-color: #ffffff;
+  --md-primary-bg-color: #111827;
+  --md-accent-fg-color: #2563eb;
 }
 
-/* Clean GitBook-like layout */
+body {
+  background:
+    radial-gradient(circle at top left, rgba(219, 234, 254, 0.75), transparent 32rem),
+    linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
 .md-header {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.88);
   color: #111827;
   box-shadow: none;
   border-bottom: 1px solid #e5e7eb;
+  backdrop-filter: blur(12px);
 }
 
-.md-tabs {
-  background: #ffffff;
-  color: #374151;
-  border-bottom: 1px solid #e5e7eb;
+.md-header__title {
+  font-weight: 700;
 }
 
 .md-search__form {
-  background-color: #f9fafb;
+  background: #f3f4f6;
   border: 1px solid #e5e7eb;
   border-radius: 6px;
 }
 
 .md-sidebar {
-  color: #4b5563;
+  color: #6b7280;
 }
 
 .md-nav__title {
-  font-weight: 700;
   color: #111827;
+  font-weight: 700;
 }
 
-.md-nav__item .md-nav__link--active {
+.md-nav__link {
+  color: #4b5563;
+}
+
+.md-nav__link--active {
   color: #111827;
   font-weight: 700;
 }
@@ -43,25 +54,32 @@
   max-width: 820px;
 }
 
-.md-typeset h1 {
-  font-weight: 700;
-  color: #111827;
-}
-
-.md-typeset h2,
-.md-typeset h3 {
-  font-weight: 700;
-  color: #111827;
-}
-
 .md-typeset {
+  color: #111827;
   font-size: 0.78rem;
   line-height: 1.75;
-  color: #111827;
 }
 
-.md-typeset code {
-  font-size: 0.72rem;
+.md-typeset h1 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+
+.md-typeset h2::before {
+  content: "// ";
+  color: #2563eb;
+}
+
+.md-typeset a {
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+.md-typeset code,
+.md-typeset pre {
+  background-color: #f3f4f6;
+  border-radius: 6px;
 }
 
 .md-footer {
