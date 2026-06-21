@@ -127,8 +127,18 @@ kbd,
 samp,
 tt {
   font-family: "JetBrains Mono", monospace !important;
-  font-size: 0.78rem !important;
-  line-height: 1.65 !important;
+}
+
+.md-typeset pre,
+.md-typeset pre code,
+.md-typeset .highlight pre,
+.md-typeset .highlight code {
+  font-size: 0.86rem !important;
+  line-height: 1.55 !important;
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+  font-variant-ligatures: none !important;
+  font-feature-settings: "liga" 0, "calt" 0;
 }
 
 .md-typeset code {
