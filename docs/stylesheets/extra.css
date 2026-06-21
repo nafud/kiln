@@ -204,3 +204,45 @@ tt {
 .md-footer {
   display: none;
 }
+
+/* Card Blocks */
+
+.home-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-top: 1.5rem;
+}
+
+.home-card {
+  display: block;
+  min-height: 6rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  background: #ffffff;
+  text-decoration: none !important;
+}
+
+.home-card:hover {
+  border-color: #2563eb;
+}
+
+.home-card-title {
+  display: block;
+  color: #111827;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.home-card-text {
+  display: block;
+  color: #6b7280;
+  line-height: 1.6;
+}
+
+@media screen and (max-width: 760px) {
+  .home-grid {
+    grid-template-columns: 1fr;
+  }
+}
