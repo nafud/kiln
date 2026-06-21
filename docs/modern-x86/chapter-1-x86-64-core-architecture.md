@@ -24,11 +24,11 @@ x86-32
 ### General-Purpose Registers
 
 | ┌63-bit | ┌31-bit | ┌15-bit | ┌7-bit&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0┐ |
-|---------|---------|---------|------------------|
-| RAX | EAX | AX&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;AH | AL |
-| RBX | EBX | BX&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;BH | BL |
-| RCX | ECX | CX&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;CH | CL |
-| RDX | EDX | DX&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;DH | DL |
+|---------|---------|---------|----------------------------------------------------------|
+| RAX | EAX | AX | AH AL |
+| RBX | EBX | BX | BH BL |
+| RCX | ECX | CX | CH CL |
+| RDX | EDX | DX | DH DL |
 | RSI | ESI | SI | SIL |
 | RDI | EDI | DI | DIL |
 | RBP | EBP | BP | BPL |
