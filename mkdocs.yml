@@ -23,6 +23,9 @@ theme:
 extra_css:
   - stylesheets/extra.css
 
+extra_javascript:
+  - javascripts/sidebar-toggle.js
+
 plugins:
   - search
 
@@ -38,7 +41,6 @@ nav:
 
   - Modern x86:
       - Modern x86: modern-x86/index.md
-      - Chapter 1: modern-x86/chapter-1-x86-64-core-architecture.md
 
   - PBA:
       - PBA: pba/index.md

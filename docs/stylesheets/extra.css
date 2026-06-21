@@ -246,3 +246,29 @@ tt {
     grid-template-columns: 1fr;
   }
 }
+
+/* Sidebar Toggle */
+
+.sidebar-toggle {
+  position: fixed;
+  left: 1rem;
+  bottom: 1rem;
+  z-index: 1000;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #6b7280;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.68rem;
+  cursor: pointer;
+}
+
+.sidebar-toggle:hover {
+  color: #2563eb;
+  border-color: #2563eb;
+}
+
+.sidebar-hidden .md-sidebar--primary {
+  display: none;
+}
