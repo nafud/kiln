@@ -2,7 +2,7 @@
 
 ## Historical Overview
 
-```text
+<pre>
 x86-32
 │
 ├─ 1985  Intel 80386 -> 32-bit architecture
@@ -18,4 +18,4 @@ x86-32
                         ├─ 2013  AVX2     -> 256-bit integer SIMD
                         ├─ 2013  FMA      -> Fused Multiply-Add
                         └─ 2017  AVX-512  -> 512-bit SIMD
-```
+</pre>
