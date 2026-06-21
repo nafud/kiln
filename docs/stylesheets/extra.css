@@ -297,13 +297,33 @@ tt {
   transform: translateY(-2px);
 }
 
-.sidebar-hidden .md-sidebar--primary {
-  opacity: 0;
-  transform: translateX(-12px);
-  pointer-events: none;
+.md-sidebar--primary {
+  opacity: 1;
+  transform: translateX(0);
 }
+
+/* Smooth sidebar hide/show with layout adjustment */
 
 .md-sidebar--primary {
   opacity: 1;
   transform: translateX(0);
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease,
+    width 180ms ease,
+    min-width 180ms ease,
+    margin 180ms ease;
+}
+
+.sidebar-hidden .md-sidebar--primary {
+  opacity: 0;
+  transform: translateX(-12px);
+  width: 0 !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  pointer-events: none;
+}
+
+.sidebar-hidden .md-content {
+  transition: max-width 180ms ease;
 }
