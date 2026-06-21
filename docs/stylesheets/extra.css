@@ -338,3 +338,38 @@ tt {
   overflow: hidden !important;
   pointer-events: none;
 }
+
+/* Scroll buttons */
+
+.scroll-buttons {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  display: flex;
+  gap: 0.4rem;
+  z-index: 1000;
+}
+
+.scroll-btn {
+  width: 38px;
+  height: 38px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #6b7280;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 160ms ease;
+}
+
+.scroll-btn:hover {
+  color: #2563eb;
+  border-color: #2563eb;
+  transform: translateY(-1px);
+}
+
+.scroll-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
