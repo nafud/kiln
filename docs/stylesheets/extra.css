@@ -286,7 +286,13 @@ tt {
     background-color 160ms ease,
     border-color 160ms ease,
     opacity 180ms ease,
-    transform 180ms ease;
+    transform 180ms ease,
+    width 180ms ease,
+    max-width 180ms ease,
+    min-width 180ms ease,
+    flex-basis 180ms ease,
+    padding 180ms ease,
+    margin 180ms ease;
 }
 
 .md-nav__link:hover {
@@ -297,22 +303,11 @@ tt {
   transform: translateY(-2px);
 }
 
-.md-sidebar--primary {
-  opacity: 1;
-  transform: translateX(0);
-}
-
 /* Smooth sidebar hide/show with layout adjustment */
 
 .md-sidebar--primary {
   opacity: 1;
   transform: translateX(0);
-  transition:
-    opacity 180ms ease,
-    transform 180ms ease,
-    width 180ms ease,
-    min-width 180ms ease,
-    margin 180ms ease;
 }
 
 .sidebar-hidden .md-sidebar--primary {
@@ -320,10 +315,20 @@ tt {
   transform: translateX(-12px);
   width: 0 !important;
   min-width: 0 !important;
+  max-width: 0 !important;
+  flex: 0 0 0 !important;
+  flex-basis: 0 !important;
+  padding: 0 !important;
   margin: 0 !important;
+  overflow: hidden !important;
   pointer-events: none;
 }
 
-.sidebar-hidden .md-content {
-  transition: max-width 180ms ease;
+.sidebar-hidden .md-sidebar--primary .md-sidebar__scrollwrap {
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
 }
