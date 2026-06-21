@@ -42,8 +42,6 @@ nav:
 
   - Modern x86:
       - Modern x86: modern-x86/index.md
-      - Chapter 1. x86-64 Core Architecture: modern-x86/chapter-01.md
-      - Chapter 2. x86-64 Core Programming – Part 1: modern-x86/chapter-02.md
 
   - PBA:
       - PBA: pba/index.md
