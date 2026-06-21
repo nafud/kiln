@@ -1,147 +1,135 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 :root {
-  --md-text-font: "Inter";
+  --md-text-font: "JetBrains Mono";
   --md-code-font: "JetBrains Mono";
+}
 
-  --sc-bg: #fafafa;
-  --sc-bg-soft: #f5f6f8;
-  --sc-surface: #ffffff;
-  --sc-border: #e2e8f0;
-  --sc-border-soft: #edf2f7;
-
-  --sc-text: #1f2328;
-  --sc-muted: #4a5568;
-  --sc-subtle: #718096;
-
-  --sc-blue: #3182ce;
-  --sc-blue-soft: rgba(49, 130, 206, 0.12);
+html,
+body,
+input,
+button,
+textarea,
+select,
+.md-typeset,
+.md-header,
+.md-nav,
+.md-search,
+.md-tabs {
+  font-family: "JetBrains Mono", monospace !important;
 }
 
 body {
-  background:
-    radial-gradient(circle at 18% 8%, rgba(49, 130, 206, 0.12), transparent 28rem),
-    radial-gradient(circle at 80% 18%, rgba(128, 90, 213, 0.10), transparent 26rem),
-    linear-gradient(180deg, #ffffff 0%, var(--sc-bg) 45%, #f8fafc 100%);
-  color: var(--sc-text);
+  background: #fafafa;
 }
 
+/* Header */
+
 .md-header {
-  background: rgba(255, 255, 255, 0.86);
-  color: var(--sc-text);
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
   box-shadow: none;
-  border-bottom: 1px solid var(--sc-border);
-  backdrop-filter: blur(14px);
 }
 
 .md-header__title,
 .md-header__topic {
-  font-family: "JetBrains Mono", monospace;
   font-weight: 700;
 }
 
+/* Search */
+
 .md-search__form {
-  background: var(--sc-bg-soft);
-  border: 1px solid var(--sc-border);
-  border-radius: 8px;
+  background: #f5f5f5;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
   box-shadow: none;
 }
 
-.md-search__input {
-  font-family: "JetBrains Mono", monospace;
-  font-size: 0.78rem;
-}
+/* Sidebar */
 
 .md-sidebar {
-  color: var(--sc-muted);
+  color: #6b7280;
 }
 
 .md-nav__title {
-  font-family: "JetBrains Mono", monospace;
-  color: var(--sc-text);
+  color: #111827;
   font-weight: 700;
 }
 
 .md-nav__link {
-  font-family: "JetBrains Mono", monospace;
-  font-size: 0.74rem;
-  color: var(--sc-muted);
+  color: #6b7280;
+  font-size: 0.8rem;
 }
 
 .md-nav__link:hover,
 .md-nav__link--active {
-  color: var(--sc-blue);
-  font-weight: 700;
+  color: #2563eb;
 }
 
-.md-main__inner {
-  margin-top: 1.6rem;
-}
+/* Content */
 
 .md-content {
-  max-width: 820px;
+  max-width: 900px;
 }
 
 .md-typeset {
-  font-size: 0.84rem;
+  color: #111827;
+  font-size: 0.82rem;
   line-height: 1.8;
-  color: var(--sc-text);
-}
-
-.md-typeset h1,
-.md-typeset h2,
-.md-typeset h3 {
-  font-family: "JetBrains Mono", monospace;
-  color: var(--sc-text);
-  letter-spacing: -0.035em;
 }
 
 .md-typeset h1 {
-  font-size: 1.9rem;
-  font-weight: 800;
+  font-size: 2rem;
+  font-weight: 700;
 }
 
 .md-typeset h2 {
-  margin-top: 2.2rem;
-  font-size: 1.25rem;
+  font-size: 1.3rem;
+  font-weight: 700;
 }
 
-.md-typeset h2::before {
-  content: "// ";
-  color: var(--sc-blue);
+.md-typeset h3 {
+  font-size: 1rem;
+  font-weight: 700;
 }
 
 .md-typeset p,
 .md-typeset li {
-  color: var(--sc-muted);
+  color: #374151;
 }
+
+/* Links */
 
 .md-typeset a {
-  color: var(--sc-blue);
-  font-weight: 600;
+  color: #2563eb;
+  text-decoration: none;
 }
 
+.md-typeset a:hover {
+  text-decoration: underline;
+}
+
+/* Code */
+
 .md-typeset code {
-  background: var(--sc-bg-soft);
-  color: #319795;
-  border: 1px solid var(--sc-border-soft);
-  border-radius: 5px;
-  padding: 0.1rem 0.35rem;
+  background: #f5f5f5;
+  border-radius: 3px;
 }
 
 .md-typeset pre {
-  background: var(--sc-surface);
-  border: 1px solid var(--sc-border);
-  border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(27, 31, 35, 0.06);
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  box-shadow: none;
 }
 
+/* Tables */
+
 .md-typeset table:not([class]) {
-  background: var(--sc-surface);
-  border: 1px solid var(--sc-border);
-  border-radius: 10px;
-  overflow: hidden;
+  border: 1px solid #e5e7eb;
 }
+
+/* Footer */
 
 .md-footer {
   display: none;
