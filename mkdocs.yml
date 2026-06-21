@@ -4,6 +4,7 @@ site_url: https://skllcrshrs.github.io/notes-portal/
 
 theme:
   name: material
+  logo: assets/images/logo.png
   font: false
   palette:
     scheme: default
