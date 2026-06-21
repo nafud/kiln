@@ -374,12 +374,24 @@ tt {
   pointer-events: none;
 }
 
-/* Left sidebar */
+/* Left sidebar: uniform background */
 
 .md-sidebar--primary,
 .md-sidebar--primary .md-sidebar__scrollwrap,
 .md-sidebar--primary .md-nav,
 .md-sidebar--primary .md-nav__title,
 .md-sidebar--primary .md-nav__list {
-    background: #f3f4f6 !important;
+  background: #f3f4f6 !important;
+}
+
+/* Remove title separator/shadow */
+.md-sidebar--primary .md-nav__title {
+  box-shadow: none !important;
+  border-bottom: none !important;
+}
+
+/* Remove Material pseudo shadows if present */
+.md-sidebar--primary .md-nav__title::before,
+.md-sidebar--primary .md-nav__title::after {
+  display: none !important;
 }
