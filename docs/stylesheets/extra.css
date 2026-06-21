@@ -374,9 +374,9 @@ tt {
   pointer-events: none;
 }
 
-/* Left sidebar background */
+/* Only left navigation sidebar */
 
-.md-sidebar__scrollwrap {
-    background: #f3f4f6;
+.md-sidebar--primary .md-sidebar__scrollwrap {
+    background: #efefef;
     border-radius: 4px;
 }
