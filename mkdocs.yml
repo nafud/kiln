@@ -41,7 +41,3 @@ nav:
       - "RE4B": re4b/index.md
   - "Reversing":
       - "Reversing": reversing/index.md
-  - "Temp":
-      - "Temp": temp/index.md
-  - "test":
-      - "test": test/index.md
