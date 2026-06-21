@@ -40,6 +40,12 @@ body {
   font-weight: 700;
 }
 
+/* Footer */
+
+.md-footer {
+    display: none !important;
+}
+
 /* Search */
 
 .md-search__form {
