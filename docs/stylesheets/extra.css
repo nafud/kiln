@@ -338,3 +338,32 @@ tt {
   overflow: hidden !important;
   pointer-events: none;
 }
+
+/* Binary background */
+
+.md-header {
+  position: relative;
+  overflow: hidden;
+}
+
+.md-header::before {
+  content: "";
+
+  position: absolute;
+  inset: 0;
+
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(37,99,235,.06) 1px, transparent 1px),
+    radial-gradient(circle at 40% 60%, rgba(37,99,235,.04) 1px, transparent 1px),
+    radial-gradient(circle at 70% 20%, rgba(37,99,235,.05) 1px, transparent 1px);
+
+  background-size: 45px 25px;
+  opacity: .6;
+
+  pointer-events: none;
+}
+
+.md-header__inner {
+  position: relative;
+  z-index: 2;
+}
