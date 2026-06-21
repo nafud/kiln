@@ -5,6 +5,20 @@
   --md-code-font: "JetBrains Mono";
 }
 
+code,
+pre,
+kbd,
+samp,
+tt,
+.highlight,
+.highlight pre,
+.highlight code,
+.md-typeset code,
+.md-typeset pre,
+.md-typeset pre code {
+    font-family: "JetBrains Mono", monospace !important;
+}
+
 html,
 body,
 input,
