@@ -295,24 +295,39 @@ tt {
     margin 180ms ease;
 }
 
-.md-nav__link:hover {
-  transform: translateX(2px);
-}
-
 .home-card:hover {
   transform: translateY(-2px);
 }
 
-/* Smooth sidebar hide/show with layout adjustment */
+/* Smooth sidebar hide/show */
 
 .md-sidebar--primary {
   opacity: 1;
   transform: translateX(0);
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease,
+    width 220ms ease,
+    min-width 220ms ease,
+    max-width 220ms ease,
+    margin 220ms ease,
+    padding 220ms ease;
+}
+
+.md-sidebar--primary .md-sidebar__scrollwrap {
+  transition:
+    opacity 160ms ease,
+    transform 200ms ease;
+}
+
+.sidebar-hidden .md-sidebar--primary .md-sidebar__scrollwrap {
+  opacity: 0;
+  transform: translateX(-10px);
 }
 
 .sidebar-hidden .md-sidebar--primary {
   opacity: 0;
-  transform: translateX(-12px);
+  transform: translateX(-10px);
   width: 0 !important;
   min-width: 0 !important;
   max-width: 0 !important;
@@ -322,13 +337,4 @@ tt {
   margin: 0 !important;
   overflow: hidden !important;
   pointer-events: none;
-}
-
-.sidebar-hidden .md-sidebar--primary .md-sidebar__scrollwrap {
-  width: 0 !important;
-  min-width: 0 !important;
-  max-width: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  overflow: hidden !important;
 }
