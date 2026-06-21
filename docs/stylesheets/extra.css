@@ -5,19 +5,7 @@
   --md-code-font: "JetBrains Mono";
 }
 
-code,
-pre,
-kbd,
-samp,
-tt,
-.highlight,
-.highlight pre,
-.highlight code,
-.md-typeset code,
-.md-typeset pre,
-.md-typeset pre code {
-    font-family: "JetBrains Mono", monospace !important;
-}
+/* Global font */
 
 html,
 body,
@@ -32,6 +20,8 @@ select,
 .md-tabs {
   font-family: "JetBrains Mono", monospace !important;
 }
+
+/* Background */
 
 body {
   background: #fafafa;
@@ -123,7 +113,23 @@ body {
   text-decoration: underline;
 }
 
-/* Code */
+/* Code blocks */
+
+.md-typeset pre,
+.md-typeset pre code,
+.md-typeset code,
+.md-typeset .highlight,
+.md-typeset .highlight pre,
+.md-typeset .highlight code,
+code,
+pre,
+kbd,
+samp,
+tt {
+  font-family: "JetBrains Mono", monospace !important;
+  font-size: 0.78rem !important;
+  line-height: 1.65 !important;
+}
 
 .md-typeset code {
   background: #f5f5f5;
