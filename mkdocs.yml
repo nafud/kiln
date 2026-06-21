@@ -27,17 +27,24 @@ plugins:
   - search
 
 nav:
-  - "CSAPP":
-      - "CSAPP": csapp/index.md
-  - "Modern x86":
-      - "Modern x86": modern-x86/index.md
-  - "PBA":
-      - "PBA": pba/index.md
-  - "Radare2":
-      - "Radare2": radare2/index.md
-  - "RE":
-      - "RE": re/index.md
-  - "RE4B":
-      - "RE4B": re4b/index.md
-  - "Reversing":
-      - "Reversing": reversing/index.md
+  - RE:
+      - Overview: re/index.md
+
+  - RE4B:
+      - Overview: re4b/index.md
+
+  - CSAPP:
+      - Overview: csapp/index.md
+
+  - Modern x86:
+      - Overview: modern-x86/index.md
+      - Chapter 1. x86-64 Core Architecture: modern-x86/chapter-1-x86-64-core-architecture.md
+
+  - PBA:
+      - Overview: pba/index.md
+
+  - Reversing:
+      - Overview: reversing/index.md
+
+  - Radare2:
+      - Overview: radare2/index.md
