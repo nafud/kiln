@@ -179,8 +179,24 @@ tt {
 
 /* Tables */
 
+.md-typeset__table {
+    width: 100%;
+}
+
+.md-typeset__table table:not([class]) {
+    width: 100%;
+    table-layout: fixed;
+    display: table;
+}
+
 .md-typeset table:not([class]) {
-  border: 1px solid #e5e7eb;
+    width: 100%;
+    border: 1px solid #e5e7eb;
+}
+
+.md-typeset table:not([class]) th,
+.md-typeset table:not([class]) td {
+    padding: 0.6rem 0.8rem;
 }
 
 /* Footer */
