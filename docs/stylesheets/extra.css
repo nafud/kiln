@@ -373,39 +373,3 @@ tt {
   opacity: 0;
   pointer-events: none;
 }
-
-/* Left sidebar: uniform background */
-
-.md-sidebar--primary,
-.md-sidebar--primary .md-sidebar__scrollwrap,
-.md-sidebar--primary .md-nav,
-.md-sidebar--primary .md-nav__title,
-.md-sidebar--primary .md-nav__list {
-  background: #f3f4f6 !important;
-}
-
-/* Remove title separator/shadow */
-
-.md-sidebar--primary .md-nav__title {
-  box-shadow: none !important;
-  border-bottom: none !important;
-}
-
-/* Remove Material pseudo shadows if present */
-
-.md-sidebar--primary .md-nav__title::before,
-.md-sidebar--primary .md-nav__title::after {
-  display: none !important;
-}
-
-/* Align sidebar title with sidebar links */
-
-.md-sidebar--primary .md-nav__title {
-  padding-left: 0.75rem !important;
-  padding-right: 0.75rem !important;
-}
-
-.md-sidebar--primary .md-nav__link {
-  padding-left: 0.75rem !important;
-  padding-right: 0.75rem !important;
-}
