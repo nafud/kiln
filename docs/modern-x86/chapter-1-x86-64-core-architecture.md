@@ -23,7 +23,7 @@ x86-32
 ## x86-64 Processor Architecture
 ### General-Purpose Registers
 
-| ┌63-bit | ┌31-bit | ┌15-bit | ┌7-bit        0┐ |
+| ┌63-bit | ┌31-bit | ┌15-bit | ┌7-bit&nbsp;&nbsp;0┐ |
 |---------|---------|---------|------------------|
 | RAX | EAX | AX | [AL / AH] |
 | RBX | EBX | BX | [BL / BH] |
