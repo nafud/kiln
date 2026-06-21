@@ -23,12 +23,12 @@ x86-32
 ## x86-64 Processor Architecture
 ### General-Purpose Registers
 
-| 64-bit | 32-bit | 16-bit | 8-bit |
+| ┌64-bit | ┌32-bit | ┌16-bit | ┌8-bit |
 |---------|---------|---------|---------|
-| RAX | EAX | AX [AL / AH] |
-| RBX | EBX | BX | BL / BH |
-| RCX | ECX | CX | CL / CH |
-| RDX | EDX | DX | DL / DH |
+| RAX | EAX | AX | [AL / AH] |
+| RBX | EBX | BX | [BL / BH] |
+| RCX | ECX | CX | [CL / CH] |
+| RDX | EDX | DX | [DL / DH] |
 | RSI | ESI | SI | SIL |
 | RDI | EDI | DI | DIL |
 | RBP | EBP | BP | BPL |
