@@ -269,6 +269,41 @@ tt {
   border-color: #2563eb;
 }
 
+/* Smooth UI interactions */
+
+.md-sidebar,
+.md-sidebar__scrollwrap,
+.md-nav,
+.md-nav__item,
+.md-nav__link,
+.md-content,
+.md-main__inner,
+.md-header,
+.home-card,
+.sidebar-toggle {
+  transition:
+    color 160ms ease,
+    background-color 160ms ease,
+    border-color 160ms ease,
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.md-nav__link:hover {
+  transform: translateX(2px);
+}
+
+.home-card:hover {
+  transform: translateY(-2px);
+}
+
 .sidebar-hidden .md-sidebar--primary {
-  display: none;
+  opacity: 0;
+  transform: translateX(-12px);
+  pointer-events: none;
+}
+
+.md-sidebar--primary {
+  opacity: 1;
+  transform: translateX(0);
 }
