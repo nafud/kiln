@@ -41,3 +41,12 @@ x86-32
 | R13 | R13D | R13W | R13B |
 | R14 | R14D | R14W | R14B |
 | R15 | R15D | R15W | R15B |
+
+!!! note
+    RIP always points to the next instruction.
+
+!!! warning
+    Stack layout differs between Windows and System V ABI.
+
+??? note "Windows Process Creation Details"
+    Long explanation here.
