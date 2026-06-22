@@ -1,8 +1,8 @@
 site_name: skullcrushers
 site_description: Reverse Engineering, Assembly, Systems Programming and Debugging Notes
-site_url: https://skllcrshrs.github.io/notes-portal/
-repo_url: https://github.com/skllcrshrs/notes-portal
-repo_name: skllcrshrs/notes-portal
+site_url: https://skllcrshrs.github.io/kiln/
+repo_url: https://github.com/skllcrshrs/kiln
+repo_name: skllcrshrs/kiln
 
 markdown_extensions:
   - admonition
