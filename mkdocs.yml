@@ -1,15 +1,31 @@
 site_name: skullcrushers
 site_description: Reverse Engineering, Assembly, Systems Programming and Debugging Notes
 site_url: https://skllcrshrs.github.io/notes-portal/
+repo_url: https://github.com/skllcrshrs/notes-portal
+repo_name: skllcrshrs/notes-portal
 
 theme:
   name: material
   logo: assets/images/logo.png
   font: false
+  icon:
+    repo: fontawesome/brands/github
   palette:
-    scheme: default
-    primary: white
-    accent: indigo
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: white
+      accent: red
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: red
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
   features:
     - navigation.instant
     - navigation.tracking
