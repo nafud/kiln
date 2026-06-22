@@ -369,6 +369,14 @@ tt {
   transform: translateY(-1px);
 }
 
+/* Flat navigation headers */
+
+.md-nav__title {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
 .scroll-hidden {
   opacity: 0;
   pointer-events: none;
