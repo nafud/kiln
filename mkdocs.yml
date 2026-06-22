@@ -4,6 +4,13 @@ site_url: https://skllcrshrs.github.io/notes-portal/
 repo_url: https://github.com/skllcrshrs/notes-portal
 repo_name: skllcrshrs/notes-portal
 
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+
 theme:
   name: material
   logo: assets/images/logo.png
