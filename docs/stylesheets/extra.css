@@ -412,10 +412,10 @@ tt {
   transform: translateY(-1px);
 }
 
-/* Flat navigation headers */
+/* Flat navigation headers — solid bg so content doesn't bleed through sticky title */
 
 .md-nav__title {
-    background: transparent !important;
+    background: var(--md-default-bg-color) !important;
     box-shadow: none !important;
     border: none !important;
 }
