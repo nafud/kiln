@@ -6,6 +6,7 @@ repo_name: skllcrshrs/kiln
 
 markdown_extensions:
   - admonition
+  - attr_list
   - pymdownx.details
   - pymdownx.superfences
   - pymdownx.highlight
