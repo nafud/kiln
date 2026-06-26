@@ -1,6 +1,6 @@
-# Modern x86
+# Modern x86 Assembly Language Programming
 
-Notes for *Modern X86 Assembly Language Programming*.
+Notes for *Modern x86 Assembly Language Programming* by Daniel Kusswurm.
 
 <div class="home-grid">
 

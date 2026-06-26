@@ -55,19 +55,27 @@ plugins:
   - search
 
 nav:
-  - RE: re/index.md
+  - Reverse Engineering:
+      - re/index.md
+      - Crackmes.one:
+          - re/crackmes/index.md
+          - Writeup: re/crackmes/writeup.md
+      - Books:
+          - re/books/index.md
+          - Modern x86 Assembly Language Programming:
+              - re/books/modern-x86/index.md
+              - Chapter 1: re/books/modern-x86/chapter-01.md
+              - Chapter 2: re/books/modern-x86/chapter-02.md
+          - Reverse Engineering for Beginners: re/books/re4b/index.md
+          - Practical Reverse Engineering: re/books/pre/index.md
+          - Practical Binary Analysis: re/books/pba/index.md
+          - "Reversing: Secrets of Reverse Engineering": re/books/reversing/index.md
+          - "Computer Systems: A Programmer's Perspective": re/books/csapp/index.md
+      - Radare2: re/radare2/index.md
 
-  - RE4B: re4b/index.md
-
-  - CSAPP: csapp/index.md
-
-  - Modern x86:
-      - modern-x86/index.md
-      - Chapter 1: modern-x86/chapter-01.md
-      - Chapter 2: modern-x86/chapter-02.md
-
-  - PBA: pba/index.md
-
-  - Reversing: reversing/index.md
-
-  - Radare2: radare2/index.md
+  - Digital Forensics:
+      - df/index.md
+      - Investigating Windows Endpoints: df/windows-endpoints/index.md
+      - Investigating Windows Memory: df/windows-memory/index.md
+      - Investigating Linux Devices: df/linux-devices/index.md
+      - Investigating macOS Endpoints: df/macos-endpoints/index.md
