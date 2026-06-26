@@ -5,6 +5,16 @@
   --md-code-font: "JetBrains Mono";
 }
 
+[data-md-color-scheme="default"] {
+  --md-accent-fg-color: #2563eb;
+  --md-accent-fg-color--transparent: rgba(37, 99, 235, 0.1);
+}
+
+[data-md-color-scheme="slate"] {
+  --md-accent-fg-color: #539bf5;
+  --md-accent-fg-color--transparent: rgba(83, 155, 245, 0.1);
+}
+
 /* Global font */
 
 html,
