@@ -1,4 +1,4 @@
-# ./Kiln
+<canvas id="kiln-logo" width="800" height="160" aria-label="Kiln"></canvas>
 
 Reverse Engineering and Systems Programming Knowledge Base.
 

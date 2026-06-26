@@ -159,6 +159,16 @@ body {
   text-decoration: underline;
 }
 
+/* Home page logo canvas */
+
+#kiln-logo {
+  display: block;
+  width: 100%;
+  max-width: 800px;
+  aspect-ratio: 800 / 160;
+  margin: 0 0 1.2rem;
+}
+
 /* Hide "Copied to clipboard" dialog */
 
 [data-md-component="dialog"] {
