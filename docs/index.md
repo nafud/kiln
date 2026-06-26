@@ -16,8 +16,6 @@
 #
  ##</pre>
 
-Reverse Engineering and Systems Programming Knowledge Base.
-
 <div class="home-grid">
 
 <a class="home-card" href="re/">

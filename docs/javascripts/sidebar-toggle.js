@@ -1,4 +1,26 @@
+/* ASCII art auto-fit */
+
+function fitKilnAscii() {
+  const pre = document.querySelector("pre.kiln-ascii");
+  if (!pre) return;
+
+  // Reset to base font-size each time before measuring
+  pre.style.fontSize = "1rem";
+
+  const container = pre.parentElement;
+  const available = container.clientWidth;
+  const scrollW = pre.scrollWidth;
+
+  if (scrollW > 0 && scrollW > available) {
+    const current = parseFloat(getComputedStyle(pre).fontSize);
+    pre.style.fontSize = (current * (available / scrollW) * 0.98) + "px";
+  }
+}
+
 document.addEventListener("DOMContentLoaded", function () {
+  fitKilnAscii();
+  window.addEventListener("resize", fitKilnAscii);
+
   /* Gradient fade below sticky sidebar title */
 
   const primaryNav = document.querySelector('.md-sidebar--primary .md-nav--primary');
