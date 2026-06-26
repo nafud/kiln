@@ -29,7 +29,6 @@ theme:
 
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
-      primary: black
       accent: red
       toggle:
         icon: material/weather-sunny

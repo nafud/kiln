@@ -21,9 +21,9 @@ select,
   font-family: "JetBrains Mono", monospace !important;
 }
 
-/* Background */
+/* Background — light mode only */
 
-body {
+[data-md-color-scheme="default"] body {
   background: #fafafa;
 }
 
@@ -94,9 +94,12 @@ body {
 }
 
 .md-typeset {
-  color: #111827;
   font-size: 0.78rem;
   line-height: 1.7;
+}
+
+[data-md-color-scheme="default"] .md-typeset {
+  color: #111827;
 }
 
 .md-typeset h1 {
@@ -130,8 +133,14 @@ body {
 .md-typeset li,
 .md-typeset td,
 .md-typeset th {
-  color: #374151;
   font-size: 0.78rem;
+}
+
+[data-md-color-scheme="default"] .md-typeset p,
+[data-md-color-scheme="default"] .md-typeset li,
+[data-md-color-scheme="default"] .md-typeset td,
+[data-md-color-scheme="default"] .md-typeset th {
+  color: #374151;
 }
 
 /* Links */
