@@ -214,3 +214,82 @@ MXCSR is a 32-bit control and status register governing floating-point behavior 
 
 !!! note "Default state"
     At process startup all exception mask bits are set, meaning FP exceptions are suppressed and produce IEEE 754 substitute values rather than signals. Application code modifies RC to control rounding mode. DAZ and FZ are off by default and are enabled in performance-sensitive code to avoid the cost of denormal handling.
+
+## Instruction Operands
+
+Most x86-64 instructions take one or more source operands and a single destination operand. Operands must be explicitly specified by the programmer in most cases, though some instructions impose fixed register requirements by design. There are three operand types.
+
+An immediate operand is a constant value encoded directly into the instruction. A register operand refers to a value currently held in a general-purpose or SIMD register. A memory operand designates a location in memory, computed at runtime from an address expression. Only one memory operand is permitted per instruction — either the source or the destination, never both simultaneously.
+
+| TYPE | EXAMPLE | C++ EQUIVALENT |
+| --- | --- | --- |
+| Immediate | `mov rax, 42` | `rax = 42` |
+| Immediate | `imul r12, -47` | `r12 *= -47` |
+| Immediate | `xor ecx, 80000000h` | `ecx ^= 0x80000000` |
+| Register | `add rbx, r10` | `rbx += r10` |
+| Register (implicit) | `mul rbx` | `rdx:rax = rax * rbx` |
+| Memory | `mov rax, [r13]` | `rax = *r13` |
+| Memory | `or rcx, [rbx+rsi*8]` | `rcx \|= *(rbx+rsi*8)` |
+| Memory | `mov qword ptr [r8], 17` | `*(long long*)r8 = 17` |
+
+!!! note "Immediate value size limit"
+    Except for `MOV`, the maximum size of an immediate operand in x86-64 is 32 bits. When used with a 64-bit register or memory operand, the immediate is sign-extended to 64 bits before the operation executes. Only `MOV reg64, imm64` accepts a full 64-bit constant.
+
+!!! note "Size operators"
+    When a memory operand's size cannot be inferred from the instruction context alone, a size operator is required. MASM uses `qword ptr`, `dword ptr`, `word ptr`, and `byte ptr`. NASM uses `qword`, `dword`, `word`, and `byte`. Without one, the assembler cannot determine whether to operate on 8, 16, 32, or 64 bits at the given address.
+
+## Memory Addressing
+
+A memory operand in x86-64 is computed from up to four components. Any component may be omitted; the processor substitutes a default of zero for absent displacement values and one for an absent scale factor. The effective address is always 64 bits wide regardless of which components are present.
+
+```text
+EffectiveAddress = BaseReg + (IndexReg × ScaleFactor) + Displacement
+```
+
+| COMPONENT | CONSTRAINTS |
+| --- | --- |
+| BaseReg | Any general-purpose register |
+| IndexReg | Any general-purpose register except RSP |
+| ScaleFactor | 1 (default), 2, 4, or 8 |
+| Displacement | Signed 8, 16, or 32-bit constant encoded in the instruction |
+
+| FORM | EXAMPLE | TYPICAL USE |
+| --- | --- | --- |
+| RIP + Disp | `mov rax, [Val]` | Global and static variables |
+| BaseReg | `mov rax, [rbx]` | Pointer dereference |
+| BaseReg + Disp | `mov rax, [rbx+16]` | Struct member access |
+| IndexReg × SF + Disp | `mov rax, [r15*8+48]` | Array element without a base pointer |
+| BaseReg + IndexReg | `mov rax, [rbx+r15]` | Two-register offset |
+| BaseReg + IndexReg + Disp | `mov rax, [rbx+r15+32]` | Struct in an array |
+| BaseReg + IndexReg × SF | `mov rax, [rbx+r15*8]` | Array of qwords with base pointer |
+| BaseReg + IndexReg × SF + Disp | `mov rax, [rbx+r15*8+64]` | Matrix element access |
+
+!!! note "RIP-relative addressing"
+    The processor adds a signed 32-bit displacement encoded in the instruction to the current value of RIP to produce the effective address. This limits the reachable range to ±2 GB relative to the instruction, which is sufficient for virtually all programs. RIP-relative addressing is the default mode for global and static data in x86-64 because it produces position-independent code and avoids the overhead of encoding 64-bit absolute addresses. The assembler or linker computes the displacement automatically.
+
+## Condition Codes
+
+Arithmetic, logical, shift, and rotate instructions update one or more status flags in RFLAGS after execution. The `Jcc`, `CMOVcc`, and `SETcc` instruction families test these flags through named condition codes. Each condition code maps to a specific flag expression. Most conditions have one or more alias suffixes that encode the same test under a different mnemonic for readability.
+
+The naming convention follows a consistent rule. Conditions using "above" and "below" test CF and ZF and are intended for unsigned comparisons. Conditions using "greater" and "less" test SF, OF, and ZF and are intended for signed comparisons.
+
+| SUFFIX | ALIAS | RFLAGS CONDITION | INTENDED FOR |
+| --- | --- | --- | --- |
+| A | NBE | CF=0 and ZF=0 | Unsigned above |
+| AE | NB | CF=0 | Unsigned above or equal |
+| B | NAE | CF=1 | Unsigned below |
+| BE | NA | CF=1 or ZF=1 | Unsigned below or equal |
+| E | Z | ZF=1 | Equal / zero |
+| NE | NZ | ZF=0 | Not equal / not zero |
+| G | NLE | ZF=0 and SF=OF | Signed greater |
+| GE | NL | SF=OF | Signed greater or equal |
+| L | NGE | SF≠OF | Signed less |
+| LE | NG | ZF=1 or SF≠OF | Signed less or equal |
+| S | | SF=1 | Result is negative |
+| NS | | SF=0 | Result is positive or zero |
+| O | | OF=1 | Signed overflow occurred |
+| NO | | OF=0 | No signed overflow |
+| C | | CF=1 | Carry set / unsigned overflow |
+| NC | | CF=0 | No carry |
+| P | PE | PF=1 | Parity even |
+| NP | PO | PF=0 | Parity odd |
