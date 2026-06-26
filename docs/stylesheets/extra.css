@@ -417,6 +417,12 @@ tt {
 
 /* Dark mode */
 
+[data-md-color-scheme="slate"] .md-header {
+  background: var(--md-default-bg-color) !important;
+  border-bottom: 1px solid #444c56;
+  box-shadow: none !important;
+}
+
 [data-md-color-scheme="slate"] .md-typeset h1 {
   border-bottom-color: #444c56;
 }
