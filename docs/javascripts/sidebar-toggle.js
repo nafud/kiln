@@ -33,22 +33,6 @@ document.addEventListener("DOMContentLoaded", function () {
     navTitle.parentNode.insertBefore(fade, navTitle.nextSibling);
   }
 
-  /* Hide / show sidebar */
-
-  const sidebarButton = document.createElement("button");
-  sidebarButton.textContent = "Hide sidebar";
-  sidebarButton.className = "sidebar-toggle";
-
-  sidebarButton.addEventListener("click", function () {
-    document.body.classList.toggle("sidebar-hidden");
-
-    sidebarButton.textContent = document.body.classList.contains("sidebar-hidden")
-      ? "Show sidebar"
-      : "Hide sidebar";
-  });
-
-  document.body.appendChild(sidebarButton);
-
   /* Scroll buttons */
 
   const scrollButtons = document.createElement("div");
