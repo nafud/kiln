@@ -50,10 +50,10 @@ select,
   font-weight: 700;
 }
 
-/* Footer */
+/* Footer — hide branding, keep prev/next navigation */
 
-.md-footer {
-    display: none !important;
+.md-footer-meta {
+  display: none !important;
 }
 
 /* Search */
