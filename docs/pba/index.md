@@ -1,3 +1,3 @@
 # PBA
 
-Notes for *Practical Reverse Engineering*.
+Notes for *Practical Binary Analysis*.

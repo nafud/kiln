@@ -54,23 +54,19 @@ plugins:
   - search
 
 nav:
-  - RE:
-      - RE: re/index.md
+  - RE: re/index.md
 
-  - RE4B:
-      - RE4B: re4b/index.md
+  - RE4B: re4b/index.md
 
-  - CSAPP:
-      - CSAPP: csapp/index.md
+  - CSAPP: csapp/index.md
 
   - Modern x86:
-      - Modern x86: modern-x86/index.md
+      - modern-x86/index.md
+      - Chapter 1: modern-x86/chapter-01.md
+      - Chapter 2: modern-x86/chapter-02.md
 
-  - PBA:
-      - PBA: pba/index.md
+  - PBA: pba/index.md
 
-  - Reversing:
-      - Reversing: reversing/index.md
+  - Reversing: reversing/index.md
 
-  - Radare2:
-      - Radare2: radare2/index.md
+  - Radare2: radare2/index.md
