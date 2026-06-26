@@ -15,6 +15,7 @@ markdown_extensions:
 theme:
   name: material
   logo: assets/images/logo.png
+  favicon: assets/images/logo.png
   font: false
   icon:
     repo: fontawesome/brands/github
