@@ -418,53 +418,64 @@ tt {
 /* Dark mode */
 
 [data-md-color-scheme="slate"] .md-typeset h1 {
-  border-bottom-color: #374151;
+  border-bottom-color: #444c56;
 }
 
 [data-md-color-scheme="slate"] .md-typeset h1 + p {
-  color: #6b7280;
-}
-
-[data-md-color-scheme="slate"] .md-typeset table:not([class]) th {
-  background: #1f2937;
-  color: #9ca3af;
-  border-bottom-color: #374151;
+  color: #768390;
 }
 
 [data-md-color-scheme="slate"] .md-typeset table:not([class]) {
-  border-color: #374151;
+  border-color: #444c56;
+}
+
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) th {
+  background: #2d333b;
+  color: #768390;
+  border-bottom-color: #444c56;
 }
 
 [data-md-color-scheme="slate"] .md-typeset pre {
-  background: #161b22;
-  border-color: #374151;
+  background: #1c2128;
+  border-color: #444c56;
 }
 
 [data-md-color-scheme="slate"] .md-typeset code {
-  background: #1f2937;
+  background: #2d333b;
+  color: #cdd9e5;
 }
 
 [data-md-color-scheme="slate"] .md-search__form {
-  background: #1f2937;
-  border-color: #374151;
+  background: #2d333b;
+  border-color: #444c56;
 }
 
 [data-md-color-scheme="slate"] .home-card {
-  background: #161b22;
-  border-color: #374151;
+  background: #2d333b;
+  border-color: #444c56;
+}
+
+[data-md-color-scheme="slate"] .home-card:hover {
+  border-color: #539bf5;
 }
 
 [data-md-color-scheme="slate"] .home-card-title {
-  color: #f9fafb;
+  color: #cdd9e5;
 }
 
 [data-md-color-scheme="slate"] .home-card-text {
-  color: #6b7280;
+  color: #768390;
 }
 
 [data-md-color-scheme="slate"] .sidebar-toggle,
 [data-md-color-scheme="slate"] .scroll-btn {
-  background: #161b22;
-  border-color: #374151;
-  color: #9ca3af;
+  background: #2d333b;
+  border-color: #444c56;
+  color: #768390;
+}
+
+[data-md-color-scheme="slate"] .sidebar-toggle:hover,
+[data-md-color-scheme="slate"] .scroll-btn:hover {
+  color: #539bf5;
+  border-color: #539bf5;
 }
