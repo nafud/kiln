@@ -1,4 +1,24 @@
 document.addEventListener("DOMContentLoaded", function () {
+  /* Suppress clipboard copy notification */
+
+  const clipboardObserver = new MutationObserver(function (mutations) {
+    for (const mutation of mutations) {
+      const el = mutation.target;
+      if (el.classList && el.classList.contains("md-tooltip--active")) {
+        const inner = el.querySelector(".md-tooltip__inner");
+        if (inner && inner.textContent.includes("Copied")) {
+          el.style.display = "none";
+        }
+      }
+    }
+  });
+
+  clipboardObserver.observe(document.body, {
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["class"]
+  });
+
   /* Gradient fade below sticky sidebar title */
 
   const primaryNav = document.querySelector('.md-sidebar--primary .md-nav--primary');
