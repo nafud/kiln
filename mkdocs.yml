@@ -43,7 +43,6 @@ theme:
     - search.highlight
     - search.suggest
     - content.code.copy
-    - navigation.footer
 
 extra_css:
   - stylesheets/extra.css

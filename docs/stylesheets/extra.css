@@ -50,9 +50,9 @@ select,
   font-weight: 700;
 }
 
-/* Footer — hide branding, keep prev/next navigation */
+/* Footer */
 
-.md-footer-meta {
+.md-footer {
   display: none !important;
 }
 
