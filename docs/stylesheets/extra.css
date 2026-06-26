@@ -75,6 +75,10 @@ select,
   color: #6b7280;
 }
 
+[data-md-color-scheme="default"] .md-sidebar--primary {
+  background: #f3f4f6;
+}
+
 .md-nav__title {
   color: #111827;
   font-weight: 700;
