@@ -75,7 +75,10 @@ select,
   color: #6b7280;
 }
 
-[data-md-color-scheme="default"] .md-sidebar--primary {
+[data-md-color-scheme="default"] .md-sidebar--primary,
+[data-md-color-scheme="default"] .md-sidebar--primary .md-sidebar__scrollwrap,
+[data-md-color-scheme="default"] .md-sidebar--primary .md-sidebar__inner,
+[data-md-color-scheme="default"] .md-sidebar--primary .md-nav--primary {
   background: #f3f4f6;
 }
 
