@@ -470,6 +470,82 @@ tt {
   pointer-events: none;
 }
 
+/* Page export actions */
+
+.page-actions {
+  position: relative;
+  float: right;
+  margin: 0 0 0.5rem 1rem;
+  z-index: 10;
+}
+
+.page-actions-btn {
+  padding: 0.3rem 0.65rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  background: #ffffff;
+  color: #6b7280;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.68rem;
+  cursor: pointer;
+  transition: color 140ms ease-out, border-color 140ms ease-out;
+}
+
+.page-actions-btn:hover {
+  color: #2563eb;
+  border-color: #2563eb;
+}
+
+.page-actions-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  min-width: 160px;
+  z-index: 100;
+}
+
+.page-actions-item {
+  display: block;
+  padding: 0.5rem 0.8rem;
+  color: #374151 !important;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.68rem;
+  text-decoration: none !important;
+  transition: background 100ms ease-out, color 100ms ease-out;
+}
+
+.page-actions-item:hover {
+  background: #f9fafb;
+  color: #2563eb !important;
+}
+
+/* Print / PDF export */
+
+@media print {
+  .md-header,
+  .md-sidebar,
+  .md-footer,
+  .sidebar-toggle,
+  .scroll-buttons,
+  .page-actions,
+  .md-search,
+  .md-tabs {
+    display: none !important;
+  }
+
+  .md-main__inner {
+    margin: 0 !important;
+  }
+
+  .md-content {
+    max-width: 100% !important;
+  }
+}
+
 /* Nav section labels (e.g. "Modern x86" collapsible) */
 
 .md-nav__item--section > .md-nav__link {
