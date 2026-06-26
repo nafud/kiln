@@ -159,29 +159,6 @@ body {
   text-decoration: underline;
 }
 
-/* Home page ASCII art title */
-
-.md-typeset pre.kiln-ascii {
-  background: linear-gradient(to top, #1a1a1a 0%, #b5b5b5 100%) !important;
-  -webkit-background-clip: text !important;
-  -webkit-text-fill-color: transparent !important;
-  background-clip: text !important;
-  border: none !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-  white-space: pre !important;
-  font-family: "JetBrains Mono", monospace !important;
-  font-size: clamp(1.2rem, 4vw, 2.2rem) !important;
-  line-height: 1.15 !important;
-  margin: 0 0 1.5rem !important;
-  overflow-x: auto;
-  display: block;
-}
-
-.md-content__inner:has(.kiln-ascii) > h1 {
-  display: none;
-}
-
 /* Hide "Copied to clipboard" dialog */
 
 [data-md-component="dialog"] {
