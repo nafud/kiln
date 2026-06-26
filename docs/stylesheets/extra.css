@@ -412,12 +412,19 @@ tt {
   transform: translateY(-1px);
 }
 
-/* Flat navigation headers — solid bg so content doesn't bleed through sticky title */
+/* Flat navigation headers — solid bg + z-index so content doesn't bleed through sticky title */
 
 .md-nav__title {
     background: var(--md-default-bg-color) !important;
     box-shadow: none !important;
     border: none !important;
+}
+
+.md-sidebar--primary .md-nav--primary > .md-nav__title {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 10 !important;
+    background: var(--md-default-bg-color) !important;
 }
 
 .scroll-hidden {
