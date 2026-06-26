@@ -74,6 +74,7 @@ body {
   color: #111827;
   font-weight: 700;
   font-size: 0.74rem;
+  background: transparent;
 }
 
 .md-nav__link {
