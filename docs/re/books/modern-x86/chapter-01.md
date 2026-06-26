@@ -22,6 +22,8 @@ x86-32
 
 ## Data Types
 
+Four categories — fundamental · numerical · SIMD · miscellaneous
+
 ### Fundamental Data Types
 
 The elementary units the processor manipulates directly. All sizes are powers of two. Bit numbering is right-to-left with bit 0 as the LSB. Multibyte types are stored in memory using little-endian byte ordering, meaning the least significant byte sits at the lowest address.
@@ -76,7 +78,7 @@ Element capacity per register width.
 | FP32 single-precision | 4 | 8 | 16 |
 | FP64 double-precision | 2 | 4 | 8 |
 
-!!! note "Runtime detection required"
+!!! warning "Runtime detection required"
     AVX, AVX2, and AVX-512 are not universally supported across processors. A binary must query CPUID before executing any SIMD code path. Detection methods are covered in Chapter 16.
 
 ### Miscellaneous Data Types
@@ -91,21 +93,124 @@ Element capacity per register width.
 
 ### General-Purpose Registers
 
-| ┌63-bit | ┌31-bit | ┌15-bit | ┌7-bit |
+X86-64 provides 16 64-bit general-purpose registers. Each register is sub-accessible at 32, 16, and 8-bit widths through aliased names. The sub-register aliases share physical storage with their parent — a write to `EAX` zeros the upper 32 bits of `RAX`; a write to `AL` or `AH` leaves the remaining bytes of `RAX` untouched.
+
+<div class="register-grid">
+  <div class="register-card">
+    <div class="register-name">RAX</div>
+    <div class="register-aliases">EAX · AX · AL / AH</div>
+    <div class="register-desc">Accumulator; implicit in MUL, IMUL, DIV, IDIV</div>
+  </div>
+  <div class="register-card">
+    <div class="register-name">RBX</div>
+    <div class="register-aliases">EBX · BX · BL / BH</div>
+    <div class="register-desc">General purpose</div>
+  </div>
+  <div class="register-card">
+    <div class="register-name">RCX</div>
+    <div class="register-aliases">ECX · CX · CL / CH</div>
+    <div class="register-desc">Count register; implicit in REP string ops and shifts</div>
+  </div>
+  <div class="register-card">
+    <div class="register-name">RDX</div>
+    <div class="register-aliases">EDX · DX · DL / DH</div>
+    <div class="register-desc">High half of 128-bit products/dividends (RDX:RAX)</div>
+  </div>
+  <div class="register-card">
+    <div class="register-name">RSI</div>
+    <div class="register-aliases">ESI · SI · SIL</div>
+    <div class="register-desc">String source pointer</div>
+  </div>
+  <div class="register-card">
+    <div class="register-name">RDI</div>
+    <div class="register-aliases">EDI · DI · DIL</div>
+    <div class="register-desc">String destination pointer</div>
+  </div>
+  <div class="register-card">
+    <div class="register-name">RSP</div>
+    <div class="register-aliases">ESP · SP · SPL</div>
+    <div class="register-desc">Stack pointer; always points to the topmost stack item</div>
+  </div>
+  <div class="register-card">
+    <div class="register-name">RBP</div>
+    <div class="register-aliases">EBP · BP · BPL</div>
+    <div class="register-desc">Frame pointer; general purpose when frame is omitted</div>
+  </div>
+  <div class="register-card">
+    <div class="register-name">R8–R15</div>
+    <div class="register-aliases">R8D–R15D · R8W–R15W · R8B–R15B</div>
+    <div class="register-desc">Added in x86-64; no legacy aliases</div>
+  </div>
+</div>
+
+!!! note "Stack alignment"
+    RSP must be aligned to an 8-byte boundary at minimum. Both Windows and Linux x86-64 ABIs enforce 16-byte alignment of RSP at function call boundaries to support SIMD stack operations.
+
+!!! note "Implicit register use"
+    Several instructions fix their operands by convention. IMUL and MUL store a 128-bit product in RDX:RAX. IDIV and DIV read the dividend from RDX:RAX. String instructions use RSI as source, RDI as destination, and RCX as the repeat count. This behavior is inherited from the 8086 and cannot be overridden.
+
+### Instruction Pointer (RIP)
+
+RIP holds the logical address of the next instruction to execute. The processor updates it automatically after each instruction. It cannot be read or written directly by application code.
+
+Control-transfer instructions modify RIP in specific ways. `CALL` pushes the return address onto the stack then loads the target into RIP. `RET` pops the top 8 bytes of the stack into RIP. `JMP` and `Jcc` update RIP without touching the stack.
+
+RIP is also used as the base for RIP-relative memory addressing. The effective address is computed as RIP plus a signed 32-bit displacement encoded in the instruction, giving a reachable window of ±2 GB. This is the default addressing mode for global and static data in x86-64, replacing the absolute 64-bit addresses used in x86-32.
+
+### RFLAGS Register
+
+RFLAGS is a 64-bit register carrying processor status and control bits. Arithmetic, logical, shift, and compare instructions update the status flags. System bits are managed by the OS and must not be modified by application code. Bits 22 through 63 are reserved.
+
+| BIT | SYMBOL | NAME | TYPE | SET WHEN |
+| --- | --- | --- | --- | --- |
+| 0 | CF | Carry | Status | Unsigned overflow; also used by rotates and shifts |
+| 2 | PF | Parity | Status | LSB of result has an even number of 1 bits |
+| 4 | AF | Auxiliary carry | Status | Carry out of bit 3; used by BCD arithmetic |
+| 6 | ZF | Zero | Status | Result is zero |
+| 7 | SF | Sign | Status | Result is negative (MSB is 1) |
+| 8 | TF | Trap | System | Single-step debugging mode |
+| 9 | IF | Interrupt enable | System | Maskable interrupts are enabled |
+| 10 | DF | Direction | Control | 0 = string ops increment RSI/RDI; 1 = decrement |
+| 11 | OF | Overflow | Status | Signed overflow (result too large or too small) |
+| 12–13 | IOPL | I/O privilege level | System | Controls I/O port access privilege |
+| 16 | RF | Resume | System | Suppresses debug faults on next instruction |
+| 17 | VM | Virtual 8086 mode | System | Enables virtual 8086 execution mode |
+| 18 | AC | Alignment check | System | Enables alignment fault on misaligned memory access |
+| 21 | ID | ID | System | CPUID instruction is supported if this bit can be toggled |
+
+!!! note "Condition code convention"
+    Instructions `Jcc`, `CMOVcc`, and `SETcc` evaluate condition codes derived from these flags. Conditions using "above" and "below" test CF and ZF and apply to unsigned comparisons. Conditions using "greater" and "less" test SF, OF, and ZF and apply to signed comparisons.
+
+### Floating-Point and SIMD Registers
+
+The register file scales across three ISA generations. Each wider register tier aliases the lower tiers, so XMM0 is the low 128 bits of YMM0, which is the low 256 bits of ZMM0.
+
+| ISA | REGISTERS | WIDTH | COUNT | USAGE |
+| --- | --- | --- | --- | --- |
+| SSE / AVX | XMM0–XMM15 | 128-bit | 16 | Scalar FP (low 32 or 64 bits used); packed integer and FP |
+| AVX / AVX2 | YMM0–YMM15 | 256-bit | 16 | Packed integer and FP; low 128 bits alias XMM |
+| AVX-512 | ZMM0–ZMM31 | 512-bit | 32 | Packed integer and FP; ZMM0-15 alias YMM/XMM |
+| AVX-512 | K0–K7 | 64-bit | 8 | Opmask registers for merge masking, zero masking, and compare results |
+
+!!! note "Scalar FP usage"
+    For scalar single-precision operations, the processor uses the low 32 bits of an XMM register. For scalar double-precision, the low 64 bits. The upper bits may be modified by some AVX scalar instructions. The legacy x87 FPU is still accessible but is not used in x86-64 code in practice — XMM scalar operations are preferred.
+
+### MXCSR Register
+
+MXCSR is a 32-bit control and status register governing floating-point behavior for SSE and AVX operations. Bits 0–5 are sticky error flags set when a FP exception occurs. Bits 7–12 are masks; when a mask bit is set, the corresponding exception is suppressed silently. Bits 16–31 are reserved.
+
+| BITS | SYMBOL | NAME | DESCRIPTION |
 | --- | --- | --- | --- |
-| RAX | EAX | AX | AH AL |
-| RBX | EBX | BX | BH BL |
-| RCX | ECX | CX | CH CL |
-| RDX | EDX | DX | DH DL |
-| RSI | ESI | SI | SIL |
-| RDI | EDI | DI | DIL |
-| RBP | EBP | BP | BPL |
-| RSP | ESP | SP | SPL |
-| R8 | R8D | R8W | R8B |
-| R9 | R9D | R9W | R9B |
-| R10 | R10D | R10W | R10B |
-| R11 | R11D | R11W | R11B |
-| R12 | R12D | R12W | R12B |
-| R13 | R13D | R13W | R13B |
-| R14 | R14D | R14W | R14B |
-| R15 | R15D | R15W | R15B |
+| 0 | IE | Invalid operation flag | Set on invalid FP operation |
+| 1 | DE | Denormal flag | Set when a denormal operand is used |
+| 2 | ZE | Divide-by-zero flag | Set on FP division by zero |
+| 3 | OE | Overflow flag | Set on FP overflow |
+| 4 | UE | Underflow flag | Set on FP underflow |
+| 5 | PE | Precision flag | Set when a result is rounded |
+| 6 | DAZ | Denormals are zero | Treats all denormal inputs as zero before the operation |
+| 7–12 | IM DM ZM OM UM PM | Exception masks | Suppress the corresponding exception when set; all masked by default |
+| 13–14 | RC | Rounding control | 00 = round to nearest (default), 01 = toward −∞, 10 = toward +∞, 11 = toward zero (truncate) |
+| 15 | FZ | Flush to zero | Forces underflowed results to zero when the underflow mask is set |
+
+!!! note "Default state"
+    At process startup all exception mask bits are set, meaning FP exceptions are suppressed and produce IEEE 754 substitute values rather than signals. Application code modifies RC to control rounding mode. DAZ and FZ are off by default and are enabled in performance-sensitive code to avoid the cost of denormal handling.

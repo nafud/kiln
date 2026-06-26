@@ -386,6 +386,47 @@ tt {
   pointer-events: none;
 }
 
+/* Register cards */
+
+.register-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin: 1rem 0 1.5rem;
+}
+
+.register-card {
+  padding: 0.7rem 0.8rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  background: #ffffff;
+}
+
+.register-name {
+  font-weight: 700;
+  color: #111827;
+  font-size: 0.8rem;
+  margin-bottom: 0.2rem;
+}
+
+.register-aliases {
+  color: #9ca3af;
+  font-size: 0.65rem;
+  margin-bottom: 0.35rem;
+}
+
+.register-desc {
+  color: #6b7280;
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
+@media screen and (max-width: 760px) {
+  .register-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 /* Nav section labels (e.g. "Modern x86" collapsible) */
 
 .md-nav__item--section > .md-nav__link {
