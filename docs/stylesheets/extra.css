@@ -427,16 +427,13 @@ tt {
     background: var(--md-default-bg-color) !important;
 }
 
-.md-sidebar--primary .md-nav--primary > .md-nav__title::after {
-    content: '';
-    position: absolute;
-    bottom: -14px;
-    left: 0;
-    right: 0;
-    height: 14px;
+.sidebar-title-fade {
+    position: sticky;
+    height: 20px;
+    margin-bottom: -20px;
     background: linear-gradient(to bottom, var(--md-default-bg-color), transparent);
     pointer-events: none;
-    z-index: 10;
+    z-index: 9;
 }
 
 .scroll-hidden {

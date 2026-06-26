@@ -1,4 +1,15 @@
 document.addEventListener("DOMContentLoaded", function () {
+  /* Gradient fade below sticky sidebar title */
+
+  const primaryNav = document.querySelector('.md-sidebar--primary .md-nav--primary');
+  const navTitle = primaryNav && primaryNav.querySelector('.md-nav__title');
+  if (navTitle) {
+    const fade = document.createElement('div');
+    fade.className = 'sidebar-title-fade';
+    fade.style.top = navTitle.offsetHeight + 'px';
+    navTitle.parentNode.insertBefore(fade, navTitle.nextSibling);
+  }
+
   /* Hide / show sidebar */
 
   const sidebarButton = document.createElement("button");
