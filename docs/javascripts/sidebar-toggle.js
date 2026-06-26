@@ -4,10 +4,11 @@ function fitKilnAscii() {
   const pre = document.querySelector("pre.kiln-ascii");
   if (!pre) return;
 
-  // Reset to base font-size each time before measuring
   pre.style.fontSize = "1rem";
 
   const container = pre.parentElement;
+  if (!container) return;
+
   const available = container.clientWidth;
   const scrollW = pre.scrollWidth;
 
@@ -61,17 +62,11 @@ document.addEventListener("DOMContentLoaded", function () {
   document.body.appendChild(scrollButtons);
 
   document.getElementById("scroll-top").addEventListener("click", function () {
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth"
-    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   });
 
   document.getElementById("scroll-bottom").addEventListener("click", function () {
-    window.scrollTo({
-      top: document.documentElement.scrollHeight,
-      behavior: "smooth"
-    });
+    window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
   });
 
   function updateScrollButtons() {
@@ -85,3 +80,8 @@ document.addEventListener("DOMContentLoaded", function () {
   window.addEventListener("scroll", updateScrollButtons);
   updateScrollButtons();
 });
+
+/* Re-fit ASCII art on instant navigation page changes */
+if (typeof document$ !== 'undefined') {
+  document$.subscribe(fitKilnAscii);
+}

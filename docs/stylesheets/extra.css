@@ -3,9 +3,6 @@
 :root {
   --md-text-font: "JetBrains Mono";
   --md-code-font: "JetBrains Mono";
-}
-
-:root {
   --md-accent-fg-color: #2563eb;
   --md-accent-fg-color--transparent: rgba(37, 99, 235, 0.1);
 }
@@ -67,6 +64,7 @@ body {
 /* Sidebar */
 
 .md-sidebar {
+  background: #fafafa;
   color: #6b7280;
 }
 
@@ -74,11 +72,12 @@ body {
   color: #111827;
   font-weight: 700;
   font-size: 0.74rem;
+  box-shadow: none !important;
+  border: none !important;
 }
 
 .md-nav--primary .md-nav__title {
   background: transparent !important;
-  box-shadow: none !important;
 }
 
 .md-nav__link {
@@ -106,9 +105,6 @@ body {
 .md-typeset {
   font-size: 0.78rem;
   line-height: 1.7;
-}
-
-.md-typeset {
   color: #111827;
 }
 
@@ -144,12 +140,6 @@ body {
 .md-typeset td,
 .md-typeset th {
   font-size: 0.78rem;
-}
-
-.md-typeset p,
-.md-typeset li,
-.md-typeset td,
-.md-typeset th {
   color: #374151;
 }
 
@@ -232,7 +222,6 @@ tt {
   box-shadow: none;
 }
 
-
 .ascii-diagram {
   background: transparent !important;
   border: none !important;
@@ -246,33 +235,33 @@ tt {
 /* Tables */
 
 .md-typeset__table {
-    width: 100%;
+  width: 100%;
 }
 
 .md-typeset__table table:not([class]) {
-    width: 100%;
-    table-layout: fixed;
-    display: table;
+  width: 100%;
+  table-layout: fixed;
+  display: table;
 }
 
 .md-typeset table:not([class]) {
-    width: 100%;
-    border: 1px solid #e5e7eb;
+  width: 100%;
+  border: 1px solid #e5e7eb;
 }
 
 .md-typeset table:not([class]) th {
-    padding: 0.55rem 0.8rem;
-    background: #f9fafb;
-    color: #6b7280;
-    font-size: 0.65rem;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    font-weight: 700;
-    border-bottom: 2px solid #e5e7eb;
+  padding: 0.55rem 0.8rem;
+  background: #f9fafb;
+  color: #6b7280;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  border-bottom: 2px solid #e5e7eb;
 }
 
 .md-typeset table:not([class]) td {
-    padding: 0.6rem 0.8rem;
+  padding: 0.6rem 0.8rem;
 }
 
 /* Card Blocks */
@@ -341,7 +330,6 @@ tt {
 
 /* Smooth UI interactions */
 
-/* Nav links and buttons: snappy color response on hover */
 .md-nav__link,
 .sidebar-toggle,
 .scroll-btn {
@@ -352,7 +340,6 @@ tt {
     transform 140ms ease-out;
 }
 
-/* Cards: smooth border + spring lift */
 .home-card {
   transition:
     border-color 150ms ease-out,
@@ -364,7 +351,6 @@ tt {
   transform: translateY(-3px);
 }
 
-/* Content area: expand smoothly when sidebar collapses */
 .md-content,
 .md-main__inner {
   transition:
@@ -441,28 +427,22 @@ tt {
   transform: translateY(-1px);
 }
 
-/* Flat navigation headers — solid bg + z-index so content doesn't bleed through sticky title */
-
-.md-nav__title {
-    background: var(--md-default-bg-color) !important;
-    box-shadow: none !important;
-    border: none !important;
-}
+/* Sticky sidebar title — transparent so it matches sidebar background */
 
 .md-sidebar--primary .md-nav--primary > .md-nav__title {
-    position: sticky !important;
-    top: 0 !important;
-    z-index: 10 !important;
-    background: var(--md-default-bg-color) !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
+  background: transparent !important;
 }
 
 .sidebar-title-fade {
-    position: sticky;
-    height: 20px;
-    margin-bottom: -20px;
-    background: linear-gradient(to bottom, var(--md-default-bg-color), transparent);
-    pointer-events: none;
-    z-index: 9;
+  position: sticky;
+  height: 20px;
+  margin-bottom: -20px;
+  background: linear-gradient(to bottom, #fafafa, transparent);
+  pointer-events: none;
+  z-index: 9;
 }
 
 .scroll-hidden {
@@ -480,4 +460,3 @@ tt {
   font-weight: 700;
   padding-top: 0.8rem;
 }
-
