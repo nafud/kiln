@@ -74,7 +74,11 @@ body {
   color: #111827;
   font-weight: 700;
   font-size: 0.74rem;
-  background: transparent;
+}
+
+.md-nav--primary .md-nav__title {
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 .md-nav__link {
