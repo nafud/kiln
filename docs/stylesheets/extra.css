@@ -427,6 +427,18 @@ tt {
     background: var(--md-default-bg-color) !important;
 }
 
+.md-sidebar--primary .md-nav--primary > .md-nav__title::after {
+    content: '';
+    position: absolute;
+    bottom: -14px;
+    left: 0;
+    right: 0;
+    height: 14px;
+    background: linear-gradient(to bottom, var(--md-default-bg-color), transparent);
+    pointer-events: none;
+    z-index: 10;
+}
+
 .scroll-hidden {
   opacity: 0;
   pointer-events: none;
