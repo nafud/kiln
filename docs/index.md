@@ -1,4 +1,10 @@
-<canvas id="kiln-logo" width="800" height="160" aria-label="Kiln"></canvas>
+<pre class="kiln-ascii">█   █  ███  █     █   █
+█  █    █   █     ██  █
+█ █     █   █     █ █ █
+███     █   █     █  ██
+█ █     █   █     █   █
+█  █    █   █     █   █
+█   █  ███  ████  █   █</pre>
 
 Reverse Engineering and Systems Programming Knowledge Base.
 
