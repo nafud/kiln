@@ -22,8 +22,6 @@ x86-32
 
 ## Data Types
 
-Four categories — fundamental · numerical · SIMD · miscellaneous
-
 ### Fundamental Data Types
 
 The elementary units the processor manipulates directly. All sizes are powers of two. Bit numbering is right-to-left with bit 0 as the LSB. Multibyte types are stored in memory using little-endian byte ordering, meaning the least significant byte sits at the lowest address.
@@ -219,7 +217,7 @@ MXCSR is a 32-bit control and status register governing floating-point behavior 
 
 Most x86-64 instructions take one or more source operands and a single destination operand. Operands must be explicitly specified by the programmer in most cases, though some instructions impose fixed register requirements by design. There are three operand types.
 
-An immediate operand is a constant value encoded directly into the instruction. A register operand refers to a value currently held in a general-purpose or SIMD register. A memory operand designates a location in memory, computed at runtime from an address expression. Only one memory operand is permitted per instruction — either the source or the destination, never both simultaneously.
+An immediate operand is a constant value encoded directly into the instruction. A register operand refers to a value currently held in a general-purpose or SIMD register. A memory operand designates a location in memory, computed at runtime from an address expression. Only one memory operand is permitted per instruction.
 
 | TYPE | EXAMPLE | C++ EQUIVALENT |
 | --- | --- | --- |
