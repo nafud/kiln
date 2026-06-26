@@ -312,32 +312,34 @@ tt {
 
 /* Smooth UI interactions */
 
-.md-sidebar,
-.md-sidebar__scrollwrap,
-.md-nav,
-.md-nav__item,
+/* Nav links and buttons: snappy color response on hover */
 .md-nav__link,
-.md-content,
-.md-main__inner,
-.md-header,
-.home-card,
-.sidebar-toggle {
+.sidebar-toggle,
+.scroll-btn {
   transition:
-    color 160ms ease,
-    background-color 160ms ease,
-    border-color 160ms ease,
-    opacity 180ms ease,
-    transform 180ms ease,
-    width 180ms ease,
-    max-width 180ms ease,
-    min-width 180ms ease,
-    flex-basis 180ms ease,
-    padding 180ms ease,
-    margin 180ms ease;
+    color 140ms ease-out,
+    background-color 140ms ease-out,
+    border-color 140ms ease-out,
+    transform 140ms ease-out;
+}
+
+/* Cards: smooth border + spring lift */
+.home-card {
+  transition:
+    border-color 150ms ease-out,
+    background-color 150ms ease-out,
+    transform 240ms cubic-bezier(0.34, 1.4, 0.64, 1);
 }
 
 .home-card:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px);
+}
+
+/* Content area: expand smoothly when sidebar collapses */
+.md-content,
+.md-main__inner {
+  transition:
+    max-width 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Smooth sidebar hide/show */
@@ -346,19 +348,20 @@ tt {
   opacity: 1;
   transform: translateX(0);
   transition:
-    opacity 220ms ease,
-    transform 220ms ease,
-    width 220ms ease,
-    min-width 220ms ease,
-    max-width 220ms ease,
-    margin 220ms ease,
-    padding 220ms ease;
+    opacity 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    width 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    min-width 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    max-width 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    flex-basis 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    padding 300ms cubic-bezier(0.4, 0, 0.2, 1),
+    margin 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .md-sidebar--primary .md-sidebar__scrollwrap {
   transition:
-    opacity 160ms ease,
-    transform 200ms ease;
+    opacity 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 260ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar-hidden .md-sidebar--primary .md-sidebar__scrollwrap {
@@ -401,7 +404,6 @@ tt {
   font-family: "JetBrains Mono", monospace;
   font-size: 0.85rem;
   cursor: pointer;
-  transition: all 160ms ease;
 }
 
 .scroll-btn:hover {
