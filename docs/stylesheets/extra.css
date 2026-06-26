@@ -159,6 +159,12 @@ body {
   text-decoration: underline;
 }
 
+/* Hide "Copied to clipboard" dialog */
+
+[data-md-component="dialog"] {
+  display: none !important;
+}
+
 /* Code blocks */
 
 .md-typeset pre,
