@@ -367,7 +367,8 @@ tt {
 
 /* Sticky sidebar title — transparent so it matches sidebar background */
 
-.md-sidebar--primary .md-nav--primary > .md-nav__title {
+.md-sidebar--primary .md-nav--primary > .md-nav__title,
+.md-sidebar--secondary .md-nav__title {
   position: sticky !important;
   top: 0 !important;
   z-index: 10 !important;
