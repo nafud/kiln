@@ -1,4 +1,4 @@
-# Digital Forensics
+# Courses
 
 Digital forensics investigation notes and cheatsheets.
 

@@ -57,6 +57,7 @@ nav:
       - "Computer Systems: A Programmer's Perspective": re/books/csapp/index.md
 
   - Tools:
+      - tools/index.md
       - Radare2: re/radare2/index.md
 
   - Courses:
