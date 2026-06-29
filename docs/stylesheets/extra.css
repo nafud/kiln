@@ -311,21 +311,22 @@ tt {
 .md-nav__link,
 .scroll-btn {
   transition:
-    color 140ms ease-out,
-    background-color 140ms ease-out,
-    border-color 140ms ease-out,
-    transform 140ms ease-out;
+    color 200ms ease,
+    background-color 200ms ease,
+    border-color 200ms ease,
+    transform 200ms ease;
 }
 
 .home-card {
   transition:
-    border-color 150ms ease-out,
-    background-color 150ms ease-out,
-    transform 240ms cubic-bezier(0.34, 1.4, 0.64, 1);
+    border-color 200ms ease,
+    box-shadow 200ms ease,
+    transform 200ms ease;
 }
 
 .home-card:hover {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07);
 }
 
 .md-content,
@@ -361,6 +362,7 @@ tt {
   color: #2563eb;
   border-color: #2563eb;
   transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 /* Sticky sidebar title — transparent so it matches sidebar background */
