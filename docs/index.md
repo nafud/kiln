@@ -23,7 +23,7 @@
 <span class="home-card-text">Reverse engineering and systems programming books.</span>
 </a>
 
-<a class="home-card" href="re/radare2/">
+<a class="home-card" href="tools/">
 <span class="home-card-title">Tools</span>
 <span class="home-card-text">Tooling notes and cheatsheets.</span>
 </a>
