@@ -80,6 +80,18 @@ body {
   background: transparent !important;
 }
 
+/* Section titles when expanded — match the collapsed grey uppercase label */
+
+.md-nav--primary > .md-nav__list > .md-nav__item > .md-nav > .md-nav__title {
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+  font-size: 0.65rem !important;
+  color: #9ca3af !important;
+  font-weight: 700 !important;
+  padding-top: 0.8rem !important;
+  box-shadow: none !important;
+}
+
 .md-nav__link {
   color: #6b7280;
   font-size: 0.72rem;
@@ -470,15 +482,3 @@ tt {
   color: #d1d5db;
 }
 
-/* Top-level nav titles — grey uppercase section labels (expanded state) */
-
-.md-nav--primary .md-nav__list > .md-nav__item > .md-nav > .md-nav__title {
-  text-transform: uppercase !important;
-  letter-spacing: 0.08em !important;
-  font-size: 0.65rem !important;
-  color: #9ca3af !important;
-  font-weight: 700 !important;
-  padding-top: 0.8rem !important;
-  box-shadow: none !important;
-  background: transparent !important;
-}
