@@ -451,13 +451,15 @@ tt {
   padding-top: 0.8rem;
 }
 
-/* Top-level nav items — bold, uppercase, spaced like section headers */
+/* Top-level nav items — bold and dark, spaced to distinguish from children */
 
 .md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link {
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 0.65rem !important;
-  color: #9ca3af !important;
+  font-size: 0.74rem !important;
+  color: #111827 !important;
   font-weight: 700;
-  padding-top: 0.8rem;
+  margin-top: 0.6rem;
+}
+
+.md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link:hover {
+  color: #2563eb !important;
 }
