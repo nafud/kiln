@@ -371,7 +371,7 @@ tt {
   position: sticky !important;
   top: 0 !important;
   z-index: 10 !important;
-  background: transparent !important;
+  background: #fafafa !important;
 }
 
 .sidebar-title-fade {
