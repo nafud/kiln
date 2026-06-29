@@ -18,7 +18,7 @@
 
 <div class="home-grid">
 
-<a class="home-card" href="re/books/">
+<a class="home-card" href="books/">
 <span class="home-card-title">Books</span>
 <span class="home-card-text">Reverse engineering and systems programming books.</span>
 </a>
@@ -28,12 +28,12 @@
 <span class="home-card-text">Tooling notes and cheatsheets.</span>
 </a>
 
-<a class="home-card" href="df/">
+<a class="home-card" href="courses/">
 <span class="home-card-title">Courses</span>
 <span class="home-card-text">Investigation notes for Windows, Linux, and macOS.</span>
 </a>
 
-<a class="home-card" href="re/crackmes/">
+<a class="home-card" href="writeups/">
 <span class="home-card-title">Writeups</span>
 <span class="home-card-text">Crackme writeup solutions.</span>
 </a>

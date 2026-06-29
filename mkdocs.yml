@@ -44,28 +44,28 @@ plugins:
 
 nav:
   - Books:
-      - re/books/index.md
+      - books/index.md
       - Modern x86 Assembly Language Programming:
-          - re/books/modern-x86/index.md
-          - Chapter 1: re/books/modern-x86/chapter-01.md
-          - Chapter 2: re/books/modern-x86/chapter-02.md
-      - Reverse Engineering for Beginners: re/books/re4b/index.md
-      - Practical Reverse Engineering: re/books/pre/index.md
-      - Practical Binary Analysis: re/books/pba/index.md
-      - "Reversing: Secrets of Reverse Engineering": re/books/reversing/index.md
-      - "Computer Systems: A Programmer's Perspective": re/books/csapp/index.md
+          - books/modern-x86/index.md
+          - Chapter 1: books/modern-x86/chapter-01.md
+          - Chapter 2: books/modern-x86/chapter-02.md
+      - Reverse Engineering for Beginners: books/re4b/index.md
+      - Practical Reverse Engineering: books/pre/index.md
+      - Practical Binary Analysis: books/pba/index.md
+      - "Reversing: Secrets of Reverse Engineering": books/reversing/index.md
+      - "Computer Systems: A Programmer's Perspective": books/csapp/index.md
 
   - Tools:
       - tools/index.md
-      - Radare2: re/radare2/index.md
+      - Radare2: tools/radare2/index.md
 
   - Courses:
-      - df/index.md
-      - Investigating Windows Endpoints: df/windows-endpoints/index.md
-      - Investigating Windows Memory: df/windows-memory/index.md
-      - Investigating Linux Devices: df/linux-devices/index.md
-      - Investigating macOS Endpoints: df/macos-endpoints/index.md
+      - courses/index.md
+      - Investigating Windows Endpoints: courses/windows-endpoints/index.md
+      - Investigating Windows Memory: courses/windows-memory/index.md
+      - Investigating Linux Devices: courses/linux-devices/index.md
+      - Investigating macOS Endpoints: courses/macos-endpoints/index.md
 
   - Writeups:
-      - re/crackmes/index.md
-      - Crackmes.one: re/crackmes/writeup.md
+      - writeups/index.md
+      - Crackmes.one: writeups/writeup.md
