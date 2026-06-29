@@ -351,11 +351,6 @@ tt {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07);
 }
 
-.md-content,
-.md-main__inner {
-  transition:
-    max-width 300ms cubic-bezier(0.4, 0, 0.2, 1);
-}
 
 /* Scroll buttons */
 
@@ -452,16 +447,6 @@ tt {
   }
 }
 
-/* Nav section labels (e.g. "Modern x86" collapsible) */
-
-.md-nav__item--section > .md-nav__link {
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 0.65rem !important;
-  color: #9ca3af !important;
-  font-weight: 700;
-  padding-top: 0.8rem;
-}
 
 /* Top-level nav items — grey uppercase section labels (collapsed state) */
 
