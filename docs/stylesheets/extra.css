@@ -292,12 +292,22 @@ tt {
   color: #111827;
   font-weight: 700;
   margin-bottom: 0.5rem;
+  transition: color 200ms ease;
 }
 
 .home-card-text {
   display: block;
   color: #6b7280;
   line-height: 1.6;
+  transition: color 200ms ease;
+}
+
+.home-card:hover .home-card-title {
+  color: #2563eb;
+}
+
+.home-card:hover .home-card-text {
+  color: #4b5563;
 }
 
 @media screen and (max-width: 760px) {
