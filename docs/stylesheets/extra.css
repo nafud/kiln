@@ -450,3 +450,14 @@ tt {
   font-weight: 700;
   padding-top: 0.8rem;
 }
+
+/* Top-level nav items — bold, uppercase, spaced like section headers */
+
+.md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.65rem !important;
+  color: #9ca3af !important;
+  font-weight: 700;
+  padding-top: 0.8rem;
+}
