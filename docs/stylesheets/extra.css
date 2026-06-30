@@ -69,23 +69,27 @@ body {
 }
 
 .md-nav__title {
+  color: #111827;
   font-weight: 700;
-  font-size: 0.65rem;
-  color: #9ca3af;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 0.74rem;
   box-shadow: none !important;
   border: none !important;
+}
+
+.md-nav--primary .md-nav__title {
   background: transparent !important;
 }
 
-/* "Kiln" site title — larger and dark */
+/* Section titles when expanded — match the collapsed grey uppercase label */
 
-.md-nav--primary > .md-nav__title {
-  font-size: 0.74rem !important;
-  color: #111827 !important;
-  text-transform: none !important;
-  letter-spacing: normal !important;
+.md-nav--primary > .md-nav__list > .md-nav__item > .md-nav > .md-nav__title {
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+  font-size: 0.65rem !important;
+  color: #9ca3af !important;
+  font-weight: 700 !important;
+  padding-top: 0.8rem !important;
+  box-shadow: none !important;
 }
 
 .md-nav__link {
@@ -386,10 +390,6 @@ tt {
   top: 0 !important;
   z-index: 10 !important;
   background: #fafafa !important;
-  color: #111827 !important;
-  text-transform: none !important;
-  letter-spacing: normal !important;
-  font-size: 0.74rem !important;
 }
 
 .sidebar-title-fade {
