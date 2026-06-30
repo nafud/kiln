@@ -448,19 +448,6 @@ tt {
 }
 
 
-/* Terminal-style bracket prefix on top-level nav section labels */
-
-.md-nav--primary > .md-nav__list > .md-nav__item:nth-child(1) > .md-nav__link::before { content: '[B] '; }
-.md-nav--primary > .md-nav__list > .md-nav__item:nth-child(2) > .md-nav__link::before { content: '[T] '; }
-.md-nav--primary > .md-nav__list > .md-nav__item:nth-child(3) > .md-nav__link::before { content: '[C] '; }
-.md-nav--primary > .md-nav__list > .md-nav__item:nth-child(4) > .md-nav__link::before { content: '[W] '; }
-
-/* Same for expanded state titles */
-
-.md-nav--primary > .md-nav__list > .md-nav__item:nth-child(1) > .md-nav > .md-nav__title::before { content: '[B] '; }
-.md-nav--primary > .md-nav__list > .md-nav__item:nth-child(2) > .md-nav > .md-nav__title::before { content: '[T] '; }
-.md-nav--primary > .md-nav__list > .md-nav__item:nth-child(3) > .md-nav > .md-nav__title::before { content: '[C] '; }
-.md-nav--primary > .md-nav__list > .md-nav__item:nth-child(4) > .md-nav > .md-nav__title::before { content: '[W] '; }
 
 /* Top-level nav items — grey uppercase section labels (collapsed state) */
 
