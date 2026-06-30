@@ -3,8 +3,8 @@
 :root {
   --md-text-font: "JetBrains Mono";
   --md-code-font: "JetBrains Mono";
-  --md-accent-fg-color: #2563eb;
-  --md-accent-fg-color--transparent: rgba(37, 99, 235, 0.1);
+  --md-accent-fg-color: #1e3a8a;
+  --md-accent-fg-color--transparent: rgba(30, 58, 138, 0.1);
 }
 
 /* Global font */
@@ -99,7 +99,7 @@ body {
 
 .md-nav__link:hover,
 .md-nav__link--active {
-  color: #2563eb;
+  color: #1e3a8a;
 }
 
 /* Right table of contents */
@@ -158,7 +158,7 @@ body {
 /* Links */
 
 .md-typeset a {
-  color: #2563eb;
+  color: #1e3a8a;
   text-decoration: none;
   transition: opacity 150ms ease;
 }
@@ -298,7 +298,7 @@ tt {
 }
 
 .home-card:hover {
-  border-color: #2563eb;
+  border-color: #1e3a8a;
 }
 
 .home-card-title {
@@ -315,7 +315,7 @@ tt {
 }
 
 .home-card:hover .home-card-title {
-  color: #2563eb;
+  color: #1e3a8a;
 }
 
 .home-card:hover .home-card-text {
@@ -380,8 +380,8 @@ tt {
 }
 
 .scroll-btn:hover {
-  color: #2563eb;
-  border-color: #2563eb;
+  color: #1e3a8a;
+  border-color: #1e3a8a;
   transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
