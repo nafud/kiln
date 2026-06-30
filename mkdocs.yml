@@ -18,19 +18,25 @@ theme:
   favicon: assets/images/logo.png
   font: false
   icon:
-    repo: fontawesome/brands/github
+    repo: material/link
   palette:
-    - scheme: default
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
       primary: white
       accent: blue
       toggle:
-        icon: material/weather-night
+        icon: material/brightness-7
         name: Switch to dark mode
-    - scheme: slate
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
       primary: black
       accent: blue
       toggle:
-        icon: material/weather-sunny
+        icon: material/brightness-4
+        name: Switch to system preference
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
         name: Switch to light mode
   features:
     - navigation.instant
