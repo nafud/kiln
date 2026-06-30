@@ -43,7 +43,7 @@ plugins:
   - search
 
 nav:
-  - Books:
+  - 📚 Books:
       - books/index.md
       - Modern x86 Assembly Language Programming:
           - books/modern-x86/index.md
@@ -55,16 +55,16 @@ nav:
       - "Reversing: Secrets of Reverse Engineering": books/reversing/index.md
       - "Computer Systems: A Programmer's Perspective": books/csapp/index.md
 
-  - Tools:
+  - 🔧 Tools:
       - tools/index.md
       - Radare2: tools/radare2/index.md
 
-  - Courses:
+  - 🎓 Courses:
       - courses/index.md
       - Investigating Windows Endpoints: courses/windows-endpoints/index.md
       - Investigating Windows Memory: courses/windows-memory/index.md
       - Investigating Linux Devices: courses/linux-devices/index.md
       - Investigating macOS Endpoints: courses/macos-endpoints/index.md
 
-  - Writeups:
+  - ✍️ Writeups:
       - writeups/index.md
