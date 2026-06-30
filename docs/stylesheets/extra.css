@@ -51,8 +51,8 @@ body {
 /* Search */
 
 .md-search__form {
-  background: #ffffff;
-  border: 1px solid #eeeeee;
+  background: #f3f4f6;
+  border: none;
   border-radius: 4px;
   box-shadow: none;
 }
