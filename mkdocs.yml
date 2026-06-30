@@ -24,13 +24,13 @@ theme:
       primary: white
       accent: blue
       toggle:
-        icon: material/weather-night
+        icon: material/brightness-4
         name: Switch to dark mode
     - scheme: slate
       primary: black
       accent: blue
       toggle:
-        icon: material/weather-sunny
+        icon: material/brightness-7
         name: Switch to light mode
   features:
     - navigation.instant
