@@ -65,7 +65,7 @@ body {
 
 .md-sidebar {
   background: #fafafa;
-  color: #6b7280;
+  color: #b0b7c3;
 }
 
 .md-nav__title {
@@ -86,14 +86,14 @@ body {
   text-transform: uppercase !important;
   letter-spacing: 0.08em !important;
   font-size: 0.65rem !important;
-  color: #9ca3af !important;
+  color: #c4cad4 !important;
   font-weight: 700 !important;
   padding-top: 0.8rem !important;
   box-shadow: none !important;
 }
 
 .md-nav__link {
-  color: #6b7280;
+  color: #b0b7c3;
   font-size: 0.72rem;
 }
 
@@ -130,7 +130,7 @@ body {
 
 /* Page subtitle: first paragraph right after h1 */
 .md-typeset h1 + p {
-  color: #9ca3af;
+  color: #c4cad4;
   font-size: 0.76rem;
   margin-top: 0;
   margin-bottom: 1.8rem;
@@ -152,7 +152,7 @@ body {
 .md-typeset td,
 .md-typeset th {
   font-size: 0.78rem;
-  color: #374151;
+  color: #6b7280;
 }
 
 /* Links */
@@ -169,7 +169,7 @@ body {
 /* Home page ASCII art title */
 
 .md-typeset pre.kiln-ascii {
-  background: linear-gradient(to top, #1a1a1a 0%, #aaaaaa 100%) !important;
+  background: linear-gradient(to top, #888888 0%, #dddddd 100%) !important;
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
   background-clip: text !important;
@@ -264,7 +264,7 @@ tt {
 .md-typeset table:not([class]) th {
   padding: 0.55rem 0.8rem;
   background: #f9fafb;
-  color: #6b7280;
+  color: #b0b7c3;
   font-size: 0.65rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -309,7 +309,7 @@ tt {
 
 .home-card-text {
   display: block;
-  color: #6b7280;
+  color: #b0b7c3;
   line-height: 1.6;
   transition: color 200ms ease;
 }
@@ -319,7 +319,7 @@ tt {
 }
 
 .home-card:hover .home-card-text {
-  color: #4b5563;
+  color: #9ca3af;
 }
 
 @media screen and (max-width: 760px) {
@@ -369,7 +369,7 @@ tt {
   border: 1px solid #e5e7eb;
   border-radius: 4px;
   background: #ffffff;
-  color: #6b7280;
+  color: #b0b7c3;
   font-family: "JetBrains Mono", monospace;
   font-size: 0.85rem;
   cursor: pointer;
@@ -430,13 +430,13 @@ tt {
 }
 
 .register-aliases {
-  color: #9ca3af;
+  color: #c4cad4;
   font-size: 0.65rem;
   margin-bottom: 0.35rem;
 }
 
 .register-desc {
-  color: #6b7280;
+  color: #b0b7c3;
   font-size: 0.68rem;
   line-height: 1.5;
 }
@@ -454,16 +454,16 @@ tt {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-size: 0.65rem !important;
-  color: #9ca3af !important;
+  color: #c4cad4 !important;
   font-weight: 700;
   margin-top: 0.6rem;
 }
 
 .md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link:hover {
-  color: #6b7280 !important;
+  color: #b0b7c3 !important;
 }
 
 .md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link .md-nav__icon {
-  color: #d1d5db;
+  color: #e5e7eb;
 }
 
