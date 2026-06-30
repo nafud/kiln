@@ -18,12 +18,20 @@ function fitKilnAscii() {
   }
 }
 
+/* Debounce resize handler to avoid layout thrashing */
+function debounce(fn, delay) {
+  let timer;
+  return function () {
+    clearTimeout(timer);
+    timer = setTimeout(fn, delay);
+  };
+}
+
 document.addEventListener("DOMContentLoaded", function () {
   fitKilnAscii();
-  window.addEventListener("resize", fitKilnAscii);
+  window.addEventListener("resize", debounce(fitKilnAscii, 100));
 
   /* Gradient fade below sticky sidebar title */
-
   const primaryNav = document.querySelector('.md-sidebar--primary .md-nav--primary');
   const navTitle = primaryNav && primaryNav.querySelector('.md-nav__title');
   if (navTitle) {
@@ -34,22 +42,28 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   /* Scroll buttons */
-
   const scrollButtons = document.createElement("div");
   scrollButtons.className = "scroll-buttons scroll-hidden";
 
-  scrollButtons.innerHTML = `
-    <button class="scroll-btn" id="scroll-top" title="Go to top">↑</button>
-    <button class="scroll-btn" id="scroll-bottom" title="Go to bottom">↓</button>
-  `;
+  const topBtn = document.createElement("button");
+  topBtn.className = "scroll-btn";
+  topBtn.title = "Go to top";
+  topBtn.textContent = "↑";
 
+  const bottomBtn = document.createElement("button");
+  bottomBtn.className = "scroll-btn";
+  bottomBtn.title = "Go to bottom";
+  bottomBtn.textContent = "↓";
+
+  scrollButtons.appendChild(topBtn);
+  scrollButtons.appendChild(bottomBtn);
   document.body.appendChild(scrollButtons);
 
-  document.getElementById("scroll-top").addEventListener("click", function () {
+  topBtn.addEventListener("click", function () {
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
 
-  document.getElementById("scroll-bottom").addEventListener("click", function () {
+  bottomBtn.addEventListener("click", function () {
     window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
   });
 

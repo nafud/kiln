@@ -165,7 +165,6 @@ body {
 
 .md-typeset a:hover {
   opacity: 0.75;
-  text-decoration: underline;
 }
 
 /* Home page ASCII art title */
@@ -361,6 +360,7 @@ tt {
   display: flex;
   gap: 0.4rem;
   z-index: 1000;
+  transition: opacity 150ms ease;
 }
 
 .scroll-btn {
@@ -409,7 +409,6 @@ tt {
 .scroll-hidden {
   opacity: 0;
   pointer-events: none;
-  transition: opacity 150ms ease;
 }
 
 /* Register cards */
