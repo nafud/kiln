@@ -214,6 +214,10 @@ body {
   overflow-x: visible !important;
 }
 
+[data-md-color-scheme="slate"] .md-typeset pre.kiln-ascii {
+  background: linear-gradient(to top, #4b5563 0%, #9ca3af 100%) !important;
+}
+
 .md-content__inner:has(.kiln-ascii) > h1 {
   display: none;
 }
