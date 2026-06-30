@@ -198,10 +198,8 @@ body {
 /* Home page ASCII art title */
 
 .md-typeset pre.kiln-ascii {
-  background: linear-gradient(to top, #888888 0%, #dddddd 100%) !important;
-  -webkit-background-clip: text !important;
-  -webkit-text-fill-color: transparent !important;
-  background-clip: text !important;
+  color: #c4cad4 !important;
+  background: transparent !important;
   border: none !important;
   box-shadow: none !important;
   padding: 0 !important;
