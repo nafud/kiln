@@ -467,3 +467,77 @@ tt {
   color: #d1d5db;
 }
 
+/* Dark mode overrides */
+
+[data-md-color-scheme="slate"] body {
+  background: #0f1117;
+}
+
+[data-md-color-scheme="slate"] .md-header {
+  background: #161b22;
+  border-bottom-color: #30363d;
+}
+
+[data-md-color-scheme="slate"] .md-sidebar {
+  background: #0f1117;
+}
+
+[data-md-color-scheme="slate"] .md-sidebar--primary .md-nav--primary > .md-nav__title,
+[data-md-color-scheme="slate"] .md-sidebar--secondary .md-nav__title {
+  background: #0f1117!important;
+}
+
+[data-md-color-scheme="slate"] .md-search__form {
+  background: #161b22;
+  border-color: #30363d;
+}
+
+[data-md-color-scheme="slate"] .md-typeset h1 {
+  border-bottom-color: #30363d;
+}
+
+[data-md-color-scheme="slate"] .md-typeset pre {
+  background: #161b22;
+  border-color: #30363d;
+}
+
+[data-md-color-scheme="slate"] .md-typeset code {
+  background: #161b22;
+}
+
+[data-md-color-scheme="slate"] .home-card {
+  background: #161b22;
+  border-color: #30363d;
+}
+
+[data-md-color-scheme="slate"] .home-card:hover {
+  border-color: #2563eb;
+}
+
+[data-md-color-scheme="slate"] .home-card-title {
+  color: #e6edf3;
+}
+
+[data-md-color-scheme="slate"] .home-card-text {
+  color: #8b949e;
+}
+
+[data-md-color-scheme="slate"] .home-card:hover .home-card-text {
+  color: #b1bac4;
+}
+
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) {
+  border-color: #30363d;
+}
+
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) th {
+  background: #161b22;
+  border-bottom-color: #30363d;
+}
+
+[data-md-color-scheme="slate"] .scroll-btn {
+  background: #161b22;
+  border-color: #30363d;
+  color: #8b949e;
+}
+
