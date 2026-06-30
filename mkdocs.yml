@@ -38,7 +38,6 @@ extra_css:
 
 extra_javascript:
   - javascripts/sidebar-toggle.js
-  - javascripts/ascii-rain.js
 
 plugins:
   - search
