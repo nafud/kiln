@@ -160,9 +160,11 @@ body {
 .md-typeset a {
   color: #2563eb;
   text-decoration: none;
+  transition: opacity 150ms ease;
 }
 
 .md-typeset a:hover {
+  opacity: 0.75;
   text-decoration: underline;
 }
 
@@ -304,14 +306,12 @@ tt {
   color: #111827;
   font-weight: 700;
   margin-bottom: 0.5rem;
-  transition: color 200ms ease;
 }
 
 .home-card-text {
   display: block;
   color: #b0b7c3;
   line-height: 1.6;
-  transition: color 200ms ease;
 }
 
 .home-card:hover .home-card-title {
@@ -330,25 +330,29 @@ tt {
 
 /* Smooth UI interactions */
 
-.md-nav__link,
-.scroll-btn {
-  transition:
-    color 200ms ease,
-    background-color 200ms ease,
-    border-color 200ms ease,
-    transform 200ms ease;
+.md-nav__link {
+  transition: color 150ms ease;
 }
 
 .home-card {
   transition:
     border-color 200ms ease,
     box-shadow 200ms ease,
-    transform 200ms ease;
+    transform 200ms ease,
+    color 200ms ease;
 }
 
 .home-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07);
+}
+
+.scroll-btn {
+  transition:
+    color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease;
 }
 
 
