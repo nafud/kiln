@@ -338,8 +338,7 @@ tt {
   transition:
     border-color 200ms ease,
     box-shadow 200ms ease,
-    transform 200ms ease,
-    color 200ms ease;
+    transform 200ms ease;
 }
 
 .home-card:hover {
@@ -347,12 +346,9 @@ tt {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07);
 }
 
-.scroll-btn {
-  transition:
-    color 150ms ease,
-    border-color 150ms ease,
-    box-shadow 150ms ease,
-    transform 150ms ease;
+.home-card-title,
+.home-card-text {
+  transition: color 200ms ease;
 }
 
 
@@ -377,6 +373,11 @@ tt {
   font-family: "JetBrains Mono", monospace;
   font-size: 0.85rem;
   cursor: pointer;
+  transition:
+    color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease;
 }
 
 .scroll-btn:hover {
@@ -408,6 +409,7 @@ tt {
 .scroll-hidden {
   opacity: 0;
   pointer-events: none;
+  transition: opacity 150ms ease;
 }
 
 /* Register cards */
