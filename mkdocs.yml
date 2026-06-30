@@ -20,9 +20,18 @@ theme:
   icon:
     repo: fontawesome/brands/github
   palette:
-    scheme: default
-    primary: white
-    accent: blue
+    - scheme: default
+      primary: white
+      accent: blue
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - scheme: slate
+      primary: black
+      accent: blue
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
   features:
     - navigation.instant
     - navigation.tracking
