@@ -9,7 +9,7 @@ Kiln is a static documentation site (MkDocs + Material theme) for reverse engine
 ## Commands
 
 ```bash
-pip install mkdocs mkdocs-material   # install dependencies
+pip install -r requirements.txt      # install dependencies
 mkdocs serve                         # local dev server at http://127.0.0.1:8000
 mkdocs build                         # build static site into site/
 ```
