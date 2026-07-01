@@ -395,20 +395,27 @@ tt {
 }
 
 .scroll-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 38px;
   height: 38px;
   border: 1px solid var(--color-border);
   border-radius: 4px;
   background: var(--color-surface);
   color: var(--color-text-muted);
-  font-family: "JetBrains Mono", monospace;
-  font-size: 0.85rem;
   cursor: pointer;
   transition:
     color 150ms ease,
     border-color 150ms ease,
     box-shadow 150ms ease,
     transform 150ms ease;
+}
+
+.scroll-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
 }
 
 .scroll-btn:hover {

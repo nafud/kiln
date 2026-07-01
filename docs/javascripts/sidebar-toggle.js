@@ -45,15 +45,20 @@ document.addEventListener("DOMContentLoaded", function () {
   const scrollButtons = document.createElement("div");
   scrollButtons.className = "scroll-buttons scroll-hidden";
 
+  const upArrowSvg = '<svg viewBox="0 0 24 24"><path d="M12 8l-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z"/></svg>';
+  const downArrowSvg = '<svg viewBox="0 0 24 24"><path d="M12 16l6-6-1.41-1.41L12 13.17l-4.59-4.58L6 10z"/></svg>';
+
   const topBtn = document.createElement("button");
   topBtn.className = "scroll-btn";
-  topBtn.title = "Go to top";
-  topBtn.textContent = "↑";
+  topBtn.setAttribute("aria-label", "Scroll to top");
+  topBtn.title = "Scroll to top";
+  topBtn.innerHTML = upArrowSvg;
 
   const bottomBtn = document.createElement("button");
   bottomBtn.className = "scroll-btn";
-  bottomBtn.title = "Go to bottom";
-  bottomBtn.textContent = "↓";
+  bottomBtn.setAttribute("aria-label", "Scroll to bottom");
+  bottomBtn.title = "Scroll to bottom";
+  bottomBtn.innerHTML = downArrowSvg;
 
   scrollButtons.appendChild(topBtn);
   scrollButtons.appendChild(bottomBtn);
