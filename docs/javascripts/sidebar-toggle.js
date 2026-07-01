@@ -4,24 +4,27 @@ function fitKilnAscii() {
   const pre = document.querySelector("pre.kiln-ascii");
   if (!pre) return;
 
-  const container = pre.parentElement;
+  const container = pre.closest(".md-content__inner") || pre.parentElement;
   if (!container) return;
 
-  /* Reset font size, then measure container width before the pre can expand it */
-  pre.style.fontSize = "1rem";
-  pre.style.visibility = "hidden";
+  /* Reset any previous scaling */
+  pre.style.fontSize = "";
 
-  const available = container.clientWidth;
+  const available = container.getBoundingClientRect().width;
+  if (!available) return;
 
-  /* Measure natural content width at 1rem */
-  pre.style.whiteSpace = "pre";
-  const naturalWidth = pre.scrollWidth;
+  /* Measure natural width using an off-screen clone so the container
+     width cannot be affected by the pre's own overflow */
+  const clone = pre.cloneNode(true);
+  clone.style.cssText =
+    "position:absolute;top:-9999px;left:-9999px;" +
+    "font-size:1rem;white-space:pre;visibility:hidden;max-width:none;overflow:visible;";
+  document.body.appendChild(clone);
+  const naturalWidth = clone.scrollWidth;
+  document.body.removeChild(clone);
 
-  pre.style.visibility = "";
-
-  if (naturalWidth > 0 && naturalWidth > available) {
-    const scale = (available / naturalWidth) * 0.97;
-    pre.style.fontSize = scale + "rem";
+  if (naturalWidth > available) {
+    pre.style.fontSize = ((available / naturalWidth) * 0.97) + "rem";
   }
 }
 
@@ -35,7 +38,8 @@ function debounce(fn, delay) {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
-  fitKilnAscii();
+  /* Wait for fonts so monospace character widths are accurate */
+  (document.fonts ? document.fonts.ready : Promise.resolve()).then(fitKilnAscii);
   window.addEventListener("resize", debounce(fitKilnAscii, 100));
 
   /* Gradient fade below sticky sidebar title */
