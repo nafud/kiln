@@ -205,8 +205,10 @@ body {
   padding: 0 !important;
   line-height: 1.2 !important;
   margin: 0 0 1.5rem !important;
-  overflow-x: hidden !important;
-  max-width: 100% !important;
+  width: fit-content !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  overflow-x: visible !important;
 }
 
 

@@ -4,27 +4,17 @@ function fitKilnAscii() {
   const pre = document.querySelector("pre.kiln-ascii");
   if (!pre) return;
 
-  const container = pre.closest(".md-content__inner") || pre.parentElement;
+  pre.style.fontSize = "1rem";
+
+  const container = pre.parentElement;
   if (!container) return;
 
-  /* Reset any previous scaling */
-  pre.style.fontSize = "";
+  const available = container.clientWidth;
+  const scrollW = pre.scrollWidth;
 
-  const available = container.getBoundingClientRect().width;
-  if (!available) return;
-
-  /* Measure natural width using an off-screen clone so the container
-     width cannot be affected by the pre's own overflow */
-  const clone = pre.cloneNode(true);
-  clone.style.cssText =
-    "position:absolute;top:-9999px;left:-9999px;" +
-    "font-size:1rem;white-space:pre;visibility:hidden;max-width:none;overflow:visible;";
-  document.body.appendChild(clone);
-  const naturalWidth = clone.scrollWidth;
-  document.body.removeChild(clone);
-
-  if (naturalWidth > available) {
-    pre.style.fontSize = ((available / naturalWidth) * 0.97) + "rem";
+  if (scrollW > 0 && scrollW > available) {
+    const current = parseFloat(getComputedStyle(pre).fontSize);
+    pre.style.fontSize = (current * (available / scrollW) * 0.98) + "px";
   }
 }
 
@@ -38,8 +28,7 @@ function debounce(fn, delay) {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
-  /* Wait for fonts so monospace character widths are accurate */
-  (document.fonts ? document.fonts.ready : Promise.resolve()).then(fitKilnAscii);
+  fitKilnAscii();
   window.addEventListener("resize", debounce(fitKilnAscii, 100));
 
   /* Gradient fade below sticky sidebar title */
