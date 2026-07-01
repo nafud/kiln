@@ -27,21 +27,29 @@ function debounce(fn, delay) {
   };
 }
 
-document.addEventListener("DOMContentLoaded", function () {
-  fitKilnAscii();
-  window.addEventListener("resize", debounce(fitKilnAscii, 100));
-
-  /* Gradient fade below sticky sidebar title */
+/* Gradient fade below sticky sidebar title.
+   Idempotent and safe to re-run: navigation.instant reconciles the DOM
+   against freshly fetched page content, which doesn't include this
+   injected element, so it must be re-created after every navigation. */
+function initSidebarFade() {
   const primaryNav = document.querySelector('.md-sidebar--primary .md-nav--primary');
   const navTitle = primaryNav && primaryNav.querySelector('.md-nav__title');
-  if (navTitle) {
-    const fade = document.createElement('div');
+  if (!navTitle) return;
+
+  let fade = navTitle.parentNode.querySelector('.sidebar-title-fade');
+  if (!fade) {
+    fade = document.createElement('div');
     fade.className = 'sidebar-title-fade';
-    fade.style.top = navTitle.offsetHeight + 'px';
     navTitle.parentNode.insertBefore(fade, navTitle.nextSibling);
   }
+  fade.style.top = navTitle.offsetHeight + 'px';
+}
 
-  /* Scroll buttons */
+/* Scroll-to-top/bottom buttons.
+   Idempotent and safe to re-run, for the same reason as initSidebarFade. */
+function initScrollButtons() {
+  if (document.querySelector('.scroll-buttons')) return;
+
   const scrollButtons = document.createElement("div");
   scrollButtons.className = "scroll-buttons scroll-hidden";
 
@@ -82,9 +90,25 @@ document.addEventListener("DOMContentLoaded", function () {
 
   window.addEventListener("scroll", updateScrollButtons);
   updateScrollButtons();
+}
+
+function init() {
+  fitKilnAscii();
+  initSidebarFade();
+  initScrollButtons();
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  init();
+  window.addEventListener("resize", debounce(function () {
+    fitKilnAscii();
+    initSidebarFade();
+  }, 100));
 });
 
-/* Re-fit ASCII art on instant navigation page changes */
+/* Re-run on instant-navigation page changes: fitKilnAscii recalculates for
+   the new page's content, and initSidebarFade/initScrollButtons recreate
+   elements that navigation.instant's DOM reconciliation may have removed. */
 if (typeof document$ !== 'undefined') {
-  document$.subscribe(fitKilnAscii);
+  document$.subscribe(init);
 }
