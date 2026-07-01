@@ -4,17 +4,24 @@ function fitKilnAscii() {
   const pre = document.querySelector("pre.kiln-ascii");
   if (!pre) return;
 
-  pre.style.fontSize = "1rem";
-
   const container = pre.parentElement;
   if (!container) return;
 
-  const available = container.clientWidth;
-  const scrollW = pre.scrollWidth;
+  /* Reset font size, then measure container width before the pre can expand it */
+  pre.style.fontSize = "1rem";
+  pre.style.visibility = "hidden";
 
-  if (scrollW > 0 && scrollW > available) {
-    const current = parseFloat(getComputedStyle(pre).fontSize);
-    pre.style.fontSize = (current * (available / scrollW) * 0.98) + "px";
+  const available = container.clientWidth;
+
+  /* Measure natural content width at 1rem */
+  pre.style.whiteSpace = "pre";
+  const naturalWidth = pre.scrollWidth;
+
+  pre.style.visibility = "";
+
+  if (naturalWidth > 0 && naturalWidth > available) {
+    const scale = (available / naturalWidth) * 0.97;
+    pre.style.fontSize = scale + "rem";
   }
 }
 
