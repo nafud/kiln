@@ -28,10 +28,12 @@
     staticJitter: 0.14,          /* per-cell ramp offset, as a ramp fraction */
     animAmplitude: 0.2,          /* shimmer swing, as a ramp fraction */
     animSpeedRadPerMs: 0.006,
-    /* Pointermove events stream continuously (~every frame) while the cursor
-       is in motion, so anything longer than a couple of frames here reads as
-       the logo "still animating" after the cursor stops. */
-    idleDelayMs: 50,
+    waveDetune: 1.7,             /* frequency ratio of the secondary wave */
+    /* The shimmer intensity is an envelope that eases in on movement and
+       eases out after the cursor stops, rather than snapping on/off. */
+    idleDelayMs: 150,            /* movement gap treated as "cursor stopped" */
+    attackMs: 120,               /* shimmer fade-in time */
+    releaseMs: 350,              /* shimmer fade-out time after stopping */
     resizeDebounceMs: 150,
     probeColumns: 40,            /* sample size for character cell measuring */
   };
@@ -46,6 +48,8 @@
     staticFrame: "",
     rafId: 0,
     lastMoveAt: 0,
+    lastTickAt: 0,
+    envelope: 0, /* current shimmer intensity, 0 (static) .. 1 (full) */
     fontLoaded: false,
   };
 
@@ -211,10 +215,12 @@
   }
 
   /* Builds one text frame. Pass null for the static frame; pass a timestamp
-     to shimmer the ink cells around their static ramp index. */
+     to shimmer the ink cells around their static ramp index. Two detuned
+     sine waves per cell give an organic ripple, and the swing is scaled by
+     the current envelope so the shimmer eases in and out. */
   function buildFrame(nowMs) {
     const maxIndex = CONFIG.charRamp.length - 1;
-    const swing = CONFIG.animAmplitude * maxIndex;
+    const swing = CONFIG.animAmplitude * maxIndex * state.envelope;
     const lines = [];
     for (let y = 0; y < state.rows; y++) {
       let line = "";
@@ -222,9 +228,10 @@
         const i = y * state.cols + x;
         let index = state.baseIndices[i];
         if (nowMs !== null && state.ink[i]) {
-          const wave = Math.sin(
-            nowMs * CONFIG.animSpeedRadPerMs + state.phases[i]
-          );
+          const angle = nowMs * CONFIG.animSpeedRadPerMs;
+          const wave =
+            0.7 * Math.sin(angle + state.phases[i]) +
+            0.3 * Math.sin(angle * CONFIG.waveDetune + state.phases[i] * 2);
           index = clampIndex(Math.round(index + wave * swing));
         }
         line += CONFIG.charRamp[index];
@@ -263,14 +270,27 @@
       cancelAnimationFrame(state.rafId);
       state.rafId = 0;
     }
+    state.envelope = 0;
+    state.lastTickAt = 0;
   }
 
+  /* Runs while the cursor moves and through the fade-out after it stops:
+     the envelope ramps toward 1 during movement (attack) and toward 0 once
+     movement pauses longer than idleDelayMs (release). The loop ends only
+     when the envelope has fully released, settling on the static frame. */
   function animationTick(now) {
     state.rafId = 0;
     if (!state.pre || !state.pre.isConnected || !state.staticFrame) return;
 
-    if (now - state.lastMoveAt >= CONFIG.idleDelayMs) {
-      state.pre.textContent = state.staticFrame; /* settle back to static */
+    const dt = state.lastTickAt ? now - state.lastTickAt : 0;
+    state.lastTickAt = now;
+    const moving = now - state.lastMoveAt < CONFIG.idleDelayMs;
+    const step = moving ? dt / CONFIG.attackMs : -dt / CONFIG.releaseMs;
+    state.envelope = Math.min(1, Math.max(0, state.envelope + step));
+
+    if (!moving && state.envelope === 0) {
+      state.pre.textContent = state.staticFrame; /* fully settled */
+      state.lastTickAt = 0;
       return;
     }
     state.pre.textContent = buildFrame(now);
