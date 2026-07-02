@@ -34,34 +34,4 @@ Notes from reverse engineering and systems programming books.
 <span class="home-card-text">Systems programming from the ground up.</span>
 </a>
 
-<a class="home-card" href="#">
-<span class="home-card-title">TEMP01</span>
-<span class="home-card-text"></span>
-</a>
-
-<a class="home-card" href="#">
-<span class="home-card-title">TEMP02</span>
-<span class="home-card-text"></span>
-</a>
-
-<a class="home-card" href="#">
-<span class="home-card-title">TEMP03</span>
-<span class="home-card-text"></span>
-</a>
-
-<a class="home-card" href="#">
-<span class="home-card-title">TEMP04</span>
-<span class="home-card-text"></span>
-</a>
-
-<a class="home-card" href="#">
-<span class="home-card-title">TEMP05</span>
-<span class="home-card-text"></span>
-</a>
-
-<a class="home-card" href="#">
-<span class="home-card-title">TEMP06</span>
-<span class="home-card-text"></span>
-</a>
-
 </div>
