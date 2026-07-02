@@ -52,6 +52,7 @@ extra_css:
   - stylesheets/extra.css
 
 extra_javascript:
+  - javascripts/page-utils.js
   - javascripts/sidebar-toggle.js
   - javascripts/ascii-logo.js
 

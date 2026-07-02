@@ -1,12 +1,3 @@
-/* Debounce resize handler to avoid layout thrashing */
-function debounce(fn, delay) {
-  let timer;
-  return function () {
-    clearTimeout(timer);
-    timer = setTimeout(fn, delay);
-  };
-}
-
 /* Gradient fade below sticky sidebar title.
    Idempotent and safe to re-run: navigation.instant reconciles the DOM
    against freshly fetched page content, which doesn't include this
@@ -92,14 +83,9 @@ function init() {
   initScrollButtons();
 }
 
-document.addEventListener("DOMContentLoaded", function () {
-  init();
-  window.addEventListener("resize", debounce(initSidebarFade, 100));
-});
+window.addEventListener("resize", KilnUtils.debounce(initSidebarFade, 100));
 
-/* Re-run on instant-navigation page changes: initSidebarFade and
+/* Re-runs on instant-navigation page changes: initSidebarFade and
    initScrollButtons recreate elements that navigation.instant's DOM
    reconciliation may have removed. */
-if (typeof document$ !== 'undefined') {
-  document$.subscribe(init);
-}
+KilnUtils.onPageChange(init);

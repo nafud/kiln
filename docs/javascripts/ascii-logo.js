@@ -6,10 +6,14 @@
    from the measured character cell and the available container width plus a
    viewport-height budget, so the logo always fits without scrollbars.
 
+   Until generation succeeds the pre shows its plain-text fallback, styled
+   as a title by extra.css; CONFIG.generatedClass switches it to grid
+   sizing. The webfont stylesheet is injected from here rather than
+   @imported in extra.css so only pages that render the logo pay for it.
+
    The logo is static by itself; pointer movement drives a shimmer animation
-   that settles back to the static frame CONFIG.idleDelayMs after the last
-   movement. Idempotent and safe to re-run on navigation.instant page
-   changes, same as sidebar-toggle.js. */
+   whose intensity envelope eases in and out. Idempotent and safe to re-run
+   on navigation.instant page changes, same as sidebar-toggle.js. */
 
 (function () {
   "use strict";
@@ -18,11 +22,15 @@
     text: "Kiln",
     fontFamily: "UnifrakturMaguntia",
     fontFallback: "serif",
+    fontStylesheetUrl:
+      "https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&display=swap",
+    fontStylesheetId: "kiln-logo-font",
+    generatedClass: "kiln-ascii--generated",
     /* Density ramp: darkest ink first, background (space) last. */
     charRamp: "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^`'. ",
     referenceFontPx: 200,        /* offscreen measuring/drawing font size */
     supersample: 3,              /* canvas pixels sampled per cell axis */
-    inkPadding: 0.94,            /* fraction of the grid the glyphs may fill */
+    inkFill: 0.94,               /* fraction of the grid the glyphs fill */
     maxViewportHeightRatio: 0.42,/* height budget so the page never scrolls */
     inkThreshold: 0.04,          /* min coverage for a cell to count as ink */
     staticJitter: 0.14,          /* per-cell ramp offset, as a ramp fraction */
@@ -42,24 +50,20 @@
     pre: null,
     cols: 0,
     rows: 0,
-    baseIndices: null, /* Int16Array: jittered static ramp index per cell */
-    phases: null,      /* Float32Array: per-cell animation phase */
-    ink: null,         /* Uint8Array: 1 where the cell contains glyph ink */
+    baseIndices: null,  /* Int16Array: jittered static ramp index per cell */
+    phases: null,       /* Float32Array: per-cell animation phase */
+    ink: null,          /* Uint8Array: 1 where the cell contains glyph ink */
     staticFrame: "",
+    buildSignature: "", /* grid + font metrics of the last generated frame */
     rafId: 0,
     lastMoveAt: 0,
     lastTickAt: 0,
     envelope: 0, /* current shimmer intensity, 0 (static) .. 1 (full) */
-    fontLoaded: false,
   };
 
-  function debounce(fn, delay) {
-    let timer;
-    return function () {
-      clearTimeout(timer);
-      timer = setTimeout(fn, delay);
-    };
-  }
+  /* MediaQueryList objects are live, so one instance stays correct even if
+     the user toggles the OS setting. */
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
   function clampIndex(index) {
     return Math.min(CONFIG.charRamp.length - 1, Math.max(0, index));
@@ -76,16 +80,44 @@
     return px + 'px "' + CONFIG.fontFamily + '", ' + CONFIG.fontFallback;
   }
 
-  /* Resolves once the webfont is usable by canvas (or immediately when the
-     Font Loading API is unavailable / the font fails — the serif fallback
-     still produces a legible logo). */
-  function loadWebFont() {
-    if (state.fontLoaded || !document.fonts || !document.fonts.load) {
+  /* Injects the logo webfont's stylesheet on demand (memoized), so pages
+     without the logo never fetch it. Resolves on error too — the serif
+     fallback still produces a legible logo. */
+  let fontStylesheetLoaded = null;
+  function ensureFontStylesheet() {
+    if (
+      !fontStylesheetLoaded ||
+      !document.getElementById(CONFIG.fontStylesheetId)
+    ) {
+      fontStylesheetLoaded = new Promise(function (resolve) {
+        const link = document.createElement("link");
+        link.id = CONFIG.fontStylesheetId;
+        link.rel = "stylesheet";
+        link.href = CONFIG.fontStylesheetUrl;
+        link.onload = resolve;
+        link.onerror = resolve;
+        document.head.appendChild(link);
+      });
+    }
+    return fontStylesheetLoaded;
+  }
+
+  /* Resolves once the logo webfont AND the page's own fonts are usable.
+     Waiting for document.fonts.ready matters because measureCharCell
+     depends on the pre's rendered font (JetBrains Mono): building against
+     fallback metrics would produce a grid that clips or under-fills once
+     the real font swaps in. */
+  function loadFonts() {
+    if (!document.fonts || !document.fonts.load) {
       return Promise.resolve();
     }
-    return document.fonts
-      .load(cssFont(CONFIG.referenceFontPx), CONFIG.text)
-      .then(function () { state.fontLoaded = true; })
+    return ensureFontStylesheet()
+      .then(function () {
+        return Promise.all([
+          document.fonts.load(cssFont(CONFIG.referenceFontPx), CONFIG.text),
+          document.fonts.ready,
+        ]);
+      })
       .catch(function () { /* keep the fallback font */ });
   }
 
@@ -143,8 +175,13 @@
 
     let cols = Math.floor(availableWidth(container) / cell.width);
     let rows = rowsForCols(cols);
-    if (rows * cell.height > maxHeight) {
-      cols = Math.floor((cols * maxHeight) / (rows * cell.height));
+    /* Shrink until the height budget truly holds: rowsForCols rounds, so a
+       single proportional scale-down can land a fraction of a row over. */
+    while (cols > 1 && rows * cell.height > maxHeight) {
+      cols = Math.min(
+        cols - 1,
+        Math.floor((cols * maxHeight) / (rows * cell.height))
+      );
       rows = rowsForCols(cols);
     }
     if (cols < 2 || rows < 2) return null;
@@ -161,8 +198,8 @@
     /* Resizing resets canvas state, so configure the context afterwards. */
     ctx.font = cssFont(CONFIG.referenceFontPx);
     ctx.fillStyle = "#000";
-    const scaleX = (canvas.width * CONFIG.inkPadding) / inkBox.width;
-    const scaleY = (canvas.height * CONFIG.inkPadding) / inkBox.height;
+    const scaleX = (canvas.width * CONFIG.inkFill) / inkBox.width;
+    const scaleY = (canvas.height * CONFIG.inkFill) / inkBox.height;
     const originX = (canvas.width - inkBox.width * scaleX) / 2 + inkBox.left * scaleX;
     const originY = (canvas.height - inkBox.height * scaleY) / 2 + inkBox.ascent * scaleY;
     ctx.setTransform(scaleX, 0, 0, scaleY, originX, originY);
@@ -241,24 +278,50 @@
     return lines.join("\n");
   }
 
-  /* Recomputes the whole grid for the current layout and repaints the
-     static frame. Called on init and (debounced) on resize. */
+  /* Recomputes the grid for the current layout and repaints the static
+     frame. Called on init, on (debounced) resize, and after late font
+     loads; the signature guard makes redundant calls cheap. */
   function rebuild() {
     const pre = state.pre;
     if (!pre || !pre.isConnected) return;
 
-    const cell = measureCharCell(pre);
-    if (!cell.width || !cell.height) return;
+    /* Grid sizing must be measured at the generated font size, not the
+       larger text-fallback size, so the class flips before probing. */
+    pre.classList.add(CONFIG.generatedClass);
 
+    const cell = measureCharCell(pre);
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    if (!ctx) return;
+    const inkBox = ctx ? measureInkBox(ctx) : null;
+    const grid =
+      cell.width && cell.height && inkBox && inkBox.width && inkBox.height
+        ? computeGrid(pre, cell, inkBox)
+        : null;
 
-    const inkBox = measureInkBox(ctx);
-    if (!inkBox.width || !inkBox.height) return;
+    if (!grid) {
+      /* Cannot generate (no 2D context, degenerate metrics, tiny layout):
+         restore the readable title-sized text fallback. */
+      pre.classList.remove(CONFIG.generatedClass);
+      return;
+    }
 
-    const grid = computeGrid(pre, cell, inkBox);
-    if (!grid) return;
+    /* Identical grid and font metrics produce an identical frame — skip
+       the canvas work (e.g. a resize that didn't change the layout), but
+       still repaint when the pre is a fresh element from an instant
+       navigation and doesn't show the frame yet. */
+    const signature = [
+      grid.cols,
+      grid.rows,
+      inkBox.width.toFixed(1),
+      inkBox.height.toFixed(1),
+    ].join("|");
+    if (
+      signature === state.buildSignature &&
+      pre.textContent === state.staticFrame
+    ) {
+      return;
+    }
+    state.buildSignature = signature;
 
     buildCells(grid, sampleCoverage(canvas, ctx, grid, inkBox));
     state.staticFrame = buildFrame(null);
@@ -299,7 +362,7 @@
 
   function onPointerMove() {
     if (!state.pre || !state.pre.isConnected || !state.staticFrame) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (reducedMotion.matches) return;
 
     state.lastMoveAt = performance.now();
     if (!state.rafId) {
@@ -316,7 +379,7 @@
       stopAnimation();
       return;
     }
-    loadWebFont().then(function () {
+    loadFonts().then(function () {
       if (state.pre === pre && pre.isConnected) rebuild();
     });
   }
@@ -324,11 +387,17 @@
   window.addEventListener("pointermove", onPointerMove);
   window.addEventListener(
     "resize",
-    debounce(rebuild, CONFIG.resizeDebounceMs)
+    KilnUtils.debounce(rebuild, CONFIG.resizeDebounceMs)
   );
 
-  document.addEventListener("DOMContentLoaded", init);
-  if (typeof document$ !== "undefined") {
-    document$.subscribe(init);
+  /* Fonts that finish after the first build (e.g. a slow @import of the
+     page font) change cell metrics; rebuilding self-heals, and the
+     signature guard makes it free when nothing changed. */
+  if (document.fonts && document.fonts.addEventListener) {
+    document.fonts.addEventListener("loadingdone", function () {
+      if (state.pre && state.pre.isConnected) rebuild();
+    });
   }
+
+  KilnUtils.onPageChange(init);
 })();
