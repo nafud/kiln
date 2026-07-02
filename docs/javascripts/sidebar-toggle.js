@@ -1,23 +1,3 @@
-/* ASCII art auto-fit */
-
-function fitKilnAscii() {
-  const pre = document.querySelector("pre.kiln-ascii");
-  if (!pre) return;
-
-  pre.style.fontSize = "1rem";
-
-  const container = pre.parentElement;
-  if (!container) return;
-
-  const available = container.clientWidth;
-  const scrollW = pre.scrollWidth;
-
-  if (scrollW > 0 && scrollW > available) {
-    const current = parseFloat(getComputedStyle(pre).fontSize);
-    pre.style.fontSize = (current * (available / scrollW) * 0.98) + "px";
-  }
-}
-
 /* Debounce resize handler to avoid layout thrashing */
 function debounce(fn, delay) {
   let timer;
@@ -108,22 +88,18 @@ function initScrollButtons() {
 }
 
 function init() {
-  fitKilnAscii();
   initSidebarFade();
   initScrollButtons();
 }
 
 document.addEventListener("DOMContentLoaded", function () {
   init();
-  window.addEventListener("resize", debounce(function () {
-    fitKilnAscii();
-    initSidebarFade();
-  }, 100));
+  window.addEventListener("resize", debounce(initSidebarFade, 100));
 });
 
-/* Re-run on instant-navigation page changes: fitKilnAscii recalculates for
-   the new page's content, and initSidebarFade/initScrollButtons recreate
-   elements that navigation.instant's DOM reconciliation may have removed. */
+/* Re-run on instant-navigation page changes: initSidebarFade and
+   initScrollButtons recreate elements that navigation.instant's DOM
+   reconciliation may have removed. */
 if (typeof document$ !== 'undefined') {
   document$.subscribe(init);
 }

@@ -25,8 +25,9 @@ Deployment is automatic: pushing to `primary` triggers the GitHub Actions workfl
 
 - [mkdocs.yml](mkdocs.yml) — site config, theme, nav, and plugin settings. The `nav:` section must be updated manually when adding new pages or sections.
 - [docs/](docs/) — all content lives here as Markdown files. Each section has an `index.md` that serves as its landing page. **Everything under `docs/` gets built and published** — do not put internal/non-public files here.
-- [docs/stylesheets/extra.css](docs/stylesheets/extra.css) — custom styles (JetBrains Mono font, card grid on home page, sidebar, scroll buttons).
-- [docs/javascripts/sidebar-toggle.js](docs/javascripts/sidebar-toggle.js) — ASCII art auto-fit, scroll-to-top/bottom buttons.
+- [docs/stylesheets/extra.css](docs/stylesheets/extra.css) — custom styles (JetBrains Mono font, card grid on home page, sidebar, scroll buttons, ASCII logo sizing variables).
+- [docs/javascripts/sidebar-toggle.js](docs/javascripts/sidebar-toggle.js) — sidebar title fade, scroll-to-top/bottom buttons.
+- [docs/javascripts/ascii-logo.js](docs/javascripts/ascii-logo.js) — generative homepage ASCII logo: renders "Kiln" (UnifrakturMaguntia) to an offscreen canvas, maps glyph coverage onto an ASCII density ramp sized to fit the page, and shimmers on cursor movement.
 - [superpowers/](superpowers/) — internal brainstorming specs and implementation plans (not part of the published site). Claude Code's brainstorming/writing-plans skills should write here, not under `docs/superpowers/`.
 
 ## Content sections
