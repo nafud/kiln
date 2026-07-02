@@ -55,10 +55,6 @@ extra_javascript:
   - javascripts/page-utils.js
   - javascripts/sidebar-toggle.js
   - javascripts/ascii-logo.js
-  - javascripts/page-actions.js
-
-hooks:
-  - hooks/export_markdown.py
 
 plugins:
   - search
