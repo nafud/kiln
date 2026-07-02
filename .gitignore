@@ -1,3 +1,6 @@
 .venv/
 site/
 __pycache__/
+
+# Local Claude Code tooling (launch config, etc.)
+.claude/

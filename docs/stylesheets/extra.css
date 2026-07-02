@@ -135,6 +135,7 @@ body {
 .md-nav__link {
   color: var(--color-text-muted);
   font-size: 0.72rem;
+  transition: color 150ms ease;
 }
 
 .md-nav__link:hover,
@@ -220,11 +221,9 @@ body {
   padding: 0 !important;
   font-size: var(--kiln-logo-fallback-font-size) !important;
   line-height: var(--kiln-logo-line-height) !important;
-  margin: 0 0 1.5rem !important;
+  margin: 0 auto 1.5rem !important;
   width: fit-content !important;
   max-width: 100% !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
   overflow: hidden !important;
   user-select: none;
   cursor: default;
@@ -234,7 +233,7 @@ body {
   font-size: var(--kiln-logo-font-size) !important;
 }
 
-
+/* The homepage has no title heading — the ASCII logo is the title */
 .md-content__inner:has(.kiln-ascii) > h1 {
   display: none;
 }
@@ -336,7 +335,11 @@ tt {
   margin-top: 1.5rem;
 }
 
-.home-card {
+/* Written as `.md-typeset a.home-card` because the generic `.md-typeset a`
+   link rule above otherwise outranks a bare `.home-card` by specificity,
+   replacing the card transitions with the link opacity fade and dimming
+   the whole card on hover. */
+.md-typeset a.home-card {
   display: block;
   min-height: 6rem;
   padding: 0.9rem 1rem;
@@ -344,10 +347,17 @@ tt {
   border-radius: 4px;
   background: var(--color-surface);
   text-decoration: none !important;
+  transition:
+    border-color 200ms ease,
+    box-shadow 200ms ease,
+    transform 200ms ease;
 }
 
-.home-card:hover {
+.md-typeset a.home-card:hover {
+  opacity: 1; /* cancel the generic link hover fade */
   border-color: var(--color-accent);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px var(--color-shadow);
 }
 
 .home-card-title {
@@ -355,12 +365,14 @@ tt {
   color: var(--color-text-primary);
   font-weight: 700;
   margin-bottom: 0.5rem;
+  transition: color 200ms ease;
 }
 
 .home-card-text {
   display: block;
   color: var(--color-text-muted);
   line-height: 1.6;
+  transition: color 200ms ease;
 }
 
 .home-card:hover .home-card-title {
@@ -370,36 +382,6 @@ tt {
 .home-card:hover .home-card-text {
   color: var(--color-text-secondary);
 }
-
-@media screen and (max-width: 760px) {
-  .home-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Smooth UI interactions */
-
-.md-nav__link {
-  transition: color 150ms ease;
-}
-
-.home-card {
-  transition:
-    border-color 200ms ease,
-    box-shadow 200ms ease,
-    transform 200ms ease;
-}
-
-.home-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px var(--color-shadow);
-}
-
-.home-card-title,
-.home-card-text {
-  transition: color 200ms ease;
-}
-
 
 /* Scroll buttons */
 
@@ -503,13 +485,6 @@ tt {
   line-height: 1.5;
 }
 
-@media screen and (max-width: 760px) {
-  .register-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-
 /* Top-level nav items — grey uppercase section labels (collapsed state) */
 
 .md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link {
@@ -527,5 +502,17 @@ tt {
 
 .md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link .md-nav__icon {
   color: var(--color-border);
+}
+
+/* Narrow screens */
+
+@media screen and (max-width: 760px) {
+  .home-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .register-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 

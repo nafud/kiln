@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - primary
+  workflow_dispatch: # manual re-deploy without an empty commit
 
 permissions:
   contents: read

@@ -13,7 +13,7 @@
 
    The logo is static by itself; pointer movement drives a shimmer animation
    whose intensity envelope eases in and out. Idempotent and safe to re-run
-   on navigation.instant page changes, same as sidebar-toggle.js. */
+   on navigation.instant page changes, same as page-chrome.js. */
 
 (function () {
   "use strict";

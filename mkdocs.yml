@@ -53,7 +53,7 @@ extra_css:
 
 extra_javascript:
   - javascripts/page-utils.js
-  - javascripts/sidebar-toggle.js
+  - javascripts/page-chrome.js
   - javascripts/ascii-logo.js
 
 plugins:

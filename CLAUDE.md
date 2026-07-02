@@ -27,7 +27,7 @@ Deployment is automatic: pushing to `primary` triggers the GitHub Actions workfl
 - [docs/](docs/) — all content lives here as Markdown files. Each section has an `index.md` that serves as its landing page. **Everything under `docs/` gets built and published** — do not put internal/non-public files here.
 - [docs/stylesheets/extra.css](docs/stylesheets/extra.css) — custom styles (JetBrains Mono font, card grid on home page, sidebar, scroll buttons, ASCII logo sizing variables).
 - [docs/javascripts/page-utils.js](docs/javascripts/page-utils.js) — shared `KilnUtils` helpers (debounce, navigation.instant-aware page-change hook) used by the other scripts; must stay first in `extra_javascript`.
-- [docs/javascripts/sidebar-toggle.js](docs/javascripts/sidebar-toggle.js) — sidebar title fade, scroll-to-top/bottom buttons.
+- [docs/javascripts/page-chrome.js](docs/javascripts/page-chrome.js) — sidebar title fade, scroll-to-top/bottom buttons.
 - [docs/javascripts/ascii-logo.js](docs/javascripts/ascii-logo.js) — generative homepage ASCII logo: renders "Kiln" (UnifrakturMaguntia) to an offscreen canvas, maps glyph coverage onto an ASCII density ramp sized to fit the page, and shimmers on cursor movement.
 - [superpowers/](superpowers/) — internal brainstorming specs and implementation plans (not part of the published site). Claude Code's brainstorming/writing-plans skills should write here, not under `docs/superpowers/`.
 
