@@ -14,7 +14,12 @@ mkdocs serve                         # local dev server at http://127.0.0.1:8000
 mkdocs build                         # build static site into site/
 ```
 
-Deployment is automatic: pushing to `main` triggers the GitHub Actions workflow at [.github/workflows/deploy.yml](.github/workflows/deploy.yml), which builds and deploys to GitHub Pages.
+Deployment is automatic: pushing to `primary` triggers the GitHub Actions workflow at [.github/workflows/deploy.yml](.github/workflows/deploy.yml), which builds and deploys to GitHub Pages.
+
+## Branch workflow
+
+- `primary` — production. Pushing here deploys the public site.
+- `secondary` — test branch. All changes are made and committed here first, verified with a local `mkdocs serve`, then merged/pushed to `primary` once confirmed good.
 
 ## Structure
 

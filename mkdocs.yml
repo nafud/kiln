@@ -83,3 +83,4 @@ nav:
 
   - Writeups:
       - writeups/index.md
+      - CFB1: writeups/cfb1.md
