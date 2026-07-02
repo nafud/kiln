@@ -28,7 +28,10 @@
     staticJitter: 0.14,          /* per-cell ramp offset, as a ramp fraction */
     animAmplitude: 0.2,          /* shimmer swing, as a ramp fraction */
     animSpeedRadPerMs: 0.006,
-    idleDelayMs: 400,
+    /* Pointermove events stream continuously (~every frame) while the cursor
+       is in motion, so anything longer than a couple of frames here reads as
+       the logo "still animating" after the cursor stops. */
+    idleDelayMs: 50,
     resizeDebounceMs: 150,
     probeColumns: 40,            /* sample size for character cell measuring */
   };
