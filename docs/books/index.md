@@ -2,6 +2,8 @@
 
 Notes from reverse engineering and systems programming books.
 
+## Category 01
+
 <div class="home-grid">
 
 <a class="home-card" href="modern-x86/">
@@ -34,6 +36,12 @@ Notes from reverse engineering and systems programming books.
 <span class="home-card-text">Systems programming from the ground up.</span>
 </a>
 
+</div>
+
+## Category 02
+
+<div class="home-grid">
+
 <a class="home-card" href="#">
 <span class="home-card-title">TEMP01</span>
 <span class="home-card-text"></span>
@@ -58,6 +66,12 @@ Notes from reverse engineering and systems programming books.
 <span class="home-card-title">TEMP05</span>
 <span class="home-card-text"></span>
 </a>
+
+</div>
+
+## Category 03
+
+<div class="home-grid">
 
 <a class="home-card" href="#">
 <span class="home-card-title">TEMP06</span>
