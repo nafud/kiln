@@ -1,7 +1,12 @@
 # Writeups
 
-Writeup solutions for crackmes from crackmes.one.
+Writeup solutions for reverse engineering challenges.
 
-| Crackme | Platform | Difficulty | Author |
-|---|---|---|---|
-| [CFB1](cfb1.md) | Windows x86-64 | Easy | pwn.by |
+<div class="home-grid">
+
+<a class="home-card" href="crackmes-one/">
+<span class="home-card-title">Crackmes.one</span>
+<span class="home-card-text">Crackme solutions from crackmes.one.</span>
+</a>
+
+</div>

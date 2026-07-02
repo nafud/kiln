@@ -83,4 +83,6 @@ nav:
 
   - Writeups:
       - writeups/index.md
-      - CFB1: writeups/cfb1.md
+      - Crackmes.one:
+          - writeups/crackmes-one/index.md
+          - CFB1: writeups/crackmes-one/cfb1.md
