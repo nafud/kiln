@@ -29,6 +29,8 @@ Deployment is automatic: pushing to `primary` triggers the GitHub Actions workfl
 - [docs/javascripts/page-utils.js](docs/javascripts/page-utils.js) — shared `KilnUtils` helpers (debounce, navigation.instant-aware page-change hook) used by the other scripts; must stay first in `extra_javascript`.
 - [docs/javascripts/sidebar-toggle.js](docs/javascripts/sidebar-toggle.js) — sidebar title fade, scroll-to-top/bottom buttons.
 - [docs/javascripts/ascii-logo.js](docs/javascripts/ascii-logo.js) — generative homepage ASCII logo: renders "Kiln" (UnifrakturMaguntia) to an offscreen canvas, maps glyph coverage onto an ASCII density ramp sized to fit the page, and shimmers on cursor movement.
+- [docs/javascripts/page-actions.js](docs/javascripts/page-actions.js) — per-page actions menu (View as Markdown, Export as PDF via print, Open in ChatGPT/Claude) shown on all pages except the homepage.
+- [hooks/export_markdown.py](hooks/export_markdown.py) — MkDocs build hook that copies each page's Markdown source into the site at `<page-url>index.md`; the page-actions menu links to these raw files.
 - [superpowers/](superpowers/) — internal brainstorming specs and implementation plans (not part of the published site). Claude Code's brainstorming/writing-plans skills should write here, not under `docs/superpowers/`.
 
 ## Content sections
