@@ -4,6 +4,18 @@ site_url: https://skllcrshrs.github.io/kiln/
 repo_url: https://github.com/skllcrshrs/kiln
 repo_name: skllcrshrs/kiln
 
+# Escalate link problems to warnings so `mkdocs build --strict` (run in CI
+# on secondary) fails on them. The homepage is intentionally not in nav,
+# so omitted_files stays at info.
+validation:
+  nav:
+    omitted_files: info
+    not_found: warn
+  links:
+    not_found: warn
+    absolute_links: warn
+    unrecognized_links: warn
+
 markdown_extensions:
   - admonition
   - attr_list
