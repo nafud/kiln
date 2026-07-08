@@ -24,11 +24,6 @@ Notes from reverse engineering and systems programming books.
 <span class="home-card-text">Binary analysis techniques and tools.</span>
 </a>
 
-<a class="home-card" href="rsore/">
-<span class="home-card-title">Reversing: Secrets of Reverse Engineering</span>
-<span class="home-card-text">Reversing techniques by Eldad Eilam.</span>
-</a>
-
 <a class="home-card" href="csapp/">
 <span class="home-card-title">Computer Systems: A Programmer's Perspective</span>
 <span class="home-card-text">Systems programming from the ground up.</span>

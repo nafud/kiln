@@ -86,7 +86,6 @@ nav:
           - Chapter 1: books/pba/pba-chapter-01.md
           - Chapter 2: books/pba/pba-chapter-02.md
           - Chapter 3: books/pba/pba-chapter-03.md
-      - "Reversing: Secrets of Reverse Engineering": books/rsore/index.md
       - "Computer Systems: A Programmer's Perspective":
           - books/csapp/index.md
           - Chapter 3: books/csapp/csapp-chapter-03.md

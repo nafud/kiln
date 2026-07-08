@@ -63,7 +63,7 @@ Three long-lived branches form a pipeline. Work flows strictly downward — `red
 
 ## File naming convention
 
-Each folder's landing page stays named `index.md` (this keeps clean directory URLs like `/books/csapp/` and drives Material's `navigation.indexes` feature; the homepage `docs/index.md` must also keep this name). Every **non-index content page is prefixed with its folder's slug** so filenames are globally unique and greppable — e.g. `books/csapp/csapp-chapter-07.md`, `books/pba/pba-chapter-01.md`, `writeups/crackmes-one/crackmes-one-cfb1.md`. Folder slugs are short codes: `mx86alp` (Modern x86 ALP), `rsore` (Reversing: Secrets of RE), `ild`/`ime`/`iwe`/`iwm` (the Investigating … courses).
+Each folder's landing page stays named `index.md` (this keeps clean directory URLs like `/books/csapp/` and drives Material's `navigation.indexes` feature; the homepage `docs/index.md` must also keep this name). Every **non-index content page is prefixed with its folder's slug** so filenames are globally unique and greppable — e.g. `books/csapp/csapp-chapter-07.md`, `books/pba/pba-chapter-01.md`, `writeups/crackmes-one/crackmes-one-cfb1.md`. Folder slugs are short codes: `mx86alp` (Modern x86 ALP), `ild`/`ime`/`iwe`/`iwm` (the Investigating … courses).
 
 ## Adding content
 
