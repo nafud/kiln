@@ -6,7 +6,7 @@ Notes from reverse engineering and systems programming books.
 
 <a class="home-card" href="csapp/">
 <span class="home-card-title">Computer Systems: A Programmer's Perspective</span>
-<span class="home-card-text">Third Global Edition. By Randal E. Bryant and David R. O'Hallaron.</span>
+<span class="home-card-text">Third Edition. By Randal E. Bryant and David R. O'Hallaron.</span>
 </a>
 
 <a class="home-card" href="mx86alp/">
