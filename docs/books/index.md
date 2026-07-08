@@ -4,7 +4,7 @@ Notes from reverse engineering and systems programming books.
 
 <div class="home-grid">
 
-<a class="home-card" href="modern-x86/">
+<a class="home-card" href="mx86alp/">
 <span class="home-card-title">Modern x86 Assembly Language Programming</span>
 <span class="home-card-text">x86-64 architecture and assembly programming.</span>
 </a>
@@ -24,7 +24,7 @@ Notes from reverse engineering and systems programming books.
 <span class="home-card-text">Binary analysis techniques and tools.</span>
 </a>
 
-<a class="home-card" href="reversing/">
+<a class="home-card" href="rsore/">
 <span class="home-card-title">Reversing: Secrets of Reverse Engineering</span>
 <span class="home-card-text">Reversing techniques by Eldad Eilam.</span>
 </a>

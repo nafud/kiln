@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/kiln-logo.svg" alt="Kiln" width="400">
+<img src="docs/assets/images/kiln-logo-readme.svg" alt="Kiln" width="400">
 
 <br><br>
 

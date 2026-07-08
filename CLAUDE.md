@@ -43,7 +43,7 @@ Three long-lived branches form a pipeline. Work flows strictly downward — `red
     - To change the word: `CONFIG.text` **plus** the fallback text/`aria-label` in [docs/index.md](docs/index.md). To change the font: `CONFIG.fontFamily` and `CONFIG.fontStylesheetUrl`.
 - [superpowers/](superpowers/) — internal brainstorming specs and implementation plans (not part of the published site). Claude Code's brainstorming/writing-plans skills should write here, not under `docs/`. Delete plans/specs once the planned work has shipped.
 - [.github/](.github/) — `deploy.yml` (production deploy from `primary`), `build-check.yml` (strict build on `secondary`, plus a canary step that fails if a Material update renames theme internals our CSS/JS hook into — keep its hook list in sync when adding new `md-*` selectors), `dependabot.yml` (weekly pip + GitHub Actions update PRs).
-- [README.md](README.md) + [assets/](assets/) — repo front door, intentionally minimal: wordmark, one-line identity, badges — nothing else. The wordmark [assets/kiln-logo.svg](assets/kiln-logo.svg) is "Kiln" in UnifrakturMaguntia converted to vector outlines (no font dependency; black, with a near-white `prefers-color-scheme: dark` override). `assets/` sits outside `docs/`, so it is **not** published to the site.
+- [README.md](README.md) — repo front door, intentionally minimal: wordmark, one-line identity, badges — nothing else. The wordmark [docs/assets/images/kiln-logo-readme.svg](docs/assets/images/kiln-logo-readme.svg) is "Kiln" in UnifrakturMaguntia converted to vector outlines (no font dependency; black, with a near-white `prefers-color-scheme: dark` override). It lives under `docs/assets/images/` alongside the favicon (`kiln-logo-favicon.png`), so both are published with the site.
 
 ## Content sections
 
@@ -61,6 +61,10 @@ Three long-lived branches form a pipeline. Work flows strictly downward — `red
 - `pymdownx.superfences` — fenced code blocks with language highlighting
 - `pymdownx.highlight` + `pymdownx.inlinehilite` — syntax highlighting
 
+## File naming convention
+
+Each folder's landing page stays named `index.md` (this keeps clean directory URLs like `/books/csapp/` and drives Material's `navigation.indexes` feature; the homepage `docs/index.md` must also keep this name). Every **non-index content page is prefixed with its folder's slug** so filenames are globally unique and greppable — e.g. `books/csapp/csapp-chapter-07.md`, `books/pba/pba-chapter-01.md`, `writeups/crackmes-one/crackmes-one-cfb1.md`. Folder slugs are short codes: `mx86alp` (Modern x86 ALP), `rsore` (Reversing: Secrets of RE), `ild`/`ime`/`iwe`/`iwm` (the Investigating … courses).
+
 ## Adding content
 
 To add a new top-level section:
@@ -68,14 +72,14 @@ To add a new top-level section:
 1. Create `docs/<section>/index.md`
 2. Add the section to `nav:` in [mkdocs.yml](mkdocs.yml)
 
-To add a new page within an existing section (e.g., `docs/books/modern-x86/chapter-03.md`):
+To add a new page within an existing section (e.g., `docs/books/csapp/csapp-chapter-05.md` — note the folder-slug prefix; the landing page stays `index.md`):
 
-1. Create the file
+1. Create the file, prefixed with the folder slug
 2. Add it under the section in `nav:` in [mkdocs.yml](mkdocs.yml)
-3. Add a card for it on the section's `index.md` landing page:
+3. Add a card for it on the section's `index.md` landing page (href is the file's directory-URL slug, i.e. the filename without `.md`):
 
 ```html
-<a class="home-card" href="<page-dir>/">
+<a class="home-card" href="<folder-slug>-<page>/">
 <span class="home-card-title">Title</span>
 <span class="home-card-text">One-line description.</span>
 </a>
