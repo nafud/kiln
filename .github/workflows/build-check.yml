@@ -1,0 +1,69 @@
+name: Build Check
+
+on:
+  push:
+    branches:
+      - secondary
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build (strict)
+        run: mkdocs build --strict
+
+      # Canary for Material theme internals that extra.css and the page
+      # scripts hook into. Material offers no public API for these, so a
+      # theme update can rename them without any build error — this step
+      # turns that silent breakage into a red check on the bump PR.
+      #   data-md-component="dialog"  extra.css hides the copy toast
+      #   md-sidebar--primary,
+      #   md-nav--primary,
+      #   md-nav__title               page-chrome.js sidebar fade + extra.css
+      #   md-content__inner           extra.css :has() homepage h1 hiding
+      #   md-typeset, md-header       extra.css styling roots
+      - name: Verify Material internals used by custom CSS/JS
+        run: |
+          # Hooks present in the built page HTML.
+          for hook in \
+            'data-md-component="dialog"' \
+            'md-sidebar--primary' \
+            'md-nav--primary' \
+            'md-nav__title' \
+            'md-main__inner' \
+            'md-content__inner' \
+            'md-typeset' \
+            'md-header'; do
+            grep -qF -- "$hook" site/index.html || {
+              echo "::error::Material internal '$hook' is gone from the built HTML — a theme update likely renamed it. Update the overrides in docs/stylesheets/extra.css / docs/javascripts/page-chrome.js."
+              exit 1
+            }
+          done
+
+          # The code-copy checkmark (extra.css + code-copy.js) hooks the
+          # copy button, which Material injects at runtime, so it is not in
+          # the page HTML — guard the tokens in the theme's CSS bundle instead.
+          css=$(ls site/assets/stylesheets/main.*.min.css | head -1)
+          for hook in 'md-code__button' 'data-md-type=copy' '--md-code-copy-icon'; do
+            grep -qF -- "$hook" "$css" || {
+              echo "::error::Material internal '$hook' is gone from the CSS bundle — a theme update likely renamed it. Update the copy-button checkmark in docs/stylesheets/extra.css / docs/javascripts/code-copy.js."
+              exit 1
+            }
+          done
