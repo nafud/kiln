@@ -7,9 +7,9 @@ source samples. Links open in a new tab.
 
 Official homepages and download sources for the tools used across these notes.
 
-| Resource | Description |
-|---|---|
-| [Compiler Explorer](https://godbolt.org/){ target=_blank rel=noopener .external-link } | Interactive compiler that shows the assembly produced for C, C++, Rust, and many other languages across compilers and flags. |
+| Resource |
+|---|
+| [Compiler Explorer](https://godbolt.org/){ target=_blank rel=noopener .external-link } |
 
 ## Malware sample sources
 
