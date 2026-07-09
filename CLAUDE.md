@@ -28,11 +28,12 @@ Three long-lived branches form a pipeline. Work flows strictly downward — `red
 ## Structure
 
 - [mkdocs.yml](mkdocs.yml) — site config: theme + three-way palette (light/dark/system), features (`navigation.instant`, `navigation.prune`, etc.), markdown extensions, `extra_javascript` load order, and `validation` settings. Link problems are escalated to warnings so `--strict` fails on them; the homepage is intentionally not in `nav`, so `nav.omitted_files` stays at `info`. The `nav:` section must be updated manually when adding pages or sections.
-- [docs/](docs/) — all content as Markdown. Each section has an `index.md` landing page with a `.home-grid` card grid. **Everything under `docs/` gets built and published** — do not put internal/non-public files here.
+- [docs/](docs/) — all content as Markdown. Every folder (section and sub-section) has an `index.md` landing page, usually with a `.home-grid` card grid pointing at its children. Sections nest: `Toolkit → {Guides → radare2, Links}`, `Readings → {Books → book folders, Bookmarks}`, `Writeups → {Crackmes.one, Challenges.re}`. **Everything under `docs/` gets built and published** — do not put internal/non-public files here.
 - [docs/stylesheets/extra.css](docs/stylesheets/extra.css) — all custom styling: JetBrains Mono as the global font, color variables in `:root` with `[data-md-color-scheme="slate"]` dark-mode overrides, ASCII logo sizing variables, card grid, sidebar styling, scroll buttons. Notes:
     - Card rules are scoped as `.md-typeset a.home-card` — a bare `.home-card` selector loses the cascade to Material's generic `.md-typeset a` rule (transitions get replaced and cards dim on hover).
     - The "Copied to clipboard" dialog is intentionally suppressed via `[data-md-component="dialog"] { display: none }`; code-copy itself still works.
     - Do not `@import` the logo font here — ascii-logo.js injects it only on pages that render the logo.
+    - Curated external links (Toolkit → Links, Readings → Bookmarks) use `.external-link` (a `↗` marker) applied via `attr_list`: `[text](url){ target=_blank rel=noopener .external-link }`.
 - [docs/javascripts/page-utils.js](docs/javascripts/page-utils.js) — shared `KilnUtils` global: `debounce`, and `onPageChange(fn)` which runs `fn` on load and after every `navigation.instant` page change (via Material's `document$`, falling back to `DOMContentLoaded`). Must stay **first** in `extra_javascript`; the other scripts depend on it.
 - [docs/javascripts/page-chrome.js](docs/javascripts/page-chrome.js) — sidebar title fade and scroll-to-top/bottom buttons. Init functions are idempotent and re-run via `KilnUtils.onPageChange` because `navigation.instant` removes injected DOM on navigation.
 - [docs/javascripts/code-copy.js](docs/javascripts/code-copy.js) — swaps the code-copy button icon to a checkmark after a copy (one delegated click listener; no per-navigation init). Material's own copy feedback is the toast dialog that extra.css hides; the checkmark is a CSS swap of the button's `::after` mask via the `md-code__button--copied` class. The restore is staged: `--leaving` fades the check out, then `--restoring` animates the copy icon back in. Swap timing is single-sourced from `--kiln-icon-swap-duration` in extra.css (the script reads it at runtime).
@@ -49,10 +50,12 @@ Three long-lived branches form a pipeline. Work flows strictly downward — `red
 
 | Nav label | Directory | Topic |
 |-----------|-----------|-------|
-| Books | `docs/books/` | Reverse engineering and systems programming books |
-| Tools | `docs/tools/` | Tooling notes and cheatsheets |
-| Courses | `docs/courses/` | Digital forensics investigation notes |
-| Writeups | `docs/writeups/` | Crackme writeup solutions |
+| Toolkit | `docs/toolkit/` | Authored tool guides/cheat sheets (`guides/`, e.g. Radare2) and curated external links (`links/`: tool sources + malware sample sources) |
+| Readings | `docs/readings/` | Book notes (`books/`, e.g. csapp/mx86alp/pre/pba/re4b) and curated external bookmarks (`bookmarks/`: blogs/articles) |
+| Courses | `docs/courses/` | Digital forensics investigation notes (`ild`/`ime`/`iwe`/`iwm`) |
+| Writeups | `docs/writeups/` | Challenge solutions: Crackmes.one (`crackmes-one/`) and Challenges.re (`challenges-re/`) |
+
+Planned cross-linking: the **Reverse Engineering for Beginners** notes (`readings/books/re4b/`) are currently empty and will grow gradually; their exercises map onto **challenges.re**, so as chapter pages and matching `writeups/challenges-re/` solution pages are added they should link to each other with simple relative links. Do **not** add these cross-links until both target pages exist — a link to a missing page fails `--strict`. (See the placeholder comments in `readings/books/re4b/index.md` and `writeups/challenges-re/index.md`.)
 
 ## Markdown extensions in use
 
@@ -63,7 +66,7 @@ Three long-lived branches form a pipeline. Work flows strictly downward — `red
 
 ## File naming convention
 
-Each folder's landing page stays named `index.md` (this keeps clean directory URLs like `/books/csapp/` and drives Material's `navigation.indexes` feature; the homepage `docs/index.md` must also keep this name). Every **non-index content page is prefixed with its folder's slug** so filenames are globally unique and greppable — e.g. `books/csapp/csapp-chapter-07.md`, `books/pba/pba-chapter-01.md`, `writeups/crackmes-one/crackmes-one-cfb1.md`. Folder slugs are short codes: `mx86alp` (Modern x86 ALP), `ild`/`ime`/`iwe`/`iwm` (the Investigating … courses).
+Each folder's landing page stays named `index.md` (this keeps clean directory URLs like `/readings/books/csapp/` and drives Material's `navigation.indexes` feature; the homepage `docs/index.md` must also keep this name). Every **non-index content page is prefixed with its folder's slug** so filenames are globally unique and greppable — e.g. `readings/books/csapp/csapp-chapter-07.md`, `readings/books/pba/pba-chapter-01.md`, `writeups/crackmes-one/crackmes-one-cfb1.md`. Folder slugs are short codes: `mx86alp` (Modern x86 ALP), `ild`/`ime`/`iwe`/`iwm` (the Investigating … courses).
 
 ## Adding content
 
@@ -72,7 +75,7 @@ To add a new top-level section:
 1. Create `docs/<section>/index.md`
 2. Add the section to `nav:` in [mkdocs.yml](mkdocs.yml)
 
-To add a new page within an existing section (e.g., `docs/books/csapp/csapp-chapter-05.md` — note the folder-slug prefix; the landing page stays `index.md`):
+To add a new page within an existing section (e.g., `docs/readings/books/csapp/csapp-chapter-05.md` — note the folder-slug prefix; the landing page stays `index.md`):
 
 1. Create the file, prefixed with the folder slug
 2. Add it under the section in `nav:` in [mkdocs.yml](mkdocs.yml)

@@ -2,14 +2,14 @@
 
 <div class="home-grid">
 
-<a class="home-card" href="books/">
-<span class="home-card-title">Books</span>
-<span class="home-card-text">Reverse engineering and systems programming books.</span>
+<a class="home-card" href="toolkit/">
+<span class="home-card-title">Toolkit</span>
+<span class="home-card-text">Tool guides, cheat sheets, and curated links.</span>
 </a>
 
-<a class="home-card" href="tools/">
-<span class="home-card-title">Tools</span>
-<span class="home-card-text">Tooling notes and cheatsheets.</span>
+<a class="home-card" href="readings/">
+<span class="home-card-title">Readings</span>
+<span class="home-card-text">Book notes and curated technical bookmarks.</span>
 </a>
 
 <a class="home-card" href="courses/">
@@ -19,7 +19,7 @@
 
 <a class="home-card" href="writeups/">
 <span class="home-card-title">Writeups</span>
-<span class="home-card-text">Crackme writeup solutions.</span>
+<span class="home-card-text">Crackme and challenge writeup solutions.</span>
 </a>
 
 </div>

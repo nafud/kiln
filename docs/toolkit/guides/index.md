@@ -1,6 +1,6 @@
-# Tools
+# Guides
 
-Reverse engineering tools and cheatsheets.
+Authored usage guides and cheat sheets for tools and my own scripts.
 
 <div class="home-grid">
 
