@@ -95,7 +95,11 @@ nav:
               - readings/books/mx86alp/index.md
               - Chapter 1: readings/books/mx86alp/mx86alp-chapter-01.md
               - Chapter 6: readings/books/mx86alp/mx86alp-chapter-06.md
-          - Practical Reverse Engineering: readings/books/pre/index.md
+          - Practical Reverse Engineering:
+              - readings/books/pre/index.md
+              - Chapter 1: readings/books/pre/pre-chapter-01.md
+              - Chapter 2: readings/books/pre/pre-chapter-02.md
+              - Chapter 3: readings/books/pre/pre-chapter-03.md
           - Practical Binary Analysis:
               - readings/books/pba/index.md
               - Chapter 1: readings/books/pba/pba-chapter-01.md
