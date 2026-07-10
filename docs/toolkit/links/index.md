@@ -20,4 +20,7 @@ Official homepages and download sources for the tools used across these notes.
     every file as hostile, never run one on your host, and check each
     source's own usage terms before downloading.
 
-*Curated entries pending.*
+| Resource |
+|---|
+| [theZoo](https://thezoo.morirt.com/){ target=_blank rel=noopener .external-link } |
+| [Ultimate RAT Collection](https://github.com/Cryakl/Ultimate-RAT-Collection){ target=_blank rel=noopener .external-link } |
