@@ -124,7 +124,7 @@ Use the `.ascii-diagram` class on `<pre>` blocks for borderless, transparent ASC
 </pre>
 ```
 
-Use `.register-grid` / `.register-card` for compact definition-card grids (4 columns, 2 on narrow screens) — used for the x86-64 register reference in `mx86alp-chapter-01.md`:
+Use `.register-grid` / `.register-card` for compact definition-card grids (4 columns, 2 on narrow screens; currently unused by content, kept available):
 
 ```html
 <div class="register-grid">

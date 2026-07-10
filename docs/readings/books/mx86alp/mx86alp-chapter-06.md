@@ -1,231 +1,162 @@
-# Chapter 6. Run-Time Calling Conventions
+# Chapter 6 — Run-Time Calling Conventions
 
-## Calling Convention Overview
+## Overview
 
-A run-time calling convention is a specification that governs data exchange between a calling function and a called function. It defines how arguments are passed (which registers, when the stack is used), the requirements for function prologues and epilogues, any constraints imposed by the host OS or compiler, and how return values are delivered to the caller.
+A calling convention specifies data exchange between caller and callee: which registers carry arguments, when the stack is used, prologue/epilogue obligations, and how return values are delivered.
 
-An x86-64 function is logically partitioned into three sections.
+Function structure:
 
-| SECTION  | RESPONSIBILITY                                                                       |
-| -------- | ------------------------------------------------------------------------------------ |
-| Prologue | Preserves non-volatile registers, establishes a stack frame, allocates local storage |
-| Body     | Carries out the computation                                                          |
-| Epilogue | Releases local storage, deconstructs the stack frame, restores non-volatile registers |
+| Section | Responsibility |
+|---|---|
+| Prologue | Preserve non-volatile registers, establish stack frame, allocate local stack storage (any subset, possibly none) |
+| Body | The computation |
+| Epilogue | Release local storage, tear down frame, restore non-volatile registers, `ret` |
 
-A prologue or epilogue may include some, all, or none of these elements depending on the function's computational requirements.
+Register classes:
 
-### Volatile vs Non-volatile Registers
+- **Volatile**: callee may freely modify; caller must not expect the value to survive a call.
+- **Non-volatile**: callee must preserve; if it needs the register, it saves the caller's value (prologue) and restores it (epilogue).
 
-Both Visual C++ and GNU C++ classify every general-purpose register as volatile or non-volatile. A called function may freely modify volatile registers. It must not alter a non-volatile register unless it preserves the caller's original value, typically by saving it in the prologue and restoring it in the epilogue.
+Function classes:
 
-### Leaf vs Non-leaf Functions
+- **Leaf**: calls no other function. Often needs no explicit prologue/epilogue; typically works entirely in volatile registers.
+- **Non-leaf**: calls other functions. Must keep RSP and the stack correctly arranged for its callees (alignment, home area on Windows).
 
-| KIND     | DEFINITION                     | TYPICAL PROPERTIES                                                                                     |
-| -------- | ------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| Leaf     | Calls no other functions       | Straightforward calculations using only volatile registers; often needs no explicit prologue or epilogue |
-| Non-leaf | Calls one or more functions    | Uses volatile and non-volatile registers, consumes stack space, must keep RSP and the stack properly arranged for callees |
+## Visual C++ (Windows x64)
 
-!!! note "Scope"
-    The chapter covers only the calling convention aspects used by the book's code. Variadic functions, bit fields, and passing or returning structures and unions by value are out of scope.
+### Register usage
 
-## Visual C++ Calling Convention (Windows x64)
+| Register | Class | Role |
+|---|---|---|
+| RAX | Volatile | Integer return value |
+| RCX, RDX, R8, R9 | Volatile | Integer arguments 1–4 |
+| R10, R11 | Volatile | Scratch |
+| RBX, RSI, RDI, R12–R15 | Non-volatile | Scratch |
+| RBP | Non-volatile | Frame pointer or scratch |
+| RSP | Non-volatile | Stack pointer |
+| XMM0–XMM3 | Volatile | FP arguments 1–4; XMM0 = FP return value |
+| XMM4, XMM5 | Volatile | Scratch |
+| XMM6–XMM15 | Non-volatile | Scratch |
 
-### Argument Passing and Return Values
+Wide-register volatility: bits 255:128 of YMM0–YMM15 are volatile; with AVX-512, bits 511:256 of ZMM0–ZMM15 and all of ZMM16–ZMM31 are volatile. Net effect: only the low 128 bits of registers 6–15 are preserved.
 
-- The first four arguments are passed in registers, selected by position and type: RCX or XMM0, RDX or XMM1, R8 or XMM2, R9 or XMM3. Remaining arguments are passed on the stack.
-- 8, 16, and 32-bit integer arguments occupy the low-order bits of the corresponding quadword register or stack slot; the high-order bits are undefined. Sign or zero extension is the callee's responsibility.
-- Scalar single and double-precision arguments use XMM bits 31:0 or 63:0; the remaining bits are undefined.
-- Integer return values use RAX/EAX/AX/AL. Floating-point return values use XMM0.
+### Argument passing
 
-### Home Area
+- Arguments 1–4 go in RCX/RDX/R8/R9 or XMM0–XMM3; the register slot is positional, so an FP argument in position 2 consumes XMM1 and leaves RDX unused. Arguments 5+ go on the stack.
+- Sub-64-bit integers occupy the low bits of their register or stack slot; the high bits are undefined — the callee sign- or zero-extends as needed (`movsx`, `movsxd`).
+- Scalar FP arguments occupy XMM bits 31:0 (single) or 63:0 (double); remaining bits undefined.
+- Returns: RAX (integer), XMM0 (scalar FP).
 
-The caller must allocate 32 bytes of stack space (four quadwords) immediately above the return address: the home area for RCX, RDX, R8, and R9. The callee may spill the argument registers there or use the space for arbitrary temporary storage. When used for alternative storage, the home area should not be referenced before the `.endprolog` directive.
+### Home area
 
-### Stack Alignment
+The caller allocates 32 bytes of stack (four quadword slots) directly above the return address before every call. The callee may spill RCX/RDX/R8/R9 there, or use the slots as scratch storage. Stack arguments begin immediately above the home area.
 
-RSP must maintain 16-byte alignment outside the prologue. A `call` pushes an 8-byte return address, so the prologue must restore alignment. With `NUM_PUSHREG` register pushes, the required pad is:
+### Stack alignment
 
-```
-STK_PAD   = ((NUM_PUSHREG AND 1) XOR 1) * 8      ; 0 or 8 bytes
-STK_TOTAL = STK_LOCAL1 + STK_LOCAL2 + STK_PAD
-```
-
-### Stack Frames and MASM Frame Directives
-
-Functions that reference both stack arguments and local variables typically build a stack frame. RBP is the customary frame pointer, though any non-volatile register may be used. Declaring a procedure with the `frame` attribute (`proc frame`) tells MASM the function uses a frame pointer and instructs it to emit static unwind data for run-time exception handling.
-
-Each prologue action must be paired with a directive that records it in the exception handling tables. Directives are assembler instructions, not executable code.
-
-| DIRECTIVE            | FOLLOWS                          | RECORDS                                                        |
-| -------------------- | -------------------------------- | -------------------------------------------------------------- |
-| `.pushreg reg`       | `push reg`                       | Stack offset of a saved non-volatile GP register               |
-| `.allocstack size`   | `sub rsp,size`                   | Local stack allocation size                                    |
-| `.setframe reg,off`  | `mov`/`lea` initializing the FP  | Frame pointer register and its byte offset from RSP            |
-| `.savexmm128 reg,off`| `vmovdqa [mem],xmmN`             | Stack displacement (relative to RSP) of a saved XMM register   |
-| `.endprolog`         | Last prologue instruction        | End of prologue                                                |
-
-!!! note "Constraints"
-    The `.setframe` offset must be an even multiple of 16 and no greater than 240. The XMM save area (STK_LOCAL2) must be at least 16 bytes per saved XMM register. Argument registers may alternatively be spilled to the home area before `push rbp` using RSP-relative addressing.
-
-Minimal frame prologue and epilogue pattern:
+RSP must be 16-byte aligned outside the prologue. Since `call` pushes an 8-byte return address, alignment depends on the number of prologue pushes plus local allocation. Pattern used throughout the book:
 
 ```asm
-SumIntegers_a proc frame
-    push rbp                    ;save caller's RBP
-    .pushreg rbp
-    sub rsp,STK_LOCAL           ;allocate local stack space
-    .allocstack STK_LOCAL
-    mov rbp,rsp                 ;set frame pointer
-    .setframe rbp,0
-    .endprolog
-    ...
-    add rsp,STK_LOCAL           ;release local stack space
-    pop rbp                     ;restore caller's RBP
-    ret
+STK_PAD   equ ((NUM_PUSHREG AND 1) XOR 1) * 8   ; 8 if push count even, else 0
+STK_TOTAL equ STK_LOCAL1 + STK_LOCAL2 + STK_PAD
+RBP_RA    equ NUM_PUSHREG * 8 + STK_LOCAL1 + STK_PAD  ; RBP-to-return-address distance
 ```
 
-### Split Local Area
+### Prologue directives (MASM)
 
-Placing the frame pointer above part of the local area, e.g. `lea rbp,[rsp+STK_LOCAL2]` with `.setframe rbp,STK_LOCAL2`, splits local storage into a region below RBP (negative displacements) and a region above it (positive displacements). This lets more of the local area be reached with 8-bit signed displacements instead of 32-bit ones, producing smaller machine code, and simplifies non-volatile XMM save and restore.
+A function using a frame pointer declares `proc frame`; MASM then emits static unwind data for run-time exception handling. Each prologue action needs a matching directive:
 
-### Non-volatile XMM Registers
+| Directive | Follows | Purpose / constraints |
+|---|---|---|
+| `.pushreg reg` | `push reg` | Records the non-volatile GPR save |
+| `.allocstack n` | `sub rsp,n` | Records local stack allocation |
+| `.setframe reg,off` | `mov`/`lea` establishing frame pointer | `off` = RSP-to-frame-pointer distance; must be a multiple of 16 and ≤ 240 |
+| `.savexmm128 xmmN,off` | `vmovdqa [mem],xmmN` | Records a non-volatile XMM save; `off` relative to RSP |
+| `.endprolog` | last prologue instruction | Marks prologue end |
 
-XMM0 to XMM5 are volatile; XMM6 to XMM15 are non-volatile. A function using XMM6 to XMM15 must save them in its prologue with 16-byte aligned `vmovdqa` stores, each followed by `.savexmm128`, and restore them in the epilogue before restoring GP registers.
+Directives assemble to metadata, not instructions. Any non-volatile register may serve as the frame pointer; RBP is conventional.
 
-```asm
-vmovdqa xmmword ptr [rbp-STK_LOCAL2+16],xmm14
-.savexmm128 xmm14,16
-vmovdqa xmmword ptr [rbp-STK_LOCAL2],xmm15
-.savexmm128 xmm15,0
-```
+### Frame layout conventions
 
-!!! warning "Alignment fault"
-    `vmovdqa` requires its memory operand aligned to 16 bytes (32 for YMM); the processor raises an exception otherwise. `vmovdqu` performs the same move without the alignment requirement.
+- Placing the frame pointer *between* two local areas (`lea rbp,[rsp+STK_LOCAL2]`) lets more of the frame be reached with 8-bit signed displacements and simplifies XMM save/restore addressing.
+- The XMM save area (STK_LOCAL2) must be ≥ 16 bytes × number of saved XMM registers, and `vmovdqa` demands 16-byte-aligned slots.
+- Home-area slots must not be touched before `.endprolog` when repurposed as scratch.
 
-### Epilogue Rules
+### Epilogue rules
 
-- RSP must be restored using either `lea rsp,[RFP+X]` or `add rsp,X`, where RFP is the frame pointer register and X a constant. This limits the instruction patterns the run-time exception handler must recognize.
-- Epilogues must contain no processing logic, including setting a return value: only stack release, register pops, and `ret`.
+- Restore RSP with `lea rsp,[RFP+X]` or `add rsp,X` only (fixed patterns the unwinder can recognize).
+- Restore non-volatile XMM registers, then non-volatile GPRs (reverse push order), then `ret`.
+- No processing logic in the epilogue — not even setting the return value.
 
-### Calling External Functions
+### Calling external functions
 
-Before calling any function, the caller must allocate the callee's 32-byte home area (`sub rsp,32`) and keep RSP 16-byte aligned. Values needed across a call must be held in non-volatile registers or on the stack, since the callee may destroy every volatile register. Library functions are declared with `extern name:proc` and invoked with `call`.
+- Caller allocates the callee's 32-byte home area (`sub rsp,32`) and keeps RSP 16-byte aligned at the call.
+- Values needed across a call must live in non-volatile registers or memory; XMM0/XMM1 etc. are clobbered.
+- Book macros (`MacrosX86-64-AVX.asmh`) automate the boilerplate:
 
-The book's `MacrosX86-64-AVX.asmh` include file automates prologue and epilogue coding against a fixed generic stack layout:
+| Macro | Emits |
+|---|---|
+| `CreateFrame_M prefix,L1,L2,regs…` | GPR pushes, stack allocation, frame pointer setup, unwind directives; generates `prefix_OffsetHomeRCX…`, `prefix_OffsetStackArgs` symbols. L1 and L2 must be multiples of 16; L2 ≤ 240 and ≥ 16 × XMM saves |
+| `SaveXmmRegs_M xmm…` | Aligned XMM saves + `.savexmm128` |
+| `EndProlog_M` | `.endprolog` |
+| `RestoreXmmRegs_M xmm…` | XMM restores (same register order as save) |
+| `DeleteFrame_M regs…` | RSP restore from RBP + GPR pops (same register list as `CreateFrame_M`) |
 
-| MACRO               | FUNCTION                                                                                          |
-| ------------------- | ------------------------------------------------------------------------------------------------- |
-| `CreateFrame_M`     | Pushes listed non-volatile GP registers, allocates locals, sets RBP; generates symbolic offsets (prefix + `OffsetHomeRCX`, `OffsetStackArgs`, etc.) |
-| `SaveXmmRegs_M`     | Saves listed non-volatile XMM registers to the XMM save area                                       |
-| `EndProlog_M`       | Marks end of prologue                                                                              |
-| `RestoreXmmRegs_M`  | Restores XMM registers; list must match `SaveXmmRegs_M`                                            |
-| `DeleteFrame_M`     | Restores RSP from RBP and pops GP registers; list must match `CreateFrame_M`                       |
+Because `DeleteFrame_M` restores RSP from RBP, home space allocated for callees needs no explicit release.
 
-`CreateFrame_M` takes a prefix string plus StkSizeLocal1 and StkSizeLocal2, both evenly divisible by 16; StkSizeLocal2 must be at most 240 and at least 16 bytes per saved XMM register. Because `DeleteFrame_M` restores RSP from RBP, home space allocated for callees (`sub rsp,32`) needs no explicit release.
+## GNU C++ (System V x86-64)
 
-## GNU C++ Calling Convention (System V AMD64)
+### Register usage
 
-### Argument Passing and Return Values
+| Register | Class | Role |
+|---|---|---|
+| RDI, RSI, RDX, RCX, R8, R9 | Volatile | Integer arguments 1–6 |
+| RAX | Volatile | Integer return value |
+| R10, R11 | Volatile | Scratch |
+| RBX, R12–R15 | Non-volatile | Scratch |
+| RBP | Non-volatile | Frame pointer or scratch |
+| RSP | Non-volatile | Stack pointer |
+| XMM0–XMM7 | Volatile | FP arguments 1–8; XMM0 = FP return value |
+| XMM8–XMM15 | Volatile | Scratch |
 
-- The first six integer arguments are passed in RDI, RSI, RDX, RCX, R8, R9. The first eight floating-point arguments are passed in XMM0 to XMM7. Remaining arguments are passed on the stack.
-- Narrow integer arguments occupy the low-order bits of their register or stack slot with undefined high-order bits, and scalar FP arguments use XMM bits 31:0 or 63:0, as in Visual C++.
-- Integer return values use RAX/EAX/AX/AL. Floating-point return values use XMM0.
-- There is no home area. Stack arguments begin at `[rsp+8]` on function entry (directly above the return address).
+All XMM/YMM registers are volatile (bits 255:128 of YMM0–YMM15 included); with AVX-512, ZMM0–ZMM31 are volatile. Nothing SIMD survives a call.
 
-### Red Zone
+### Argument passing
 
-The 128 bytes below RSP are the red zone. A leaf function may use this area for temporary storage without adjusting RSP, since nothing (signal handlers excluded by the ABI design) will overwrite it. Non-leaf functions have no usable red zone because their own calls push data below RSP.
+- Six integer-register slots and eight FP-register slots are assigned independently (not positional as on Windows). Overflow arguments go on the stack.
+- On entry, stack arguments begin at `[rsp+8]` (just above the return address). There is no home area.
+- Sub-64-bit and scalar-FP rules match Windows: high bits undefined, callee extends.
+- Returns: RAX (integer), XMM0 (scalar FP).
 
-```asm
-RZ_A equ -8
-...
-mov [rsp+RZ_A],rdi          ;store in red zone, no allocation needed
-```
+### Red zone
 
-### Stack Frames
+The 128 bytes below RSP are guaranteed untouched by the ABI — signal and interrupt handlers will not clobber them. A leaf function may use the red zone as scratch storage without adjusting RSP. Non-leaf functions have no usable red zone, since their own `call`s write below RSP.
 
-Frame pointer usage is optional. A conventional prologue pushes RBP (and any other non-volatile registers), copies RSP to RBP, then subtracts local storage. Locals then have negative displacements from RBP and stack arguments positive ones.
+### Stack frames and alignment
 
-Splitting arguments and locals across the frame pointer has two benefits: many operands encode with 8-bit rather than 32-bit displacements, and new arguments or locals can be added without disturbing existing offsets. The cost is the loss of one general-purpose register. When no frame pointer is used, RBP is available as an ordinary non-volatile register.
+- Frame pointer is optional. Typical framed prologue: push non-volatiles, `mov rbp,rsp`, `sub rsp,LOCAL`. Epilogue: `mov rsp,rbp` (or `add rsp,LOCAL`), pops in reverse order, `ret`.
+- Splitting the frame — stack arguments at positive RBP offsets, locals at negative — favors 8-bit displacement encodings and lets new values be added without renumbering existing offsets. Cost of a frame pointer: one fewer GPR.
+- RSP must be 16-byte aligned before any `call`; add 0 or 8 pad bytes to local allocation as required. Defining an explicit `STK_PAD` symbol (even when 0) documents the invariant for future maintenance.
 
-An epilogue may restore RSP with `mov rsp,rbp` (frame pointer form) or `add rsp,STK_LOCAL+STK_PAD` (RSP-relative form) before the pops and `ret`.
+### Calling external functions
 
-### Stack Alignment
+- Calls into shared libraries go through the Procedure Linkage Table: NASM `call pow wrt ..plt`. The PLT holds addresses resolved at run time (shared-object functions).
+- Volatile-register return values needed later (e.g., XMM0 from `pow`) must be spilled to non-volatile storage or the stack before the next call.
 
-RSP must be aligned on a 16-byte boundary before any `call`. Since the return address plus an odd number of pushes can misalign the stack, a pad constant (normally 0 or 8) is added to the local allocation. Defining the pad symbol even when zero documents that it must be revisited if the stack layout changes.
+## Convention Comparison
 
-### Calling External Functions
+| | Visual C++ (Windows) | GNU C++ (SysV Linux) |
+|---|---|---|
+| Integer register args | 4: RCX, RDX, R8, R9 | 6: RDI, RSI, RDX, RCX, R8, R9 |
+| FP register args | 4: XMM0–XMM3 (positional with GPR slots) | 8: XMM0–XMM7 (independent of GPR slots) |
+| Home area | 32 bytes, caller-allocated | None |
+| Red zone | None | 128 bytes below RSP |
+| First stack arg on entry | `[rsp+8+32]` (above home area) | `[rsp+8]` |
+| Non-volatile GPRs | RBX, RSI, RDI, RBP, RSP, R12–R15 | RBX, RBP, RSP, R12–R15 |
+| Non-volatile XMM | XMM6–XMM15 (low 128 bits) | None |
+| Unwind directives | `.pushreg`, `.allocstack`, `.setframe`, `.savexmm128`, `.endprolog` required | None |
+| Epilogue constraints | Fixed RSP-restore patterns; no logic | No mandated pattern |
+| RSP alignment at call | 16 bytes | 16 bytes |
 
-Position-independent code calls shared library functions through the Procedure Linkage Table. In NASM the special symbol `wrt ..plt` directs the assembler to emit the call through the function's PLT entry:
+## Shared Requirements
 
-```asm
-extern pow
-...
-call pow wrt ..plt          ;xmm0 = pow(xmm0, xmm1)
-```
-
-The PLT holds function addresses that cannot be resolved until run time, such as functions in shared object libraries. All XMM registers are volatile under this convention, so any XMM value needed after a call must be spilled to the stack or recomputed; integer values are best kept in non-volatile GP registers to avoid reloads.
-
-## Summary
-
-### Visual C++ Register Usage
-
-| REGISTER    | TYPE         | USAGE                                        |
-| ----------- | ------------ | -------------------------------------------- |
-| RAX         | Volatile     | Integer return value                         |
-| RBX         | Non-volatile | Scratch                                      |
-| RCX         | Volatile     | Integer argument 1                           |
-| RDX         | Volatile     | Integer argument 2                           |
-| RSI         | Non-volatile | Scratch                                      |
-| RDI         | Non-volatile | Scratch                                      |
-| RBP         | Non-volatile | Stack frame pointer or scratch               |
-| RSP         | Non-volatile | Stack pointer                                |
-| R8          | Volatile     | Integer argument 3                           |
-| R9          | Volatile     | Integer argument 4                           |
-| R10, R11    | Volatile     | Scratch                                      |
-| R12–R15     | Non-volatile | Scratch                                      |
-| XMM0        | Volatile     | FP argument 1, FP return value               |
-| XMM1–XMM3   | Volatile     | FP arguments 2–4                             |
-| XMM4, XMM5  | Volatile     | Scratch                                      |
-| XMM6–XMM15  | Non-volatile | Scratch                                      |
-
-Wide-register volatility: bits 255:128 of YMM0 to YMM15 are volatile. With AVX-512, bits 511:256 of ZMM0 to ZMM15 are volatile and ZMM16 to ZMM31 are fully volatile.
-
-### GNU C++ Register Usage
-
-| REGISTER    | TYPE         | USAGE                                        |
-| ----------- | ------------ | -------------------------------------------- |
-| RAX         | Volatile     | Integer return value                         |
-| RBX         | Non-volatile | Scratch                                      |
-| RDI         | Volatile     | Integer argument 1                           |
-| RSI         | Volatile     | Integer argument 2                           |
-| RDX         | Volatile     | Integer argument 3                           |
-| RCX         | Volatile     | Integer argument 4                           |
-| R8          | Volatile     | Integer argument 5                           |
-| R9          | Volatile     | Integer argument 6                           |
-| RBP         | Non-volatile | Stack frame pointer or scratch               |
-| RSP         | Non-volatile | Stack pointer                                |
-| R10, R11    | Volatile     | Scratch                                      |
-| R12–R15     | Non-volatile | Scratch                                      |
-| XMM0        | Volatile     | FP argument 1, FP return value               |
-| XMM1–XMM7   | Volatile     | FP arguments 2–8                             |
-| XMM8–XMM15  | Volatile     | Scratch                                      |
-
-Wide-register volatility: bits 255:128 of YMM0 to YMM15 are volatile. With AVX-512, ZMM16 to ZMM31 are volatile.
-
-### Convention Comparison
-
-| ASPECT                     | VISUAL C++                                  | GNU C++                                     |
-| -------------------------- | ------------------------------------------- | ------------------------------------------- |
-| Register integer arguments | 4 (RCX, RDX, R8, R9)                        | 6 (RDI, RSI, RDX, RCX, R8, R9)              |
-| Register FP arguments      | 4 (XMM0–XMM3, shared positions with GP)     | 8 (XMM0–XMM7, independent of GP positions)  |
-| Home area                  | Required, 32 bytes allocated by caller      | None                                        |
-| Red zone                   | None                                        | 128 bytes below RSP, leaf functions only    |
-| Non-volatile XMM           | XMM6–XMM15                                  | None, all XMM volatile                      |
-| RSP alignment              | 16 bytes outside prologue                   | 16 bytes before any call                    |
-| Unwind directives          | `.pushreg` `.allocstack` `.setframe` `.savexmm128` `.endprolog` | None                    |
-| Epilogue constraints       | `lea rsp,[RFP+X]` or `add rsp,X`; no logic  | No mandated pattern                         |
-| Shared library calls       | Direct `call`                               | `call fn wrt ..plt` in PIC code             |
-
-!!! warning "RFLAGS.DF and MXCSR.RC"
-    Both conventions designate RFLAGS.DF and MXCSR.RC as non-volatile. Failure to preserve them may cause C++ library functions to behave erratically or fail.
+Both conventions treat RFLAGS.DF and MXCSR.RC as non-volatile: a function that changes either must restore it before returning, or library functions may misbehave.

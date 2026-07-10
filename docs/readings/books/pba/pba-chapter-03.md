@@ -1,181 +1,116 @@
-# Chapter 3. The PE Format: A Brief Introduction
+# Chapter 3 — The PE Format: A Brief Introduction
 
-The Portable Executable (PE) format is the main binary format on Windows and is common in malware analysis. PE is a modified version of the Common Object File Format (COFF), so it is sometimes called PE/COFF. The 64 bit variant is named PE32+; its differences from 32 bit PE are minor. This chapter highlights the differences from ELF. PE structures are defined in `WinNT.h` (Windows SDK).
+The *Portable Executable* format is the main binary format on Windows — relevant chiefly for malware analysis. PE is a modified version of the *Common Object File Format* (COFF), which preceded ELF on Unix; hence the name PE/COFF. The 64-bit version is called *PE32+*, differing only slightly from PE. Data structures are defined in `WinNT.h` (Windows SDK).
 
-Now that ELF is understood, PE is easier to learn because most binary formats share many concepts.
+File layout, top to bottom: MS-DOS header → MS-DOS stub → PE signature → PE file header → PE optional header → section headers → sections.
 
-```
-┌────────────────────┐
-│ MS-DOS header      │  IMAGE_DOS_HEADER, starts with "MZ"
-│ MS-DOS stub        │  small DOS program
-├────────────────────┤
-│ PE signature       │  "PE\0\0"
-│ PE file header      │  IMAGE_FILE_HEADER          ┐
-│ PE optional header  │  IMAGE_OPTIONAL_HEADER64    ┘ = IMAGE_NT_HEADERS64
-├────────────────────┤
-│ Section headers    │  IMAGE_SECTION_HEADER[]
-├────────────────────┤
-│ Sections           │  .text .rdata .data .idata .edata .reloc .rsrc .pdata ...
-└────────────────────┘
-```
+## 3.1 The MS-DOS Header and Stub
 
-## MS-DOS Header and MS-DOS Stub
+Present for backward compatibility: during the transition from MS-DOS binaries, every PE file could also be interpreted (in a limited sense) as an MS-DOS binary. The header describes how to load the *MS-DOS stub* that follows it — usually a small program that prints "This program cannot be run in DOS mode" and exits, though in principle it can be a full MS-DOS version of the program.
 
-Every PE file starts with an MS-DOS header for backward compatibility, so the file can also be interpreted as an MS-DOS binary. The header describes how to load and execute the MS-DOS stub that follows it. The stub is a small DOS program run instead of the main program under MS-DOS, typically printing a message such as "This program cannot be run in DOS mode" and exiting.
+| Field | Meaning |
+|---|---|
+| `e_magic` | ASCII "MZ" (hence *MZ header*; the initials of Mark Zbikowski, designer of the original MS-DOS executable format) |
+| `e_lfanew` | File offset where the real PE binary begins — a PE-aware loader reads this and skips the header and stub |
 
-| FIELD       | ROLE                                                        |
-| ----------- | ----------------------------------------------------------- |
-| `e_magic`   | Magic value, ASCII "MZ" (hence "MZ header")                 |
-| `e_lfanew`  | File offset where the real PE binary begins                 |
+## 3.2 The PE Signature, File Header, and Optional Header
 
-A PE aware loader reads the MS-DOS header, then uses `e_lfanew` to skip past it and the stub to the PE headers.
+The equivalent of ELF's executable header, split into three parts. `WinNT.h` wraps all three in `IMAGE_NT_HEADERS64`, but in practice they are treated as separate entities. Dump with `objdump -x`.
 
-!!! note "MZ"
-    MZ stands for Mark Zbikowski, who designed the original MS-DOS executable format.
+### PE signature
 
-## PE Signature, File Header, and Optional Header
+ASCII "PE" followed by two NULL characters. Analogous to ELF's magic bytes.
 
-PE splits the equivalent of ELF's executable header into three parts. `IMAGE_NT_HEADERS64` in `WinNT.h` encompasses all three, but in practice they are treated as separate entities.
-
-| PART               | STRUCT                     | ANALOGOUS TO ELF                       |
-| ------------------ | -------------------------- | -------------------------------------- |
-| PE signature       | (4 byte string)            | Magic bytes in `e_ident`               |
-| PE file header     | `IMAGE_FILE_HEADER`        | Part of the executable header          |
-| PE optional header | `IMAGE_OPTIONAL_HEADER64`  | Part of the executable header          |
-
-Dump PE headers with `objdump -x hello.exe`.
-
-### The PE Signature
-
-The ASCII characters "PE" followed by two null bytes (`"PE\0\0"`). Analogous to the ELF magic value.
-
-### The PE File Header
+### PE file header (`IMAGE_FILE_HEADER`)
 
 ```c
 typedef struct {
-  WORD  Machine;
-  WORD  NumberOfSections;
-  DWORD TimeDateStamp;
-  DWORD PointerToSymbolTable;   /* deprecated */
-  DWORD NumberOfSymbols;        /* deprecated */
-  WORD  SizeOfOptionalHeader;
-  WORD  Characteristics;
+    WORD  Machine;
+    WORD  NumberOfSections;
+    DWORD TimeDateStamp;
+    DWORD PointerToSymbolTable;
+    DWORD NumberOfSymbols;
+    WORD  SizeOfOptionalHeader;
+    WORD  Characteristics;
 } IMAGE_FILE_HEADER;
 ```
 
-| FIELD                  | MEANING                                                                  |
-| ---------------------- | ------------------------------------------------------------------------ |
-| `Machine`              | Target architecture, like ELF `e_machine`; x86-64 is `0x8664`            |
-| `NumberOfSections`     | Number of entries in the section header table                            |
-| `SizeOfOptionalHeader` | Size in bytes of the optional header that follows                        |
-| `Characteristics`      | Flags: endianness, DLL or not, stripped or not, large address aware, etc |
+| Field | Notes |
+|---|---|
+| `Machine` | Target architecture, like ELF's `e_machine`; x86-64 = `0x8664` |
+| `NumberOfSections` | Entry count of the section header table |
+| `SizeOfOptionalHeader` | Size in bytes of the optional header that follows |
+| `Characteristics` | Flags: endianness, DLL or not, stripped or not, ... |
+| `PointerToSymbolTable`, `NumberOfSymbols` | **Deprecated** — PE files should no longer embed symbols/debug info; symbols are optionally emitted in a separate debugging file (PDB) |
 
-The symbol table fields (`PointerToSymbolTable`, `NumberOfSymbols`) are deprecated. PE symbols and debugging information are optionally emitted in a separate debugging file rather than embedded.
+### PE optional header (`IMAGE_OPTIONAL_HEADER64`)
 
-### The PE Optional Header
+Not actually optional for executables (may be missing in object files). Key fields:
 
-Despite the name, this header is not optional for executables (it may be absent in object files). Present in essentially any PE executable.
+| Field | Notes |
+|---|---|
+| `Magic` | `0x020b` for 64-bit PE (PE32+) |
+| `MajorLinkerVersion` / `MinorLinkerVersion` | Linker used to create the binary; other fields give the minimum OS version required |
+| `ImageBase` | Address at which to load the binary — PE binaries are designed for a specific virtual address |
+| `AddressOfEntryPoint` | Entry point, as an RVA |
+| `BaseOfCode` | Base of the code sections, as an RVA |
+| `DataDirectory[16]` | See below |
 
-Key fields:
+*Relative virtual addresses (RVAs)* are added to `ImageBase` to obtain virtual addresses: base VA of code = `ImageBase + BaseOfCode`.
 
-| FIELD                 | MEANING                                                                              |
-| --------------------- | ------------------------------------------------------------------------------------ |
-| `Magic`               | 16 bit magic, `0x020b` for 64 bit PE                                                  |
-| linker/OS versions    | Major/minor linker version and minimal OS version to run the binary                  |
-| `ImageBase`           | Virtual address at which to load the binary (PE binaries target a specific address)   |
-| `BaseOfCode`          | Base of code sections as an RVA; base virtual address = `ImageBase + BaseOfCode`      |
-| `AddressOfEntryPoint` | Entry point address, specified as an RVA                                             |
-| `DataDirectory[16]`   | Array of `IMAGE_DATA_DIRECTORY` entries, each an RVA and a size (see below)           |
+The `DataDirectory` is an array of `IMAGE_DATA_DIRECTORY` entries, each an RVA plus size describing an important portion of the binary; interpretation depends on the array index. It serves as a shortcut for the loader — no need to iterate the section header table.
 
-!!! note "Relative virtual addresses"
-    Pointer fields in the optional header often hold RVAs (relative virtual addresses), meant to be added to `ImageBase` to yield the actual virtual address.
+| Index | Describes |
+|---|---|
+| 0 | Export directory (table of exported functions) — `.edata` |
+| 1 | Import directory (table of imported functions) — `.idata` |
+| 5 | Base relocation table — `.reloc` |
 
-The `DataDirectory` gives the loader a shortcut to important portions of the binary without iterating the section header table. Each entry's meaning is fixed by its index.
+## 3.3 The Section Header Table
 
-| INDEX | ENTRY                        | DESCRIBES                                        |
-| ----- | ---------------------------- | ----------------------------------------------- |
-| 0     | Export Directory (`.edata`)  | Table of exported functions                     |
-| 1     | Import Directory (`.idata`)  | Table of imported functions                     |
-| 5     | Base Relocation Directory (`.reloc`) | Relocation table                        |
+An array of `IMAGE_SECTION_HEADER` structures, one per section:
 
-## The Section Header Table
+| Field | Meaning | Nearest ELF analog |
+|---|---|---|
+| `Name[8]` | Section name as an inline 8-byte character array — names limited to 8 characters; no string table | `sh_name` (indexes `.shstrtab`) |
+| `SizeOfRawData` | Size in the file | `sh_size` |
+| `VirtualSize` | Size in memory | — (segment-level `p_memsz` is the closest concept) |
+| `PointerToRawData` | File offset | `sh_offset` |
+| `VirtualAddress` | Virtual address | `sh_addr` |
+| `Characteristics` | Flags: executable, readable, writable, ... | `sh_flags` |
 
-Analogous to ELF's section header table: an array of `IMAGE_SECTION_HEADER` structures, one per section.
+Unlike ELF, PE has no explicit section/segment distinction: there is no program header table, and the section header table is used for both linking and loading. The closest thing to ELF's execution view is the `DataDirectory`.
 
-```c
-typedef struct {
-  BYTE  Name[8];
-  union {
-    DWORD PhysicalAddress;
-    DWORD VirtualSize;
-  } Misc;
-  DWORD VirtualAddress;
-  DWORD SizeOfRawData;
-  DWORD PointerToRawData;
-  DWORD PointerToRelocations;
-  DWORD PointerToLinenumbers;
-  WORD  NumberOfRelocations;
-  WORD  NumberOfLinenumbers;
-  DWORD Characteristics;
-} IMAGE_SECTION_HEADER;
-```
+## 3.4 Sections
 
-| FIELD             | MEANING                                            | ELF ANALOG   |
-| ----------------- | -------------------------------------------------- | ------------ |
-| `Name[8]`         | Section name, inline char array, max 8 characters  | `sh_name` (via string table) |
-| `VirtualSize`     | Size in memory                                     | `sh_size`    |
-| `SizeOfRawData`   | Size in the file                                   |              |
-| `VirtualAddress`  | Virtual address                                    | `sh_addr`    |
-| `PointerToRawData`| File offset                                        | `sh_offset`  |
-| `Characteristics` | Flags: executable, readable, writable              | `sh_flags`   |
+Overview with `objdump -x`. Common sections:
 
-Unlike ELF, PE names sections with an inline 8 byte array rather than referencing a string table, limiting names to 8 characters.
+| PE section | Contents | ELF analog |
+|---|---|---|
+| `.text` | Code | `.text` |
+| `.rdata` | Read-only data | `.rodata` (roughly) |
+| `.data` | Readable/writable data | `.data` |
+| `.bss` | Zero-initialized data (sometimes absent) | `.bss` |
+| `.pdata` | Exception information | — |
+| `.rsrc` | Resources | — |
+| `.reloc` | Relocation information | `.rela.*` |
 
-Key structural difference from ELF: PE does not explicitly distinguish sections from segments. There is no separate program header table; the section header table serves both linking and loading. The closest thing to ELF's execution view is the `DataDirectory`, which shortcuts the loader to portions needed for setup.
+!!! warning "Data in code sections"
+    PE compilers like Visual Studio sometimes place read-only data in `.text`, mixed with code, instead of in `.rdata` — making it possible to accidentally interpret constant data as instructions during disassembly.
 
-## Sections
+### `.edata` and `.idata`
 
-Many PE sections correspond directly to ELF sections, often with nearly identical names. Inspect with `objdump -x hello.exe`.
+The important PE sections with no direct ELF equivalent; referenced by DataDirectory entries 0 and 1. `.idata` specifies the symbols (functions and data) imported from shared libraries — *DLLs* in Windows terminology; `.edata` lists the symbols the binary exports, with their addresses. To resolve external references, the loader matches required imports against the export tables of the providing DLLs. In practice both sections are often absent as separate sections and merged into `.rdata`; contents and workings are unchanged.
 
-| PE SECTION | CONTENTS                                    | ELF EQUIVALENT      |
-| ---------- | ------------------------------------------- | ------------------- |
-| `.text`    | Code                                        | `.text`             |
-| `.rdata`   | Read only data                              | `.rodata`           |
-| `.data`    | Readable/writable data                      | `.data`             |
-| `.bss`     | Zero initialized data (may be absent)       | `.bss`              |
-| `.reloc`   | Relocation information                      | `.rela.*`           |
-| `.edata`   | Exported functions table                    | (none)              |
-| `.idata`   | Imported functions table                    | (none)              |
+The *Import Address Table (IAT)* — part of `.idata`, analogous to ELF's GOT — is a table of pointer slots. Initially each slot points to the name or identifying number of the symbol to import; the dynamic loader replaces it with a pointer to the actual function or variable. A library call is then implemented as a call to a *thunk*: nothing more than an indirect `jmp` through the function's IAT slot. Thunks typically appear grouped together; their jump targets are the IAT jump slots in the import directory (inside `.rdata`).
 
-!!! note "Mixed code and data"
-    Visual Studio sometimes places read only data in `.text` mixed with code instead of in `.rdata`, which makes disassembly harder because constant data can be misread as instructions.
+### Padding in code sections
 
-### .edata and .idata
+Visual Studio pads between functions/blocks with `int3` instructions (gcc uses `nop`) to align code for efficient access. `int3` is the debugger breakpoint instruction — it traps to the debugger, or crashes without one — which is acceptable since padding is never meant to execute.
 
-The most important PE sections with no direct ELF equivalent. The export and import directory entries in `DataDirectory` point to them.
+!!! note "/hotpatch"
+    With Visual Studio's `/hotpatch` option, 5 `int3` bytes precede every function and a 2-byte do-nothing instruction (usually `mov edi, edi`) sits at the entry point. To hot patch at runtime: overwrite the 5 bytes with a long `jmp` to the patched function, then overwrite the 2-byte instruction with a relative jump to that long jump — redirecting the entry point.
 
-- `.idata` lists the symbols (functions and data) the binary imports from DLLs (Windows shared libraries).
-- `.edata` lists the symbols the binary exports along with their addresses.
+## Summary
 
-To resolve external references, the loader matches a binary's required imports against the export table of the DLL that provides them.
-
-In practice `.idata` and `.edata` are often absent as separate sections and merged into `.rdata`, with contents and behavior unchanged.
-
-The Import Address Table (IAT), part of `.idata`, is analogous to the ELF GOT: a table of resolved pointers, one slot per imported symbol. Initially each slot points to the name or ordinal of the symbol to import. The dynamic loader replaces these with pointers to the actual imported functions or variables.
-
-A library function call is implemented as a call to a thunk, an indirect jump through the function's IAT slot.
-
-```
-140001cd0: jmp QWORD PTR [rip+0x3b2]   # -> IAT slot 0x140002088
-140001cd6: jmp QWORD PTR [rip+0x3a4]   # -> IAT slot 0x140002080
-140001cdc: jmp QWORD PTR [rip+0x406]   # -> IAT slot 0x1400020e8
-```
-
-Thunks are usually grouped together. Their jump targets are IAT jump slots stored in the import directory within `.rdata`.
-
-### Padding in PE Code Sections
-
-Visual Studio emits `int3` instructions as padding to align functions and code blocks for efficient access, where gcc uses `nop`. `int3` is the debugger breakpoint instruction; it traps to the debugger, or crashes if none is present. This is acceptable for padding since padding is never executed.
-
-!!! note "int3 and /hotpatch"
-    With Visual Studio's `/hotpatch` option, `int3` padding serves a dual purpose. It inserts 5 `int3` bytes before every function and a 2 byte do nothing instruction (usually `mov edi, edi`) at the entry point. Hot patching overwrites the 5 `int3` bytes with a long `jmp` to a patched function and the 2 byte instruction with a short relative jump to that long jump, redirecting the entry point.
+PE shares most of its structure with ELF: headers describing the file, a section table, comparable section contents, and load-time import resolution through a table of patched pointers. The principal differences: the legacy MS-DOS header/stub, a three-part header with RVA-based addressing against a preferred `ImageBase`, the `DataDirectory` in place of a segment view, inline 8-character section names, and IAT thunks in place of PLT/GOT stubs.
