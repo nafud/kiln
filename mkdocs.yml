@@ -101,7 +101,9 @@ nav:
               - Chapter 1: readings/books/pba/pba-chapter-01.md
               - Chapter 2: readings/books/pba/pba-chapter-02.md
               - Chapter 3: readings/books/pba/pba-chapter-03.md
-          - Reverse Engineering for Beginners: readings/books/re4b/index.md
+          - Reverse Engineering for Beginners:
+              - readings/books/re4b/index.md
+              - Chapter 1: readings/books/re4b/re4b-chapter-01.md
       - Bookmarks: readings/bookmarks/index.md
 
   - Courses:
@@ -116,4 +118,6 @@ nav:
       - Crackmes.one:
           - writeups/crackmes-one/index.md
           - CFB1: writeups/crackmes-one/crackmes-one-cfb1.md
-      - Challenges.re: writeups/challenges-re/index.md
+      - Challenges.re:
+          - writeups/challenges-re/index.md
+          - RE4B Chapter 1: writeups/challenges-re/challenges-re-re4b-ch01.md

@@ -2,11 +2,18 @@
 
 Notes for *Reverse Engineering for Beginners* by Dennis Yurichev.
 
-*Chapter notes pending.*
+<div class="home-grid">
 
-<!-- Future cross-linking: this book's exercises map onto challenges.re.
-     As chapter notes are added here, each should link to its matching
-     solution under writeups/challenges-re/, and vice versa. Keep page
-     slugs predictable (re4b-<topic>.md here, challenges-re-<id>.md there)
-     so the links are simple relative paths. Do not add these links until
-     both pages exist — a link to a missing page breaks the --strict build. -->
+<a class="home-card" href="re4b-chapter-01/">
+<span class="home-card-title">Chapter 1</span>
+<span class="home-card-text">Code Patterns (1.1–1.11): the comparative method across x86, x86-64, ARM, and MIPS.</span>
+</a>
+
+</div>
+
+<!-- Cross-linking: this book's exercises map onto challenges.re. Each
+     chapter page links to its matching solutions under
+     writeups/challenges-re/ with relative links, and vice versa (see
+     re4b-chapter-01.md for the established pattern). Do not add a
+     cross-link until both pages exist — a link to a missing page breaks
+     the --strict build. -->
