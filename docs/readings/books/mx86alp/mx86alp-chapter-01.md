@@ -1,4 +1,4 @@
-# Chapter 1 — X86-64 Core Architecture
+# Chapter 1. X86-64 Core Architecture
 
 ## Historical Overview
 

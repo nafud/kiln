@@ -1,4 +1,4 @@
-# Chapter 6 — Run-Time Calling Conventions
+# Chapter 6. Run-Time Calling Conventions
 
 ## Overview
 

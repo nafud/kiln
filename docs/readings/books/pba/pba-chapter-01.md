@@ -1,4 +1,4 @@
-# Chapter 1 — Anatomy of a Binary
+# Chapter 1. Anatomy of a Binary
 
 Machine code executed by the processor is *binary code*. A program's binary code and data are stored in a single self-contained file: a *binary executable file*, or *binary*.
 

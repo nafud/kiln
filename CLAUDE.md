@@ -59,7 +59,7 @@ Three long-lived branches form a pipeline. Work flows strictly downward — `red
 | Courses | `docs/courses/` | Digital forensics investigation notes (`ild`/`ime`/`iwe`/`iwm`) |
 | Writeups | `docs/writeups/` | Challenge solutions: Crackmes.one (`crackmes-one/`) and Challenges.re (`challenges-re/`) |
 
-Planned cross-linking: the **Reverse Engineering for Beginners** notes (`readings/books/re4b/`) are currently empty and will grow gradually; their exercises map onto **challenges.re**, so as chapter pages and matching `writeups/challenges-re/` solution pages are added they should link to each other with simple relative links. Do **not** add these cross-links until both target pages exist — a link to a missing page fails `--strict`. (See the placeholder comments in `readings/books/re4b/index.md` and `writeups/challenges-re/index.md`.)
+Cross-linking (RE4B ↔ challenges.re): the **Reverse Engineering for Beginners** notes (`readings/books/re4b/`) and the **challenges.re** writeups (`writeups/challenges-re/`) are paired — RE4B's exercises map onto challenges.re problems. Chapter 1 is the established pattern: `re4b-chapter-01.md` links its `§x.y Exercises` sections to the matching challenge anchors in `challenges-re-re4b-ch01.md`, and each solution links back to the book sections it leans on. Follow that page as the template when adding later chapters. Two rules: use **relative** links (`../../../writeups/challenges-re/challenges-re-re4b-ch01.md#anchor`), never absolute `nafud.github.io` URLs (they bypass `--strict` validation and break local preview); and never add a cross-link until **both** target pages exist — a link to a missing page fails `--strict`.
 
 ## Markdown extensions in use
 
@@ -73,6 +73,8 @@ Planned cross-linking: the **Reverse Engineering for Beginners** notes (`reading
 Each folder's landing page stays named `index.md` (this keeps clean directory URLs like `/readings/books/csapp/` and drives Material's `navigation.indexes` feature; the homepage `docs/index.md` must also keep this name). Every **non-index content page is prefixed with its folder's slug** so filenames are globally unique and greppable — e.g. `readings/books/csapp/csapp-chapter-07.md`, `readings/books/pba/pba-chapter-01.md`, `writeups/crackmes-one/crackmes-one-cfb1.md`. Folder slugs are short codes: `mx86alp` (Modern x86 ALP), `ild`/`ime`/`iwe`/`iwm` (the Investigating … courses).
 
 Tool guides are an exception to the prefix rule: each guide is its **own folder** whose entire content lives in its `index.md` (e.g. `toolkit/guides/radare2/index.md`), giving it a clean URL (`/toolkit/guides/radare2/`) and room to grow sub-pages later.
+
+**Page heading + subtitle convention.** Every content page opens with a single `# h1`, immediately followed by one intro paragraph — extra.css's `h1 + p` rule renders that paragraph as the faint subtitle, so it must be prose, not a list or table. Book-chapter h1s use the uniform house style **`# Chapter N. Title`** (period after the number, e.g. `# Chapter 8. Exceptional Control Flow`) — match it when adding or replacing a chapter; incoming drafts sometimes arrive with an em-dash or a `Book — Chapter N:` prefix, normalize them. Pages must **not** carry YAML frontmatter — no page uses it; Material derives the `<title>` (`"<h1> - Kiln"`) from the h1, auto-generates `<link rel="canonical">` from `site_url`, and the page description falls back to `site_description`. (A `title:`/`canonical:`/`meta-description:` block on an incoming draft is redundant or non-functional here — strip it.)
 
 ## Adding content
 
@@ -111,6 +113,13 @@ To add a curated external link (Toolkit → Links, Readings → Bookmarks): appe
 (`.external-link` is only the icon — new-tab behavior is automatic via external-links.js.)
 
 New malware sample sources go in the table under the existing `!!! warning "Curate with caution"` admonition on the Links page — that warning is mandatory and must stay. No `nav`/card changes are needed for link rows.
+
+## Links (internal cross-references and external redirection)
+
+Two link kinds, two rules — get them right or `--strict` / navigation breaks:
+
+- **Internal links (page → page within the site)** are **relative Markdown links to the target `.md` file**, resolved and validated by `--strict`: `[CSAPP §3.6.3](csapp-chapter-03.md)` (same folder), `[Chapter 1](../../readings/books/re4b/re4b-chapter-01.md#152-x86-64)` (across sections, with a heading anchor). MkDocs rewrites these to the final directory URLs at build. **Never** hardcode an absolute `https://nafud.github.io/kiln/...` URL for internal targets — it skips link validation and 404s against the local `mkdocs serve`. Anchors are Material's slugified headings (lowercase, spaces→`-`, dots dropped: `### 1.5.2 x86-64` → `#152-x86-64`); after wiring cross-page anchors, confirm the `id=` exists in the built HTML. The RE4B ↔ challenges.re pair (see "Content sections") is the worked example.
+- **External links (page → another origin)** are plain Markdown links tagged with the icon class: `[name](https://example.com/){ .external-link }`. New-tab **redirection is automatic** — [external-links.js](docs/javascripts/external-links.js) stamps `target="_blank" rel="noopener"` on every off-site anchor at load and after each `navigation.instant` change, so you do **not** write `target=_blank rel=noopener` per link. `.external-link` adds only the trailing chain-link icon; omit it (as the homepage attribution does) when the icon would be noise, and the link still opens in a new tab. Internal links are never redirected (external-links.js checks `origin`), so they stay in-tab.
 
 ## Custom CSS classes for content
 

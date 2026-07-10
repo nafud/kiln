@@ -1,4 +1,4 @@
-# Chapter 3 — The PE Format: A Brief Introduction
+# Chapter 3. The PE Format: A Brief Introduction
 
 The *Portable Executable* format is the main binary format on Windows — relevant chiefly for malware analysis. PE is a modified version of the *Common Object File Format* (COFF), which preceded ELF on Unix; hence the name PE/COFF. The 64-bit version is called *PE32+*, differing only slightly from PE. Data structures are defined in `WinNT.h` (Windows SDK).
 

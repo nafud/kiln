@@ -1,4 +1,4 @@
-# Chapter 2 — The ELF Format
+# Chapter 2. The ELF Format
 
 The *Executable and Linkable Format* is the default binary format on Linux, used for executables, object files, shared libraries, and core dumps. Discussion centers on 64-bit executables; 32-bit differs mainly in the size and order of certain header fields. Type definitions live in `/usr/include/elf.h`.
 
