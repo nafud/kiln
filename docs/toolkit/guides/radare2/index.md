@@ -1,188 +1,269 @@
 # Radare2
 
-Radare2 usage cheat sheet.
+Working notes for radare2. Commands are grouped by task, annotated with the
+things that actually bite you in practice. r2's command grammar is
+compositional: a base verb (`p`, `a`, `d`, `w`, `i`, `s`) plus sub-letters that
+narrow the action, an optional `j` for JSON, `~` to grep, and `@` to run at a
+different address. Learn the grammar and you stop memorizing the leaves.
 
 ---
 
 ## Launch & Config
 
-```bash
-r2 <file>              # Open binary (read-only)
-r2 -w <file>           # Open in write mode
-r2 -d <file>           # Open under debugger
-r2 -A <file>           # Auto-analyze on open (runs aaa)
-r2 -q -c '<cmd>' <f>   # Run command then quit (scripting)
-r2 -i script.r2 <f>    # Execute r2 script on open
+```
+r2 <file>              # Open read-only (safe default)
+r2 -w <file>           # Open in read/write (needed for any patching)
+r2 -d <file>           # Open under the debugger (spawns the process)
+r2 -A <file>           # Load + run aaa (one -A = aaa, -AA = aaaa)
+r2 -AA <file>          # Load + run aaaa (experimental, slower analysis)
+r2 -q -c '<cmd>' <f>   # Run command(s) then quit — scripting/one-liners
+r2 -i script.r2 <f>    # Run an r2 script on load
+r2 -n <file>           # Skip header parsing / analysis (raw/corrupt files)
 ```
 
-**In-session config**
+`r2 -A` is the everyday launch. Reach for `-AA` only when function boundaries or
+jump tables come back wrong; it costs real time on large binaries.
+
+**In-session config (`e`)**
 
 ```
-e                      # List all config variables
-e <key>=<val>          # Set config variable
-e asm.syntax=att       # Switch to AT&T syntax
-e asm.bits=64          # Force 64-bit mode
-e cfg.bigendian=true   # Force big-endian
-!<cmd>                 # Execute shell command inline
-q                      # Quit
+e                      # Dump every config var (huge; grep it)
+e~asm.                 # List only asm.* vars
+e <key>=<val>          # Set a var
+e asm.syntax=att       # AT&T instead of the default Intel
+e asm.bits=64          # Pin word size when auto-detect is wrong
+e asm.pseudo=true      # Render disasm as pseudocode inline
+e cfg.bigendian=true   # Force big-endian (MIPS/PPC blobs)
+e dbg.bep=main         # Break at main on launch instead of the ELF entry
+!<cmd>                 # Run a host shell command
+q                      # Quit  (q! to skip the "are you sure" on write mode)
 ```
+
+Config is the lever behind most "why does it look like that" questions —
+syntax, bits, endianness, and pseudocode are all just `e` toggles.
 
 ---
 
 ## Analysis
 
 ```
-aa                     # Analyze all (basic, fast)
-aaa                    # Analyze all + extras (recommended)
-aaaa                   # Deep analysis (slow, thorough)
-af                     # Analyze function at current offset
-afl                    # List all analyzed functions
-afl~<str>              # Filter function list by string
-afn <name>             # Rename current function
-afi                    # Show function info / metadata
-afv                    # List function local variables
-axf                    # List forward xrefs from current addr
-axt                    # List xrefs to current address
-axt @@ sym.*           # Find all xrefs to all symbols
+aa                     # Analyze all — fast, symbols + entrypoints only
+aaa                    # aa + function calls, refs, strings (the sane default)
+aaaa                   # aaa + experimental passes (jump tables, emu); slow
+af                     # Analyze the function at the current offset
+afl                    # List analyzed functions (addr, size, name)
+afl~<str>              # Grep the function list  (e.g. afl~main)
+aflj                   # Same, as JSON (feed to r2pipe)
+afn <name>             # Rename the current function
+afi                    # Function metadata (size, refs, stack frame, cc)
+afv                    # Local variables + arguments of the function
+axf                    # Xrefs FROM here (what this code calls/reads)
+axt                    # Xrefs TO here (who reaches this address)
+axt @@ sym.*           # Xrefs to every symbol, in one pass
 ```
 
-**Strings & References**
+`axt` is the backbone of static tracing: seek to a function or string, run
+`axt`, follow the callers up. `af` is worth knowing because `aaa` regularly
+misses functions that are only reached indirectly — seek to the byte and `af`
+by hand.
+
+**Strings & references**
 
 ```
-iz                     # List strings in .data section
-izz                    # Search strings in whole binary
-axt @ str.<name>       # Find where a string is referenced
-ii                     # List imports
-iE                     # List exports
-is                     # List symbols
+iz                     # Strings in data sections (the usual list)
+izz                    # Strings scanned across the whole binary
+izzz                   # Raw scan, every string incl. unmapped regions
+axt @ str.<name>       # Who references this string
+ii                     # Imports
+iE                     # Exports
+is                     # Symbols
 ```
+
+The `iz` → `izz` → `izzz` ladder trades noise for completeness. Start at `iz`;
+escalate only when the string you expect isn't there (packed/obfuscated data
+often only shows under `izzz`). r2 auto-creates `str.*` flags, so
+`axt @ str.<name>` is the fast path from an interesting string to the code
+that uses it.
 
 ---
 
 ## Navigation
 
 ```
-s <addr|sym>           # Seek to address or symbol
-s+<n>                  # Seek forward n bytes
-s-<n>                  # Seek backward n bytes
-s-                     # Undo last seek
-s+                     # Redo seek
-sl                     # List seek history
+s <addr|sym>           # Seek to an address, symbol, or flag
 s sym.main             # Jump to main()
+s+<n> / s-<n>          # Seek n bytes forward / back (relative)
+s-                     # Undo last seek  (bare, no number)
+s+                     # Redo seek       (bare, no number)
+s*                     # Show seek history (undo_/redo_ flags)
 ```
 
-**Flags & Bookmarks**
+Note the overload: `s-4` moves back four bytes, but bare `s-` undoes your last
+jump. In visual mode the same undo/redo is `u` / `U`. Everything in r2 is
+relative to the current seek (`$$`), so seeking is how you "move the cursor."
+
+**Flags (bookmarks)**
 
 ```
-f <name> [len] @<addr> # Create named flag (bookmark)
-fl                     # List all flags
+f <name> [len] @ <addr># Create a named flag
+fl                     # List flags
 fs                     # List flag spaces
-fs <space>             # Switch to a flag space
+fs <space>             # Switch flag space (symbols, strings, etc.)
 f- <name>              # Delete a flag
 ```
+
+Flags are namespaced by flag space (`sym`, `str`, `reloc`, …). If `afl~foo`
+finds nothing, the flag may live in another space — `fs *` searches all.
 
 ---
 
 ## Disassembly
 
 ```
-pd <n>                 # Disassemble n instructions
-pdf                    # Disassemble current function
-pdc                    # Pseudo-C decompiler output
-pdg                    # Ghidra decompiler (r2ghidra plugin)
-pd- <n>                # Disassemble n instructions backwards
-pds                    # Disasm summary (calls, jumps only)
+pdf                    # Disassemble the current function (most-used)
+pd <n>                 # Disassemble n instructions from here
+pd -<n>                # Disassemble n instructions BEFORE here
+pi <n>                 # n instructions, opcodes only (no addr/bytes column)
+pds                    # Function summary — just the calls/strings/jumps
+pdc                    # Built-in pseudo-decompiler (no plugin needed)
+pdg                    # Ghidra decompiler        (needs r2ghidra)
+pdd                    # r2dec decompiler         (needs r2dec)
 pdj                    # Disassembly as JSON
-pi <n>                 # Print n instructions (no metadata)
-ao                     # Analyze single opcode at cursor
-aoj                    # Opcode info as JSON
+ao                     # Analyze the opcode under the cursor (esil, type, size)
+aoj                    # Same, JSON
 ```
+
+`pdf` is where you live. `pds` is underrated for triage: it collapses a
+function down to its calls and string refs so you can judge relevance without
+reading every instruction. Decompilers vary in quality per target — `pdc`
+always works, `pdg`/`pdd` are better but need the plugin installed.
 
 ---
 
 ## Print & Inspect
 
 ```
-px <n>                 # Hex dump n bytes
-pxw <n>                # Hex dump as 32-bit words
-pxq <n>                # Hex dump as 64-bit qwords
-ps @ <addr>            # Print string at address
-pf <fmt>               # Print formatted struct (e.g. pf xxS)
-p8 <n>                 # Raw bytes as hex string
-p=e                    # Entropy visualization across file
+px <n>                 # Hexdump n bytes
+pxw <n>                # Dump as 32-bit words
+pxq <n>                # Dump as 64-bit qwords
+pxr <n>                # Dump words + resolve each as a pointer/flag (stacks!)
+ps @ <addr>            # Print the string at an address
+pf <fmt> @ <addr>      # Print a formatted struct (e.g. pf xxs = int,int,str)
+p8 <n>                 # Raw bytes as a hex string
+p=e                    # Entropy graph across the file (spot packed regions)
 ```
 
-**Visual Mode**
+`pxr` is the one to remember for stack/heap inspection — it dereferences each
+word and labels known addresses, so you can read a stack frame at a glance.
+`pf` takes a format string (`x` dword, `q` qword, `s` string, `z`
+null-term, a leading number for arrays) and is how you overlay a struct on raw
+bytes.
 
-| Key | Action |
-|-----|--------|
-| `V` | Enter visual mode (hex view) |
-| `VV` | Visual graph mode (CFG) |
-| `v` | Visual panels (split view) |
-| `p` / `P` | Cycle display modes |
-| `q` | Exit visual mode |
+**Visual mode**
+
+| Key   | Action                                            |
+| ----- | ------------------------------------------------- |
+| `V`   | Hex/disasm view (Enter to open, `q` to leave)     |
+| `VV`  | Graph mode — control-flow graph of the function   |
+| `Vv`  | Function/analysis menu (rename, set types, xrefs) |
+| `v`   | Visual panels (split dashboard view)              |
+| `Vpp` | Visual debugger layout                            |
+
+Inside any visual view: `p`/`P` cycle print modes, `hjkl` move, `:` drops to a
+command prompt, `?` shows context help. `VV` graph mode is the single biggest
+quality-of-life feature for reading branchy functions.
 
 ---
 
 ## Searching
 
 ```
-/ <string>             # Search for ASCII string
-/x <hexbytes>          # Search for byte pattern
-/a <asm>               # Search by assembly instruction
-/c <instr>             # Search code matching instruction
-/R <opcode>            # Find ROP gadgets matching pattern
-/R/ <regex>            # ROP gadget search with regex
-//                     # Repeat last search
+/ <string>             # Search ASCII
+/i <string>            # Search ASCII, case-insensitive
+/x <hexbytes>          # Search a byte pattern
+/x ff..33              # ... with nibble wildcards ( .. = any )
+/x ff0033:ff00ff       # ... with a bitmask (value:mask)
+/a <asm>               # Search for an assembled instruction
+/c <instr>             # Search analyzed code matching an instruction
+/R <opcode>            # ROP gadgets ending in a matching instruction
+/R/ <regex>            # ROP gadget search by regex
+//                     # Repeat the last search
 ```
 
-**Search scope config**
+The masked `/x` forms are the workhorses: `/x 80..80` finds a byte, anything,
+then a byte; `value:mask` matches only the bits set in the mask. Results land
+as `hit0_*` flags you can iterate with `@@ hit*`.
+
+**Search scope**
 
 ```
-e search.in=dbg.maps   # Search across all memory maps
+e search.in=dbg.maps   # Search all debugger memory maps
 e search.in=io.maps    # Search all mapped IO sections
+e search.in=block      # Search only the current block (default varies)
 ```
+
+Scope is the usual "search finds nothing" culprit — by default r2 may only be
+searching the current section. Widen `search.in` before assuming the pattern
+isn't there.
 
 ---
 
 ## Debugging
 
 ```
-dc                     # Continue execution
-ds                     # Step into (one instruction)
-dso                    # Step over (skip call)
-dsu <addr>             # Step until address
-db <addr>              # Set breakpoint
-db- <addr>             # Remove breakpoint
-dbl                    # List breakpoints
-dr                     # Show register values
-dr <reg>=<val>         # Set register value
-dm                     # List memory maps
-dbt                    # Backtrace (call stack)
-doo [args]             # Restart process with args
-dk <sig>               # Send signal to process
+dc                     # Continue
+ds                     # Step one instruction (into)
+dso                    # Step over (skips the call)
+dsu <addr>             # Step until an address
+dcu <addr>             # Continue until an address (faster "run to here")
+db <addr>              # Set a breakpoint
+db- <addr>             # Remove a breakpoint
+db                     # List breakpoints  (dbl also lists)
+dr                     # Show registers
+dr <reg>=<val>         # Set a register
+dr <reg>               # Read one register
+dm                     # Memory maps
+dmh                    # Heap layout (glibc; great for heap work)
+dbt                    # Backtrace / call stack
+doo [args]             # Reopen under debugger with args (alias of ood)
+dk <sig>               # Send a signal to the process
 ```
+
+For "run to this line," prefer `dcu <addr>` over stepping — it continues at
+full speed and stops at the target. `dso` vs `ds` matters constantly: `ds` into
+a `call` drops you inside the callee; `dso` runs the call and returns. After any
+`dc`/`ds`, `V` (or `Vpp`) gives you a live register+disasm dashboard.
 
 ---
 
 ## Writing & Patching
 
 !!! warning "Write mode required"
-    Open with `r2 -w <file>` before any write operation.
+    Open with `r2 -w <file>` (or `oo+` mid-session) before any write. Writes hit
+    the file on disk — work on a copy.
 
 ```
-wx <hexbytes>          # Write hex bytes at current offset
-wa <asm>               # Write assembly instruction
-wf <file>              # Write file contents at offset
-wz <string>            # Write null-terminated string
-wn <n> <byte>          # Write n copies of byte
-wao nop                # NOP out current instruction
+wx <hexbytes>          # Write raw hex at the current offset
+wa <asm>               # Assemble and write an instruction
+wao nop                # NOP out the current instruction (auto-sizes)
+wf <file>              # Write a file's contents at the offset
+wz <string>            # Write a null-terminated string
+wn <byte> <n>          # Write n copies of a byte
 ```
 
-**One-liner patch from shell**
+`wao` is smarter than `wx 90` because it fills the whole instruction correctly
+(right length, right no-op for the arch). `wa` assembles for you, so you write
+`wa jmp 0x401260` instead of hand-encoding. Combine writes with iterators:
 
-```bash
-r2 -qc 'wx 90 @ 0x401234' -w ./binary
+```
+wx 90 @@ sym.*         # Write a byte at every symbol (batch patch)
+```
+
+**One-liner patch from the shell**
+
+```
+r2 -w -qc 'wx 90 @ 0x401234' ./binary
+r2 -w -qc 's 0x401234; wa jmp 0x401260; pd 1' ./binary   # patch + verify
 ```
 
 ---
@@ -191,89 +272,123 @@ r2 -qc 'wx 90 @ 0x401234' -w ./binary
 
 ```
 i                      # File info summary
-iI                     # Detailed binary info (arch, OS, bits)
-ih                     # Section headers
-iS                     # Sections with perms and sizes
+iI                     # Detailed: arch, bits, OS, endian, PIC/NX/canary
+ih                     # File/format header fields (ELF/PE/Mach-O header)
+iS                     # Sections — name, perms, size, vaddr/paddr
 il                     # Linked libraries
 ir                     # Relocations
-iM                     # Entry point
-ph md5                 # MD5 hash of current block
-ph sha256              # SHA256 hash of current block
+ie                     # Entrypoints (the real start address(es))
+iM                     # Address of the main symbol
+ph md5                 # MD5 of the current block
+ph sha256              # SHA-256 of the current block
+ph md5 <len>           # Hash a specific length instead of the block size
 ```
 
-**From shell (no session)**
+Two easy mix-ups: `ih` is the format *header*, `iS` is *sections* — different
+things. And `ie` gives the entrypoint(s) while `iM` gives `main` — the CRT
+entry is not `main`. `iI` is the fastest security-posture check (NX, PIE,
+canary, RELRO) without leaving r2.
 
-```bash
-rabin2 -I <file>       # Quick binary info
-rabin2 -z <file>       # Extract strings
+**From the shell (no session)**
+
+```
+rabin2 -I <file>       # Info summary (mirrors iI)
+rabin2 -z <file>       # Strings
 rabin2 -i <file>       # Imports
+rabin2 -e <file>       # Entrypoints
+rabin2 -s <file>       # Symbols
 ```
+
+`rabin2` is the same engine r2 uses for parsing — reach for it in scripts and
+quick triage when you don't want a full session.
 
 ---
 
 ## Scripting & Output
 
 ```
-~<str>                 # Grep output (pipe filter)
-~[n]                   # Select column n from output
-cmd > file             # Redirect output to file
-. script.r2            # Source / execute r2 script
+~<str>                 # Grep r2 output   (afl~main)
+~[n]                   # Keep column n of each line (afl~[0] = addresses)
+~:0                    # Keep row 0 (first line)
+cmd > file             # Redirect output to a file
+cmd | host_cmd         # Pipe output to a host program (| less, | grep)
+. script.r2            # Source an r2 script
+.<cmd>                 # Run a command and interpret its output AS commands
 ```
 
-**Batch from shell**
+The internal grep (`~`) is column- and row-aware, which is why r2 scripting
+rarely needs external `grep`/`awk`. The `.` prefix is the metaprogramming hook:
+`.(cmd)` runs a command and executes whatever it prints — that's how you turn a
+listing into a batch of actions.
 
-```bash
-r2 -qc 'cmd' <file>    # Single command, quit
-r2 -i script.r2 <file> # Run full script
-```
-
-**Iterators**
+**Batch from the shell**
 
 ```
-@@                     # Run cmd on each matched address
-@@ sym.*               # Iterate over all sym.* flags
-afl @@ sym.*           # Analyze each symbol function
+r2 -qc 'aaa; aflj' <file>        # Analyze, dump functions as JSON, quit
+r2 -i script.r2 <file>           # Run a full script on load
 ```
 
-!!! tip "JSON output"
-    Most commands accept a `j` suffix for JSON output — useful for r2pipe scripting: `aflj`, `pdj`, `isj`, etc.
+**Iterators (`@@`)**
+
+```
+@@ <flag-glob>         # Run the command at each matching flag
+@@ sym.*               # ... at every symbol
+@@ hit*                # ... at every search hit
+afl @@ sym.*           # Analyze each symbol's function
+@@f                    # At every function (see aflq)
+@@b                    # At every basic block of the current function
+@@@ <type>             # Extended foreach over a class (functions, imports, …)
+```
+
+`@@` is r2's `for`-loop; anything you can flag, you can iterate. Pair it with
+`~` and `j` output and most one-off analysis scripts collapse to a single line.
+
+!!! note "JSON everywhere"
+    Append `j` to almost any command for machine-readable output: `aflj`,
+    `pdj`, `isj`, `izj`, `drj`. This is the intended interface for r2pipe.
 
 ---
 
 ## Common Workflows
 
-**Static analysis entry point**
+**Static triage entry point**
 
-```bash
+```
 r2 -A ./binary
-# then inside r2:
-afl          # list functions
-s sym.main   # jump to main
-pdf          # disassemble
+afl              # what functions exist
+iI               # arch, protections (NX/PIE/canary)
+s sym.main ; pdf # read main
 ```
 
-**Find & follow a string reference**
+**Follow a string to its use site**
 
 ```
-izz          # find all strings
-axt @ str.interesting_string   # who references it?
-s <addr>     # seek there
-pdf          # disassemble that function
+izz                            # find the string
+axt @ str.interesting_string   # who references it
+s <ref-addr> ; pdf             # read that function
 ```
 
-**ROP chain hunting**
+**ROP hunting**
 
 ```
-/R/ pop rdi; ret       # find gadgets
-/R/ pop rsi; pop r15   # chain candidates
+/R/ pop rdi; ret               # gadget by regex
+/R/ pop rsi; pop r15           # multi-instruction candidates
 ```
 
-**Patch a jump**
+**Patch and verify a jump**
 
-```bash
+```
 r2 -w ./binary
-# inside r2:
 s 0x401234
-wa jmp 0x401260        # overwrite instruction
-pd 1                   # verify
+wa jmp 0x401260                # or: wao nop  to kill a check
+pd 1                           # confirm the new instruction
+```
+
+**Debug to a target, inspect the stack**
+
+```
+r2 -d ./binary
+db 0x401234 ; dc               # break and run to it
+dr                             # registers
+pxr 64 @ rsp                   # stack with pointers resolved
 ```
