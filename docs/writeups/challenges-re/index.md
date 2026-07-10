@@ -1,7 +1,7 @@
 # Challenges.re
 
 My solutions to the exercises at
-[challenges.re](https://challenges.re/){ target=_blank rel=noopener .external-link }.
+[challenges.re](https://challenges.re/){ .external-link }.
 
 *Solutions pending.*
 

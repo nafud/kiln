@@ -6,7 +6,7 @@ External sources for tools and malware samples.
 
 | Resource |
 |---|
-| [Compiler Explorer](https://godbolt.org/){ target=_blank rel=noopener .external-link } |
+| [Compiler Explorer](https://godbolt.org/){ .external-link } |
 
 ## Malware sample sources
 
@@ -15,5 +15,5 @@ External sources for tools and malware samples.
 
 | Resource |
 |---|
-| [theZoo](https://thezoo.morirt.com/){ target=_blank rel=noopener .external-link } |
-| [Ultimate RAT Collection](https://github.com/Cryakl/Ultimate-RAT-Collection){ target=_blank rel=noopener .external-link } |
+| [theZoo](https://thezoo.morirt.com/){ .external-link } |
+| [Ultimate RAT Collection](https://github.com/Cryakl/Ultimate-RAT-Collection){ .external-link } |

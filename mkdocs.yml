@@ -65,6 +65,7 @@ extra_css:
 
 extra_javascript:
   - javascripts/page-utils.js
+  - javascripts/external-links.js
   - javascripts/page-chrome.js
   - javascripts/ascii-logo.js
   - javascripts/code-copy.js
