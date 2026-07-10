@@ -1,6 +1,7 @@
 # Crackmes.one
 
-Writeup solutions for crackmes from [crackmes.one](https://crackmes.one).
+Writeup solutions for crackmes from
+[crackmes.one](https://crackmes.one/){ target=_blank rel=noopener .external-link }.
 
 | Crackme | Platform | Difficulty | Author |
 |---|---|---|---|
