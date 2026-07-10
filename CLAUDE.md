@@ -27,13 +27,14 @@ Three long-lived branches form a pipeline. Work flows strictly downward — `red
 
 ## Structure
 
-- [mkdocs.yml](mkdocs.yml) — site config: theme + three-way palette (light/dark/system), features (`navigation.instant`, `navigation.prune`, etc.), markdown extensions, `extra_javascript` load order, and `validation` settings. Link problems are escalated to warnings so `--strict` fails on them; the homepage is intentionally not in `nav`, so `nav.omitted_files` stays at `info`. The `nav:` section must be updated manually when adding pages or sections.
-- [docs/](docs/) — all content as Markdown. Every folder (section and sub-section) has an `index.md` landing page, usually with a `.home-grid` card grid pointing at its children. Sections nest: `Toolkit → {Guides → radare2, Links}`, `Readings → {Books → book folders, Bookmarks}`, `Writeups → {Crackmes.one, Challenges.re}`. **Everything under `docs/` gets built and published** — do not put internal/non-public files here.
+- [mkdocs.yml](mkdocs.yml) — site config: theme + three-way palette (light/dark/system), features (`navigation.instant`, `navigation.prune`, etc.), markdown extensions, `extra_javascript` load order, and `validation` settings. Link problems are escalated to warnings so `--strict` fails on them; the homepage is intentionally not in `nav`, so `nav.omitted_files` stays at `info`. `theme.font: false` disables Material's Google-Fonts loading — JetBrains Mono comes from the `@import` in extra.css instead. The `nav:` section must be updated manually when adding pages or sections.
+- [docs/](docs/) — all content as Markdown. Every folder (section and sub-section) has an `index.md` landing page — with a `.home-grid` card grid when it has child pages to point at. Sections nest: `Toolkit → {Guides → radare2, Links}`, `Readings → {Books → book folders, Bookmarks}`, `Writeups → {Crackmes.one, Challenges.re}`. The curated-link pages (`toolkit/links/`, `readings/bookmarks/`) render their entries as single-column `| Resource |` Markdown tables — see "Adding content". **Everything under `docs/` gets built and published** — do not put internal/non-public files here.
 - [docs/stylesheets/extra.css](docs/stylesheets/extra.css) — all custom styling: JetBrains Mono as the global font, color variables in `:root` with `[data-md-color-scheme="slate"]` dark-mode overrides, ASCII logo sizing variables, card grid, sidebar styling, scroll buttons. Notes:
     - Card rules are scoped as `.md-typeset a.home-card` — a bare `.home-card` selector loses the cascade to Material's generic `.md-typeset a` rule (transitions get replaced and cards dim on hover).
+    - The first paragraph after a page's `h1` renders as a faint subtitle (`h1 + p` rule) — every page's intro line relies on this.
     - The "Copied to clipboard" dialog is intentionally suppressed via `[data-md-component="dialog"] { display: none }`; code-copy itself still works.
     - Do not `@import` the logo font here — ascii-logo.js injects it only on pages that render the logo.
-    - Curated external links (Toolkit → Links, Readings → Bookmarks) use `.external-link` (a trailing chain-link SVG-mask icon, tinted via `currentColor`) applied via `attr_list`: `[text](url){ target=_blank rel=noopener .external-link }`.
+    - External links out of the site use `.external-link` (a trailing chain-link SVG-mask icon, tinted via `currentColor` so it matches the link color and hover) applied via `attr_list`: `[text](url){ target=_blank rel=noopener .external-link }`.
 - [docs/javascripts/page-utils.js](docs/javascripts/page-utils.js) — shared `KilnUtils` global: `debounce`, and `onPageChange(fn)` which runs `fn` on load and after every `navigation.instant` page change (via Material's `document$`, falling back to `DOMContentLoaded`). Must stay **first** in `extra_javascript`; the other scripts depend on it.
 - [docs/javascripts/page-chrome.js](docs/javascripts/page-chrome.js) — sidebar title fade and scroll-to-top/bottom buttons. Init functions are idempotent and re-run via `KilnUtils.onPageChange` because `navigation.instant` removes injected DOM on navigation.
 - [docs/javascripts/code-copy.js](docs/javascripts/code-copy.js) — swaps the code-copy button icon to a checkmark after a copy (one delegated click listener; no per-navigation init). Material's own copy feedback is the toast dialog that extra.css hides; the checkmark is a CSS swap of the button's `::after` mask via the `md-code__button--copied` class. The restore is staged: `--leaving` fades the check out, then `--restoring` animates the copy icon back in. Swap timing is single-sourced from `--kiln-icon-swap-duration` in extra.css (the script reads it at runtime).
@@ -87,6 +88,14 @@ To add a new page within an existing section (e.g., `docs/readings/books/csapp/c
 <span class="home-card-text">One-line description.</span>
 </a>
 ```
+
+To add a curated external link (Toolkit → Links, Readings → Bookmarks): append a row to the page's single-column `| Resource |` table —
+
+```markdown
+| [Name](https://example.com/){ target=_blank rel=noopener .external-link } |
+```
+
+New malware sample sources go in the table under the existing `!!! warning "Curate with caution"` admonition on the Links page — that warning is mandatory and must stay. No `nav`/card changes are needed for link rows.
 
 ## Custom CSS note
 
