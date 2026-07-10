@@ -3,7 +3,7 @@
 **Platform:** Windows x86-64  
 **Difficulty:** Easy  
 **Author:** pwn.by / pwned.space  
-**Source:** [crackmes.one](https://crackmes.one)
+**Source:** [crackmes.one](https://crackmes.one/){ target=_blank rel=noopener .external-link }
 
 A serial-based crackme. The program takes a username (minimum 4 characters) and a serial key, then validates the key against a value derived from the username. The goal is to understand the derivation algorithm and generate a valid key for any username.
 

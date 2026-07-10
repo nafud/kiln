@@ -22,19 +22,21 @@ Three long-lived branches form a pipeline. Work flows strictly downward — `red
 
 - `redact` — writing desk. Long-lived branch where content is written gradually (draft chapters, half-finished notes). Unfinished states are first-class here: pages may be missing from `nav`, links may dangle, strict builds may fail — none of it matters because `redact` never reaches production directly and **no CI runs on it** (by design; a mid-draft red ✗ would be noise). Preview drafts locally with `mkdocs serve`. When a piece is ready, merge `redact` into `secondary`; immediately after each promotion, merge `secondary` back into `redact` so the desk stays current — skipping the sync-back is what causes `mkdocs.yml` nav conflicts later.
 - `secondary` — test/integration branch, **always promotable**. Everything on it is finished work verified with a local `mkdocs serve`; every push runs [.github/workflows/build-check.yml](.github/workflows/build-check.yml) (`mkdocs build --strict` plus the theme-internals canary), so broken links and nav mistakes fail CI before they can reach production. Small self-contained changes (typo fixes, styling, config) are committed here directly; gradual content work arrives by merging `redact`.
-- `primary` — production. Pushing here triggers [.github/workflows/deploy.yml](.github/workflows/deploy.yml), which builds and deploys to GitHub Pages; it can be re-run manually from the Actions tab (`workflow_dispatch`). Receives only fast-forward pushes of CI-verified `secondary` states, once the user confirms: `git push origin secondary:primary`.
+- `primary` — production. Pushing here triggers [.github/workflows/deploy.yml](.github/workflows/deploy.yml), which builds (non-strict — validation already happened on `secondary`; the deploy build must not fail late) and deploys to GitHub Pages; it can be re-run manually from the Actions tab (`workflow_dispatch`). Receives only fast-forward pushes of CI-verified `secondary` states, once the user confirms: `git push origin secondary:primary`. A promotion done as a GitHub PR merge instead adds a merge commit to `primary`; after one, fast-forward `secondary` (and `redact`) to the merge commit so the next promotion fast-forwards again.
 - Layout/content experiments that are just "to see how it looks" go on a throwaway branch (e.g. `experiment/<name>`), deleted afterwards — not commit+revert pairs on the long-lived branches.
 
 ## Structure
 
 - [mkdocs.yml](mkdocs.yml) — site config: theme + three-way palette (light/dark/system), features (`navigation.instant`, `navigation.prune`, etc.), markdown extensions, `extra_javascript` load order, and `validation` settings. Link problems are escalated to warnings so `--strict` fails on them; the homepage is intentionally not in `nav`, so `nav.omitted_files` stays at `info`. `theme.font: false` disables Material's Google-Fonts loading — JetBrains Mono comes from the `@import` in extra.css instead. The `nav:` section must be updated manually when adding pages or sections.
-- [docs/](docs/) — all content as Markdown. Every folder (section and sub-section) has an `index.md` landing page — with a `.home-grid` card grid when it has child pages to point at. Sections nest: `Toolkit → {Guides → radare2, Links}`, `Readings → {Books → book folders, Bookmarks}`, `Writeups → {Crackmes.one, Challenges.re}`. The curated-link pages (`toolkit/links/`, `readings/bookmarks/`) render their entries as single-column `| Resource |` Markdown tables — see "Adding content". **Everything under `docs/` gets built and published** — do not put internal/non-public files here.
-- [docs/stylesheets/extra.css](docs/stylesheets/extra.css) — all custom styling: JetBrains Mono as the global font, color variables in `:root` with `[data-md-color-scheme="slate"]` dark-mode overrides, ASCII logo sizing variables, card grid, sidebar styling, scroll buttons. Notes:
+- [docs/](docs/) — all content as Markdown. Every folder (section and sub-section) has an `index.md` landing page — with a `.home-grid` card grid when it has child pages to point at, **except** writeup-collection landing pages (`writeups/crackmes-one/`), which list their solutions as a metadata Markdown table (`| Crackme | Platform | Difficulty | Author |`) instead of cards. Sections nest: `Toolkit → {Guides → radare2, Links}`, `Readings → {Books → book folders, Bookmarks}`, `Writeups → {Crackmes.one, Challenges.re}`. The curated-link pages (`toolkit/links/`, `readings/bookmarks/`) render their entries as single-column `| Resource |` Markdown tables — see "Adding content". **Everything under `docs/` gets built and published** — do not put internal/non-public files here.
+- [docs/index.md](docs/index.md) — homepage: the ASCII-logo `pre` (with plain-text fallback + `aria-label`), the four section cards, and an attribution line tagged `{: .home-attribution }`. It deliberately has **no `# h1`** — the logo is the title, and extra.css hides the `h1` Material generates from the page title (`.md-content__inner:has(.kiln-ascii) > h1`). The attribution link is the one external link intentionally **without** `.external-link` (a chain icon would be noise in a footer signature).
+- [docs/stylesheets/extra.css](docs/stylesheets/extra.css) — all custom styling: JetBrains Mono as the global font, color variables in `:root` with `[data-md-color-scheme="slate"]` dark-mode overrides, ASCII logo sizing variables, card grid, register cards, sidebar styling (sticky nav titles + injected gradient fade), scroll buttons. The Material footer is hidden entirely (`.md-footer { display: none }`). Notes:
     - Card rules are scoped as `.md-typeset a.home-card` — a bare `.home-card` selector loses the cascade to Material's generic `.md-typeset a` rule (transitions get replaced and cards dim on hover).
     - The first paragraph after a page's `h1` renders as a faint subtitle (`h1 + p` rule) — every page's intro line relies on this.
     - The "Copied to clipboard" dialog is intentionally suppressed via `[data-md-component="dialog"] { display: none }`; code-copy itself still works.
     - Do not `@import` the logo font here — ascii-logo.js injects it only on pages that render the logo.
-    - External links out of the site use `.external-link` (a trailing chain-link SVG-mask icon, tinted via `currentColor` so it matches the link color and hover) applied via `attr_list`: `[text](url){ target=_blank rel=noopener .external-link }`.
+    - External links out of the site use `.external-link` (a trailing chain-link SVG-mask icon, tinted via `currentColor` so it matches the link color and hover) applied via `attr_list`: `[text](url){ target=_blank rel=noopener .external-link }`. This applies to **all** external links in content, not just the curated-link tables; the homepage attribution is the sole deliberate exception.
+    - Homepage-only rules are gated on `:has(.kiln-ascii)` (no homepage-specific class exists): they hide Material's generated `h1` and flex-stretch the `.md-main → .md-main__inner → .md-content → .md-content__inner` chain so the attribution's `margin-top: auto` pins it to the bottom of the viewport.
 - [docs/javascripts/page-utils.js](docs/javascripts/page-utils.js) — shared `KilnUtils` global: `debounce`, and `onPageChange(fn)` which runs `fn` on load and after every `navigation.instant` page change (via Material's `document$`, falling back to `DOMContentLoaded`). Must stay **first** in `extra_javascript`; the other scripts depend on it.
 - [docs/javascripts/page-chrome.js](docs/javascripts/page-chrome.js) — sidebar title fade and scroll-to-top/bottom buttons. Init functions are idempotent and re-run via `KilnUtils.onPageChange` because `navigation.instant` removes injected DOM on navigation.
 - [docs/javascripts/code-copy.js](docs/javascripts/code-copy.js) — swaps the code-copy button icon to a checkmark after a copy (one delegated click listener; no per-navigation init). Material's own copy feedback is the toast dialog that extra.css hides; the checkmark is a CSS swap of the button's `::after` mask via the `md-code__button--copied` class. The restore is staged: `--leaving` fades the check out, then `--restoring` animates the copy icon back in. Swap timing is single-sourced from `--kiln-icon-swap-duration` in extra.css (the script reads it at runtime).
@@ -69,6 +71,8 @@ Planned cross-linking: the **Reverse Engineering for Beginners** notes (`reading
 
 Each folder's landing page stays named `index.md` (this keeps clean directory URLs like `/readings/books/csapp/` and drives Material's `navigation.indexes` feature; the homepage `docs/index.md` must also keep this name). Every **non-index content page is prefixed with its folder's slug** so filenames are globally unique and greppable — e.g. `readings/books/csapp/csapp-chapter-07.md`, `readings/books/pba/pba-chapter-01.md`, `writeups/crackmes-one/crackmes-one-cfb1.md`. Folder slugs are short codes: `mx86alp` (Modern x86 ALP), `ild`/`ime`/`iwe`/`iwm` (the Investigating … courses).
 
+Tool guides are an exception to the prefix rule: each guide is its **own folder** whose entire content lives in its `index.md` (e.g. `toolkit/guides/radare2/index.md`), giving it a clean URL (`/toolkit/guides/radare2/`) and room to grow sub-pages later.
+
 ## Adding content
 
 To add a new top-level section:
@@ -89,6 +93,14 @@ To add a new page within an existing section (e.g., `docs/readings/books/csapp/c
 </a>
 ```
 
+Exception: on writeup-collection landing pages (e.g. `writeups/crackmes-one/index.md`), step 3 is a row in the metadata table instead of a card:
+
+```markdown
+| [CFB1](crackmes-one-cfb1.md) | Windows x86-64 | Easy | pwn.by |
+```
+
+To add a tool guide: create `docs/toolkit/guides/<tool>/index.md` (the guide **is** the folder's index — see "File naming convention"), add it under `Guides:` in `nav:`, and add a card on `toolkit/guides/index.md`.
+
 To add a curated external link (Toolkit → Links, Readings → Bookmarks): append a row to the page's single-column `| Resource |` table —
 
 ```markdown
@@ -97,7 +109,7 @@ To add a curated external link (Toolkit → Links, Readings → Bookmarks): appe
 
 New malware sample sources go in the table under the existing `!!! warning "Curate with caution"` admonition on the Links page — that warning is mandatory and must stay. No `nav`/card changes are needed for link rows.
 
-## Custom CSS note
+## Custom CSS classes for content
 
 Use the `.ascii-diagram` class on `<pre>` blocks for borderless, transparent ASCII diagrams:
 
@@ -107,4 +119,16 @@ Use the `.ascii-diagram` class on `<pre>` blocks for borderless, transparent ASC
   | box  |
   +------+
 </pre>
+```
+
+Use `.register-grid` / `.register-card` for compact definition-card grids (4 columns, 2 on narrow screens) — used for the x86-64 register reference in `mx86alp-chapter-01.md`:
+
+```html
+<div class="register-grid">
+  <div class="register-card">
+    <div class="register-name">RAX</div>
+    <div class="register-aliases">EAX · AX · AL / AH</div>
+    <div class="register-desc">Accumulator; implicit in MUL, IMUL, DIV, IDIV</div>
+  </div>
+</div>
 ```

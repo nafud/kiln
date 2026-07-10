@@ -37,6 +37,7 @@ jobs:
       #   md-sidebar--primary,
       #   md-nav--primary,
       #   md-nav__title               page-chrome.js sidebar fade + extra.css
+      #   md-main__inner              extra.css :has() homepage flex stretch
       #   md-content__inner           extra.css :has() homepage h1 hiding
       #   md-typeset, md-header       extra.css styling roots
       - name: Verify Material internals used by custom CSS/JS
