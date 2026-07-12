@@ -122,6 +122,7 @@ nav:
       - Crackmes.one:
           - writeups/crackmes-one/index.md
           - CFB1: writeups/crackmes-one/crackmes-one-cfb1.md
+          - CFB2: writeups/crackmes-one/crackmes-one-cfb2.md
       - Challenges.re:
           - writeups/challenges-re/index.md
           - RE4B Chapter 1: writeups/challenges-re/challenges-re-re4b-ch01.md
