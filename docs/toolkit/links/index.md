@@ -10,8 +10,6 @@ External sources for tools and malware samples.
 
 ## MARE Lab
 
-### Triage & Static Identification
-
 | Triage & Static Identification |
 |---|
 | [DIE (Detect It Easy)](https://github.com/horsicq/Detect-It-Easy){ .external-link } |
@@ -22,30 +20,22 @@ External sources for tools and malware samples.
 | [HxD](https://mh-nexus.de/en/hxd/){ .external-link } |
 | [010 Editor](https://www.sweetscape.com/010editor/){ .external-link } |
 
-### Disassembly & Decompilation
-
 | Disassembly & Decompilation |
 |---|
 | [Ghidra](https://github.com/NationalSecurityAgency/ghidra){ .external-link } |
 | [Cutter](https://cutter.re/){ .external-link } |
 | [IDA Free](https://hex-rays.com/ida-free/){ .external-link } |
 
-### Debugging
-
 | Debugging |
 |---|
 | [x64dbg (x32/x64)](https://x64dbg.com/){ .external-link } |
 | [WinDbg](https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/){ .external-link } |
-
-### .NET-Specific
 
 | .NET-Specific |
 |---|
 | [dnSpyEx](https://github.com/dnSpyEx/dnSpy){ .external-link } |
 | [de4dot](https://github.com/de4dot/de4dot){ .external-link } |
 | [ILSpy](https://github.com/icsharpcode/ILSpy){ .external-link } |
-
-### Dynamic (Behavioral) Monitoring
 
 | Dynamic (Behavioral) Monitoring |
 |---|
@@ -57,8 +47,6 @@ External sources for tools and malware samples.
 | [Autoruns](https://learn.microsoft.com/en-us/sysinternals/downloads/autoruns){ .external-link } |
 | [Sysmon](https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon){ .external-link } |
 
-### Network Analysis
-
 | Network Analysis |
 |---|
 | [Wireshark](https://www.wireshark.org/){ .external-link } |
@@ -67,26 +55,18 @@ External sources for tools and malware samples.
 | [TCPView](https://learn.microsoft.com/en-us/sysinternals/downloads/tcpview){ .external-link } |
 | [mitmproxy](https://mitmproxy.org/){ .external-link } |
 
-### Unpacking & Injection Detection
-
 | Unpacking & Injection Detection |
 |---|
 | [PE-sieve](https://github.com/hasherezade/pe-sieve){ .external-link } |
 | [Hollows Hunter](https://github.com/hasherezade/hollows_hunter){ .external-link } |
 
-### Memory Forensics
-
 | Memory Forensics |
 |---|
 | [Volatility 3](https://github.com/volatilityfoundation/volatility3){ .external-link } |
 
-### Decode & Data Utilities
-
 | Decode & Data Utilities |
 |---|
 | [CyberChef](https://gchq.github.io/CyberChef/){ .external-link } |
-
-### Environments & Distros
 
 | Environments & Distros |
 |---|
