@@ -125,3 +125,5 @@ nav:
       - Challenges.re:
           - writeups/challenges-re/index.md
           - RE4B Chapter 1: writeups/challenges-re/challenges-re-re4b-ch01.md
+      - Hack This Site:
+          - writeups/hack-this-site/index.md
