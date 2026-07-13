@@ -30,7 +30,7 @@ theme:
   favicon: assets/images/kiln-logo-favicon.png
   font: false
   icon:
-    repo: material/link
+    repo: fontawesome/brands/github
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
