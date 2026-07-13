@@ -1,16 +1,14 @@
 # CFB2
 
-A crackmes.one keygen-style challenge where the key is a route through a maze embedded as raw data in the binary. Solving it is entirely static: locate the grid, recover the movement and validation semantics from the disassembly, and run a shortest-path search.
+**Source:** [crackmes.one](https://crackmes.one/crackme/6a15496417539b5175d12386){ .external-link }  
+**Author:** [CrackNotMe](https://crackmes.one/user/CrackNotMe){ .external-link }  
+**Difficulty:** 2.0  
+**Quality:** 4.0  
+**Language:** C/C++  
+**Platform:** Windows  
+**Arch:** x86-64
 
-| | |
-|---|---|
-| Source | [crackmes.one](https://crackmes.one/crackme/6a15496417539b5175d12386){ .external-link } |
-| Author | [CrackNotMe](https://crackmes.one/user/CrackNotMe){ .external-link } |
-| Difficulty | 2.0 |
-| Quality | 4.0 |
-| Language | C/C++ |
-| Platform | Windows |
-| Arch | x86-64 |
+A crackmes.one keygen-style challenge where the key is a route through a maze embedded as raw data in the binary. Solving it is entirely static: locate the grid, recover the movement and validation semantics from the disassembly, and run a shortest-path search.
 
 | | |
 |---|---|
@@ -298,13 +296,9 @@ Expected runtime behavior:
    You have successfully solved CFB2!
 ```
 
-## 10. Summary
-
-CFB2 is a maze validator. A 10x10 grid is embedded in the binary, and the entered key is a sequence of WASD moves walked across it. Any wall free route from the start to the goal is accepted. Recovering the grid and the movement rules gives the solution path.
-
 ---
 
-### Appendix: key addresses
+### Appendix
 
 | Address | Meaning |
 |---|---|

@@ -1,16 +1,14 @@
 # CFB1
 
-A crackmes.one keygen challenge. The expected serial is computed from the username at runtime and compared against the entered value. Cracking it means recovering that derivation and turning it into a keygen. This is done entirely statically, with no debugger and no execution.
+**Source:** [crackmes.one](https://crackmes.one/crackme/6a1547f42b3df128c1df5ca5){ .external-link }  
+**Author:** [CrackNotMe](https://crackmes.one/user/CrackNotMe){ .external-link }  
+**Difficulty:** 2.2  
+**Quality:** 4.3  
+**Language:** C/C++  
+**Platform:** Windows  
+**Arch:** x86-64
 
-| | |
-|---|---|
-| Source | [crackmes.one](https://crackmes.one/crackme/6a1547f42b3df128c1df5ca5){ .external-link } |
-| Author | [CrackNotMe](https://crackmes.one/user/CrackNotMe){ .external-link } |
-| Difficulty | 2.2 |
-| Quality | 4.3 |
-| Language | C/C++ |
-| Platform | Windows |
-| Arch | x86-64 |
+A crackmes.one keygen challenge. The expected serial is computed from the username at runtime and compared against the entered value. Cracking it means recovering that derivation and turning it into a keygen. This is done entirely statically, with no debugger and no execution.
 
 | | |
 |---|---|
@@ -219,13 +217,9 @@ Expected runtime behavior:
    You have successfully solved CFB1!
 ```
 
-## 9. Summary
-
-CFB1 is a username/serial keygen check. The program derives the expected serial from the trimmed username with a per character, position dependent transform and formats it as uppercase hex, then compares it to the entered serial. Recovering that transform yields a keygen for any username.
-
 ---
 
-### Appendix: key addresses
+### Appendix
 
 | Address | Meaning |
 |---|---|
