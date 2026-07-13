@@ -1,30 +1,32 @@
-# CFB1 — Username / Serial Keygen
+# CFB1
 
-**Platform:** Windows x86-64  
-**Difficulty:** Easy  
-**Author:** pwn.by  
-**Source:** [crackmes.one](https://crackmes.one/){ .external-link }
-
-A crackmes.one challenge from the same author as CFB2. Where CFB2 hid its answer as *data* (a maze grid), CFB1 hides it as an *algorithm*: the expected serial is computed from the username at runtime and compared against your input. Cracking it means recovering that derivation and turning it into a keygen. This is done entirely statically — no debugger, no execution.
+A crackmes.one keygen challenge. The expected serial is computed from the username at runtime and compared against the entered value. Cracking it means recovering that derivation and turning it into a keygen. This is done entirely statically, with no debugger and no execution.
 
 | | |
 |---|---|
-| **Target** | `CFB1.exe` — PE32+ console executable, x86-64 |
-| **Toolchain** | MSVC (C++, iostreams, `std::string`, `std::stringstream`) |
-| **Image base** | `0x140000000` |
-| **SHA-256** | `2806a1d20c1cc2d1c1bcc7e2e3a90963ad990376ae52f3c0889a88dbd86eb311` |
-| **Tools used** | `file`, `strings`, `objdump -d -M intel`, Python |
-| **Method** | Pure static analysis |
+| Source | [crackmes.one](https://crackmes.one/crackme/6a1547f42b3df128c1df5ca5){ .external-link } |
+| Author | [CrackNotMe](https://crackmes.one/user/CrackNotMe){ .external-link } |
+| Difficulty | 2.2 |
+| Quality | 4.3 |
+| Language | C/C++ |
+| Platform | Windows |
+| Arch | x86-64 |
 
-**TL;DR — keygen:**
+| | |
+|---|---|
+| Target | `CFB1.exe` |
+| Image base | `0x140000000` |
+| SHA-256 | `2806a1d20c1cc2d1c1bcc7e2e3a90963ad990376ae52f3c0889a88dbd86eb311` |
+| Method | Static analysis. No debugger. |
 
-```python
-def keygen(username):                       # username trimmed, len >= 4
-    return "".join(f"{(((i+0x5A)&0xFF) ^ ord(c)) + 0x13 & 0xFF:02X}"
-                   for i, c in enumerate(username))
-```
+!!! tip "TL;DR"
+    ```python
+    def keygen(username):                       # username trimmed, len >= 4
+        return "".join(f"{(((i+0x5A)&0xFF) ^ ord(c)) + 0x13 & 0xFF:02X}"
+                       for i, c in enumerate(username))
+    ```
 
-Example: `crackme` → `4C3C5051484518`.
+    Example: `crackme` → `4C3C5051484518`.
 
 ---
 
@@ -73,7 +75,7 @@ $ grep -nE '# 0x14002c[89a]' dis.txt
 1400079b5: lea rsi,[rip+0x2508c]  # 0x14002ca48   ; ACCESS DENIED
 ```
 
-All hits are inside the function at **`0x1400074d0`** — `main`.
+All hits are inside the function at **`0x1400074d0`**, which is `main`.
 
 ## 4. Input handling (getline, SSO, trim, length gate)
 
@@ -82,7 +84,7 @@ Both inputs are read the same way: `std::getline(std::cin, s)` (the `'\n'` delim
 Two MSVC details generate most of the surrounding branch noise and are worth naming so they aren't mistaken for validation logic:
 
 - **Small String Optimization.** Each `std::string` is 32 bytes on the stack: `{ data[16] / ptr, size, capacity }`. The username lives at `[rbp-0x39]` (size `[rbp-0x29]`, capacity `[rbp-0x21]`); the serial at `[rbp-0x59]` (size `[rbp-0x49]`, capacity `[rbp-0x41]`). The recurring idiom `cmp <cap>,0xf` / `cmova rax,<buf>` is just "is this string inline or heap-allocated?": when capacity ≤ 15 the buffer *is* the object, otherwise the data pointer is loaded.
-- **Trim predicate.** The two scan loops call `0x1400117b0`, which indexes the locale ctype table and masks with `0x8` (the `_SPACE` bit) — i.e. `isspace`. Leading and trailing whitespace is stripped before measuring.
+- **Trim predicate.** The two scan loops call `0x1400117b0`, which indexes the locale ctype table and masks with `0x8` (the `_SPACE` bit), i.e. `isspace`. Leading and trailing whitespace is stripped before measuring.
 
 The username length gate:
 
@@ -104,7 +106,7 @@ After the serial is read and trimmed, `main` prints `Verifying key...` and calls
 140007964: call 0x1400066e0         ; expected = derive(username)
 ```
 
-The comparison that follows is a plain string equality — length first, then `memcmp`:
+The comparison that follows is a plain string equality: length first, then `memcmp`:
 
 ```asm
 140007986: mov r8,QWORD PTR [rbp-0x49]  ; r8 = entered serial length
@@ -118,7 +120,7 @@ The comparison that follows is a plain string equality — length first, then `m
 14000799e: ...                          ; ACCESS GRANTED
 ```
 
-The `memcmp` operands are resolved SSO-aware just above the call (`cmova` on each capacity). Because `memcmp` is byte-exact, the entered serial must match the derived one **including case** — and since the derivation emits uppercase hex (next section), a lowercase serial fails.
+The `memcmp` operands are resolved SSO-aware just above the call (`cmova` on each capacity). Because `memcmp` is byte-exact, the entered serial must match the derived one **including case**, and since the derivation emits uppercase hex (next section), a lowercase serial fails.
 
 ## 6. The derivation routine (`0x1400066e0`)
 
@@ -161,7 +163,7 @@ serial += "%02X" % b_i
 
 Note the operator order fixed by the instructions: XOR first (`xor al,...`), then add (`add al,0x13`), all in 8-bit registers, so both the intermediate and the result are taken mod 256. The XOR key is position-dependent (`i + 0x5A`), which is why identical characters at different offsets map to different digits.
 
-### Worked example — `test`
+### Worked example: `test`
 
 | i | char | `(i+0x5A)` | `⊕ char` | `+0x13` | out |
 |---|------|-----------|----------|---------|-----|
@@ -198,7 +200,7 @@ Sample output:
 
 ## 8. Verification by reimplementation
 
-Reproducing `main`'s exact accept condition — equal length, then byte-exact compare — confirms every generated pair:
+Reproducing `main`'s exact accept condition (equal length, then byte-exact compare) confirms every generated pair:
 
 ```python
 def verify(username, serial):
@@ -219,17 +221,11 @@ Expected runtime behavior:
 
 ## 9. Summary
 
-CFB1 is a straightforward keygen-me once the scaffolding is stripped away. The verification is `entered == derive(trimmed_username)` under a length + `memcmp` check, and the derivation is a per-character, position-keyed transform:
-
-```
-b_i = ((( i + 0x5A ) & 0xFF ) ^ username[i]) + 0x13   (mod 256),  emitted as 2-digit uppercase hex
-```
-
-The only parts that can trip you up are environmental rather than cryptographic: the SSO bookkeeping around every `std::string`, the `isspace` trimming that changes which bytes are actually hashed, and the stream flags that pin the output to zero-padded uppercase hex (so the accepted serial is case-sensitive). Compared with CFB2's embedded-maze data model, CFB1 puts the secret in code — recovering three constants (`0x5A`, `0x13`, and the hex/uppercase formatting) is the whole challenge.
+CFB1 is a username/serial keygen check. The program derives the expected serial from the trimmed username with a per character, position dependent transform and formats it as uppercase hex, then compares it to the entered serial. Recovering that transform yields a keygen for any username.
 
 ---
 
-### Appendix — key addresses
+### Appendix: key addresses
 
 | Address | Meaning |
 |---|---|

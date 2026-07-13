@@ -1,22 +1,25 @@
-# CFB2 — The Maze Runner
+# CFB2
 
-**Platform:** Windows x86-64  
-**Difficulty:** Easy  
-**Author:** pwn.by  
-**Source:** [crackmes.one](https://crackmes.one/){ .external-link }
-
-A keygen-style crackme where the "key" is not a serial or a hash pre-image — it is a route through a maze embedded as raw data in the binary. Solving it is entirely static: locate the grid, recover the movement and validation semantics from the disassembly, and run a shortest-path search.
+A crackmes.one keygen-style challenge where the key is a route through a maze embedded as raw data in the binary. Solving it is entirely static: locate the grid, recover the movement and validation semantics from the disassembly, and run a shortest-path search.
 
 | | |
 |---|---|
-| **Target** | `CFB2.exe` — PE32+ console executable, x86-64 |
-| **Toolchain** | MSVC (C++, iostreams, `std::string`) |
-| **Image base** | `0x140000000` |
-| **SHA-256** | `20aa2133b4694a036e349a28b2203d729fa3964cde3a07f641e33e1abe26596b` |
-| **Tools used** | `file`, `strings`, `objdump -d -M intel`, Python |
-| **Method** | Pure static analysis — no debugger, no execution |
+| Source | [crackmes.one](https://crackmes.one/crackme/6a15496417539b5175d12386){ .external-link } |
+| Author | [CrackNotMe](https://crackmes.one/user/CrackNotMe){ .external-link } |
+| Difficulty | 2.0 |
+| Quality | 4.0 |
+| Language | C/C++ |
+| Platform | Windows |
+| Arch | x86-64 |
 
-!!! tip "TL;DR — key"
+| | |
+|---|---|
+| Target | `CFB2.exe` |
+| Image base | `0x140000000` |
+| SHA-256 | `20aa2133b4694a036e349a28b2203d729fa3964cde3a07f641e33e1abe26596b` |
+| Method | Static analysis. No debugger. |
+
+!!! tip "TL;DR"
     `SDDSSASSDDSSDDDSSDDD`
 
 ---
@@ -36,7 +39,7 @@ Section table (relevant for mapping file offsets ↔ virtual addresses later):
 | `.rdata` | `0x14002b000` | `0x029e00` | string literals + the maze |
 | `.data` | `0x14003e000` | `0x03c800` | globals (`__security_cookie`, iostream ptrs) |
 
-Any `.rdata` VMA maps back to disk as `fileoff = 0x29e00 + (vma − 0x14002b000)`. That single relation is all we need to pull embedded data out by hand — no PE-aware tooling required.
+Any `.rdata` VMA maps back to disk as `fileoff = 0x29e00 + (vma − 0x14002b000)`. That single relation is all we need to pull embedded data out by hand; no PE-aware tooling required.
 
 ## 2. Strings define the checker's contract
 
@@ -59,7 +62,7 @@ From these we can already state the checker's contract:
 
 - Input is a string of moves drawn from `{W, A, S, D}`.
 - There is a grid with **walls** and **bounds**; the finish is fixed at **`(9,9)`**, implying a 10×10 grid indexed `0..9`.
-- Two distinct end-state failures exist: *not reaching the finish*, and *"reaching the end but not finishing the key there"* — i.e. the terminal move, not merely some intermediate move, must land on the goal.
+- Two distinct end-state failures exist: *not reaching the finish*, and *"reaching the end but not finishing the key there"*, i.e. the terminal move, not merely some intermediate move, must land on the goal.
 
 Everything after this is confirming the exact numeric encoding and pulling the grid bytes.
 
@@ -76,13 +79,13 @@ $ grep -nE '# 0x14002b[789ab]' disasm.txt
 ...
 ```
 
-Every hit lands inside the function starting at **`0x140006370`** — this is `main`.
+Every hit lands inside the function starting at **`0x140006370`**, which is `main`.
 
 ## 4. Input acquisition (MSVC std::string, SSO)
 
 Before the maze logic, the program reads one line and trims it. Two implementation details are worth calling out because they generate most of the surrounding branch noise:
 
-- The line is read with a `'\n'` delimiter (`mov dl,0xa` before the stream call) — a `std::getline(std::cin, s)`.
+- The line is read with a `'\n'` delimiter (`mov dl,0xa` before the stream call), a `std::getline(std::cin, s)`.
 - The `std::string` uses **SSO (small string optimization)**. Its layout on the stack is: buffer at `[rbp-0x38]`, size at `[rbp-0x28]`, capacity at `[rbp-0x20]`, initialized to `0xf`:
 
 ```asm
@@ -129,7 +132,7 @@ Each character is upper-cased (`0x140010fe8`, a `toupper` whose fast path is `le
 | `A` | `x − 1` | left |
 | `D` | `x + 1` | right |
 
-### 5.2 Bounds — unsigned on purpose
+### 5.2 Bounds, unsigned on purpose
 
 ```asm
 14000665a: cmp esi,0x9 ; ja out_of_bounds
@@ -158,7 +161,7 @@ The byte is then interpreted (`r12b` holds the constant `1`):
 140006695: cmove ebx,r12d       ; won = 1  iff on a goal cell at the FINAL step
 ```
 
-Cell encoding: **`0` = open, `1` = wall, `2` = goal.** The `won` flag is set only when a goal cell is occupied on the last input character — this is the mechanism behind the *"finished the key there"* rule. The start tile `(0,0)` is never wall-checked; validation only inspects tiles *entered by a move*, making `(0,0)` the implicit valid origin.
+Cell encoding: **`0` = open, `1` = wall, `2` = goal.** The `won` flag is set only when a goal cell is occupied on the last input character, which is the mechanism behind the *"finished the key there"* rule. The start tile `(0,0)` is never wall-checked; validation only inspects tiles *entered by a move*, making `(0,0)` the implicit valid origin.
 
 ## 6. Win gate and failure dispatch
 
@@ -177,12 +180,12 @@ The failure handlers form a compact dispatch. Mapping each verdict to the condit
 
 | Verdict string | Trigger | Extra info printed |
 |---|---|---|
-| `Key cannot be empty!` | trimmed input length 0 | — |
+| `Key cannot be empty!` | trimmed input length 0 | None |
 | `Invalid move '<c>' at step N` + `Only W, A, S, D are allowed.` | char ∉ {W,A,S,D} | offending char, 1-based step |
 | `Out of bounds at step N! (x:…, y:…)` + `ACCESS DENIED!` | `x>9` or `y>9` (unsigned) | step, coords |
 | `Hit a wall at step N! (x:…, y:…)` + `ACCESS DENIED!` | `maze[y*10+x] == 1` | step, coords |
 | `You did not reach the finish point (9,9).` + current position | loop finished, `(x,y) ≠ (9,9)` | terminal coords |
-| `You reached the end, but didn't finish the input key there!` | loop finished, `(x,y) == (9,9)` **but** `won == 0` | — |
+| `You reached the end, but didn't finish the input key there!` | loop finished, `(x,y) == (9,9)` **but** `won == 0` | None |
 
 Displayed step numbers are 1-based (`lea rdx,[r15+1]`).
 
@@ -247,7 +250,7 @@ while q:
             seen.add((nx,ny)); q.append(((nx,ny), p+ch))
 ```
 
-Result — the shortest solution (20 moves):
+Result: the shortest solution (20 moves):
 
 ```text
 SDDSSASSDDSSDDDSSDDD
@@ -297,15 +300,11 @@ Expected runtime behavior:
 
 ## 10. Summary
 
-The challenge is a data-driven maze validator. Its only non-obvious pieces are (a) the SSO bookkeeping that clutters the input-handling prologue, (b) the unsigned bounds check that folds the negative case into a single comparison, (c) the `x + y*10` addressing and `0/1/2` cell encoding, and (d) the terminal-step goal flag whose "didn't finish the key there" failure path is unreachable against the shipped grid. Once the 100 maze bytes at `0x14002b3c0` are recovered, the key is any wall-free route from `(0,0)` to `(9,9)`:
-
-```text
-SDDSSASSDDSSDDDSSDDD
-```
+CFB2 is a maze validator. A 10x10 grid is embedded in the binary, and the entered key is a sequence of WASD moves walked across it. Any wall free route from the start to the goal is accepted. Recovering the grid and the movement rules gives the solution path.
 
 ---
 
-### Appendix — key addresses
+### Appendix: key addresses
 
 | Address | Meaning |
 |---|---|
