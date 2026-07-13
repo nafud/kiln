@@ -29,27 +29,25 @@ theme:
   logo: assets/images/kiln-logo-favicon.png
   favicon: assets/images/kiln-logo-favicon.png
   font: false
-  icon:
-    repo: fontawesome/brands/github
   palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/link
+        name: Switch to light mode
     - media: "(prefers-color-scheme: light)"
       scheme: default
       primary: white
       accent: blue
       toggle:
-        icon: material/brightness-7
+        icon: material/toggle-switch
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
       primary: black
       accent: blue
       toggle:
-        icon: material/brightness-4
+        icon: material/toggle-switch-off
         name: Switch to system preference
-    - media: "(prefers-color-scheme)"
-      toggle:
-        icon: material/brightness-auto
-        name: Switch to light mode
   features:
     - navigation.instant
     - navigation.tracking
