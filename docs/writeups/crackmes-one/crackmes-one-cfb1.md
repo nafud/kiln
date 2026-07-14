@@ -8,7 +8,7 @@
 **Platform:** Windows  
 **Arch:** x86-64
 
-A crackmes.one keygen challenge. The expected serial is computed from the username at runtime and compared against the entered value. Cracking it means recovering that derivation and turning it into a keygen. This is done entirely statically, with no debugger and no execution.
+A crackmes.one keygen. There is no stored password to grep for. The program derives the expected serial from the username at runtime and compares it against what you type, so the work is to recover that derivation and reimplement it. The analysis below is static.
 
 | | |
 |---|---|
@@ -18,217 +18,293 @@ A crackmes.one keygen challenge. The expected serial is computed from the userna
 | Method | Static analysis. No debugger. |
 
 !!! tip "TL;DR"
-    ```python
-    def keygen(username):                       # username trimmed, len >= 4
-        return "".join(f"{(((i+0x5A)&0xFF) ^ ord(c)) + 0x13 & 0xFF:02X}"
-                       for i, c in enumerate(username))
+    For a username of length `n`, the serial is `2n` uppercase hex digits. For each character `c` at index `i` (0-based),
+
+    ```
+    byte = (((i + 0x5A) ^ c) + 0x13) & 0xFF
     ```
 
-    Example: `crackme` → `4C3C5051484518`.
-
----
+    emitted as two uppercase hex digits. A complete keygen is in the [Keygen](#6-keygen) section.
 
 ## 1. Triage
 
-```bash
-$ file CFB1.exe
-CFB1.exe: PE32+ executable (console) x86-64, for MS Windows, 6 sections
-```
+A 64-bit MSVC console PE.
 
-Sections and the offset↔VMA relation used throughout:
+=== "Radare2"
 
-| Section | VMA | File offset |
-|---------|-----|-------------|
-| `.text` | `0x140001000` | `0x000400` |
-| `.rdata` | `0x14002c000` | `0x02a800` |
-| `.data` | `0x14003f000` | `0x03d600` |
+    ```
+    $ rabin2 -I CFB1.exe
+    arch     x86
+    baddr    0x140000000
+    bintype  pe
+    bits     64
+    class    PE32+
+    cc       ms
+    endian   little
+    lang     c
+    machine  AMD 64
+    os       windows
+    subsys   Windows CUI
 
-For `.rdata`: `fileoff = 0x2a800 + (vma − 0x14002c000)`.
+    $ rabin2 -S CFB1.exe
+    [Sections]
 
-## 2. Strings: the checker's contract
+    nth paddr          size vaddr          vsize perm type name
+    ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+    0   0x00000400  0x2a400 0x140001000  0x2b000 -r-x ---- .text
+    1   0x0002a800  0x12e00 0x14002c000  0x13000 -r-- ---- .rdata
+    2   0x0003d600   0x1400 0x14003f000   0x3000 -rw- ---- .data
+    3   0x0003ea00   0x2600 0x140042000   0x3000 -r-- ---- .pdata
+    4   0x00041000    0x200 0x140045000   0x1000 -rw- ---- .fptable
+    5   0x00041200    0xa00 0x140046000   0x1000 -r-- ---- .reloc
+    ```
 
-```bash
-$ strings -n 6 CFB1.exe
-[+] Enter Username (min 4 chars):
-[-] Error: Username is too short! Must be at least 4 characters.
-[+] Enter Serial Key:
-[*] Verifying key...
-   [+] ACCESS GRANTED! Congratulations!
-   [-] ACCESS DENIED! Invalid key.
-```
+=== "Objdump"
 
-This is a **username + serial keygen-me**: read a username (minimum 4 characters), read a serial, verify. The presence of `std::basic_stringstream` in the RTTI strings is an early hint that the expected serial is *formatted* (assembled digit by digit) rather than compared byte-for-byte against a stored constant.
+    ```
+    $ file CFB1.exe
+    CFB1.exe: PE32+ executable (console) x86-64, for MS Windows, 6 sections
 
-## 3. Locating `main`
+    $ objdump -h CFB1.exe
+    Idx Name          Size      VMA               File off
+      0 .text         0002a2b8  0000000140001000  00000400
+      1 .rdata        00012c36  000000014002c000  0002a800
+      2 .data         00001400  000000014003f000  0003d600
+    ```
 
-MSVC emits each string literal as a RIP-relative `lea`; `objdump` resolves the target in a comment. Grepping the disassembly for the verdict-string address band collapses to a single function:
-
-```bash
-$ objdump -d -M intel --no-show-raw-insn CFB1.exe > dis.txt
-$ grep -nE '# 0x14002c[89a]' dis.txt
-140007546: lea rdx,[rip+0x2535b]  # 0x14002c8a8   ; banner
-14000758c: lea rdx,[rip+0x2534d]  # 0x14002c8e0   ; "Enter Username"
-140007946: lea rdx,[rip+0x2503b]  # 0x14002c988   ; "Verifying key..."
-1400079a5: lea rsi,[rip+0x2502c]  # 0x14002c9d8   ; ACCESS GRANTED
-1400079b5: lea rsi,[rip+0x2508c]  # 0x14002ca48   ; ACCESS DENIED
-```
-
-All hits are inside the function at **`0x1400074d0`**, which is `main`.
-
-## 4. Input handling (getline, SSO, trim, length gate)
-
-Both inputs are read the same way: `std::getline(std::cin, s)` (the `'\n'` delimiter is passed as `mov dl,0xa` before the stream call), then whitespace-trimmed, then measured.
-
-Two MSVC details generate most of the surrounding branch noise and are worth naming so they aren't mistaken for validation logic:
-
-- **Small String Optimization.** Each `std::string` is 32 bytes on the stack: `{ data[16] / ptr, size, capacity }`. The username lives at `[rbp-0x39]` (size `[rbp-0x29]`, capacity `[rbp-0x21]`); the serial at `[rbp-0x59]` (size `[rbp-0x49]`, capacity `[rbp-0x41]`). The recurring idiom `cmp <cap>,0xf` / `cmova rax,<buf>` is just "is this string inline or heap-allocated?": when capacity ≤ 15 the buffer *is* the object, otherwise the data pointer is loaded.
-- **Trim predicate.** The two scan loops call `0x1400117b0`, which indexes the locale ctype table and masks with `0x8` (the `_SPACE` bit), i.e. `isspace`. Leading and trailing whitespace is stripped before measuring.
-
-The username length gate:
-
-```asm
-14000775d: cmp rsi,0x4              ; rsi = trimmed username length
-140007761: jae 0x140007793         ; >= 4  -> continue to serial prompt
-140007763: lea rdx,[rip+...]        ; # 0x14002c910  "... too short ..."
-```
-
-`jae` is unsigned: length ≥ 4 proceeds, otherwise it prints the error and exits. The **trimmed** username is what feeds the derivation.
-
-## 5. The verification: derive, then compare
-
-After the serial is read and trimmed, `main` prints `Verifying key...` and calls the derivation routine, passing the **username** in and receiving the expected serial in a fresh `std::string` at `[rbp-0x19]`:
-
-```asm
-14000795c: lea rdx,[rbp-0x39]       ; arg = username string
-140007960: lea rcx,[rbp-0x19]       ; RVO out = expected-serial string
-140007964: call 0x1400066e0         ; expected = derive(username)
-```
-
-The comparison that follows is a plain string equality: length first, then `memcmp`:
-
-```asm
-140007986: mov r8,QWORD PTR [rbp-0x49]  ; r8 = entered serial length
-14000798a: cmp r8,QWORD PTR [rbp-0x9]   ; vs expected serial length
-14000798e: jne 0x1400079ae             ; differ -> ACCESS DENIED
-140007990: test r8,r8                   ; both empty -> accept
-140007993: je  0x14000799e
-140007995: call 0x1400297a0             ; memcmp(entered, expected, len)
-14000799a: test eax,eax
-14000799c: jne 0x1400079ae             ; nonzero -> ACCESS DENIED
-14000799e: ...                          ; ACCESS GRANTED
-```
-
-The `memcmp` operands are resolved SSO-aware just above the call (`cmova` on each capacity). Because `memcmp` is byte-exact, the entered serial must match the derived one **including case**, and since the derivation emits uppercase hex (next section), a lowercase serial fails.
-
-## 6. The derivation routine (`0x1400066e0`)
-
-The routine constructs a `std::ostringstream` and appends two hex digits per username character. The core loop:
-
-```asm
-140006712: xor ebp,ebp                    ; i = 0   (rbp reused as counter)
-; --- loop body ---
-140006720: cmp QWORD PTR [rbx+0x18],0xf    ; SSO: capacity > 15 ?
-140006725: jbe 0x14000672c
-140006727: mov rcx,QWORD PTR [rbx]         ;   rcx = heap data ptr
-14000672a: jmp 0x14000672f
-14000672c: mov rcx,rbx                     ;   rcx = inline buffer
-14000672f: lea eax,[rbp+0x5a]              ; eax = i + 0x5A
-140006732: xor al,BYTE PTR [rcx+rbp*1]     ; al  = ((i+0x5A) & 0xFF) ^ username[i]
-140006735: add al,0x13                     ; al  = al + 0x13
-140006737: movzx edi,al                    ; edi = byte value (0..255)
-
-; --- stream formatting flags (applied every iteration) ---
-140006743: and DWORD PTR [rsp+rcx*1+0x58],0xfffff9ff  ; clear dec(0x200)|oct(0x400)
-14000674b: or  DWORD PTR [rsp+rcx*1+0x58],0x800       ; set hex
-14000675c: or  DWORD PTR [rsp+rcx*1+0x58],0x4         ; set uppercase
-140006761: mov edx,0x2 ; ... width(2)                 ; setw(2)
-140006797: mov BYTE PTR [rsp+rcx*1+0x98],0x30         ; fill '0'
-14000679f: mov edx,edi ; call 0x140003b00             ; stream << (int)byte
-
-1400067ab: inc rbp
-1400067ae: cmp rbp,QWORD PTR [rbx+0x10]    ; i < username length ?
-1400067b2: jb  0x140006720
-```
-
-The `ios_base::fmtflags` manipulation is exactly `stream << std::hex << std::uppercase << std::setw(2) << std::setfill('0')`: the `and 0xfffff9ff` clears the `dec` (`0x200`) and `oct` (`0x400`) bits of `basefield`, `or 0x800` sets `hex`, and `or 0x4` sets `uppercase`. Each byte (`0..255`) is inserted as an `int`, producing exactly two zero-padded uppercase hex digits.
-
-So, for a username of length *n*, the serial is `2n` uppercase hex characters, where character *i* contributes:
+Strings live in the file at a **file offset** but the code refers to them by **virtual address**. Matching a string to the instruction that loads it means converting between the two. Each section lists both, and within a section they differ by a fixed delta, `delta = vaddr - paddr`. The strings sit in `.rdata`, so
 
 ```
-b_i = ( ((i + 0x5A) & 0xFF) XOR username[i] + 0x13 ) & 0xFF
-serial += "%02X" % b_i
+delta(.rdata) = 0x14002c000 - 0x2a800 = 0x140001800
+vaddr = file_offset + 0x140001800
 ```
 
-Note the operator order fixed by the instructions: XOR first (`xor al,...`), then add (`add al,0x13`), all in 8-bit registers, so both the intermediate and the result are taken mod 256. The XOR key is position-dependent (`i + 0x5A`), which is why identical characters at different offsets map to different digits.
+## 2. Strings
 
-### Worked example: `test`
+`strings` or `rabin2 -z` alone dumps everything, so filter for the program's own markers.
 
-| i | char | `(i+0x5A)` | `⊕ char` | `+0x13` | out |
-|---|------|-----------|----------|---------|-----|
+=== "Radare2"
+
+    ```
+    $ rabin2 -z CFB1.exe | grep '\['
+    nth paddr      vaddr       len size section type  string
+    15  0x0002b038 0x14002c838 51  52   .rdata ascii [+] by pwn.by [+]
+    18  0x0002b0e0 0x14002c8e0 34  35   .rdata ascii [+] Enter Username (min 4 chars):
+    19  0x0002b110 0x14002c910 65  66   .rdata ascii [-] Error: Username is too short! Must be at least 4 characters.
+    21  0x0002b170 0x14002c970 22  23   .rdata ascii [+] Enter Serial Key:
+    22  0x0002b188 0x14002c988 21  22   .rdata ascii \n[*] Verifying key...
+    24  0x0002b1d8 0x14002c9d8 52  53   .rdata ascii    [+] ACCESS GRANTED! Congratulations!
+    26  0x0002b248 0x14002ca48 52  53   .rdata ascii    [-] ACCESS DENIED! Invalid key.
+
+    $ rabin2 -z CFB1.exe | grep basic_stringstream
+    1460 0x0003e6b0 0x1400400b0 71 72 .data ascii .?AV?$basic_stringstream@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@
+    ```
+
+=== "Objdump"
+
+    ```
+    $ strings -n 6 CFB1.exe | grep -E '\[[-+*]\]'
+               [+] by pwn.by [+]
+    [+] Enter Username (min 4 chars):
+    [-] Error: Username is too short! Must be at least 4 characters.
+    [+] Enter Serial Key:
+    [*] Verifying key...
+       [+] ACCESS GRANTED! Congratulations!
+       [-] ACCESS DENIED! Invalid key.
+
+    $ strings CFB1.exe | grep basic_stringstream
+    .?AV?$basic_stringstream@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@
+    ```
+
+That is the whole contract. Ask for a username of at least four characters, ask for a serial, verify, print one of two verdicts. No serial is stored, which means it is computed.
+
+The RTTI name is worth pulling out. RTTI, or Run-Time Type Information, is data the MSVC compiler emits so a program can identify an object's type while running, which is what `typeid` and `dynamic_cast` rely on. Each polymorphic class leaves its mangled type name in the binary, which is why the pretty name `std::basic_stringstream` finds nothing while the mangled `.?AV?$basic_stringstream@...` does. Seeing a `stringstream` means the expected serial is built through a formatting step rather than compared against a fixed constant, which turns out to be hex. Next, find where these strings are used.
+
+## 3. Locating main
+
+Take the `[+] Enter Username` prompt and find the instruction that loads it.
+
+=== "Radare2"
+
+    ```
+    $ r2 -A CFB1.exe
+    [0x140009f8c]> izz~Enter Username
+    3439 0x0002b0e0 0x14002c8e0 34 35 .rdata ascii [+] Enter Username (min 4 chars):
+    [0x140009f8c]> axt 0x14002c8e0
+    main 0x14000758c [DATA:r--] lea rdx, str.___Enter_Username__min_4_chars_:
+    [0x140009f8c]> pdf @ main
+    ┌ 1605: int main (int argc, char **argv, char **envp);
+    │           0x1400074d0      push rbp
+    │           0x1400074d2      push rbx
+    │           ...
+    ```
+
+    r2's analysis (`-A`) resolves the cross-reference into the named function `main` and draws its bounds, so the entry at `0x1400074d0` is given directly. No manual prologue hunt is needed.
+
+=== "Objdump"
+
+    ```
+    $ python3 -c "d=open('CFB1.exe','rb').read(); print(hex(d.find(b'[+] Enter Username')))"
+    0x2b0e0
+
+    # convert with the delta from Triage: 0x2b0e0 + 0x140001800 = 0x14002c8e0
+
+    $ objdump -d -M intel --no-show-raw-insn CFB1.exe > dis.txt
+    $ grep '# 0x14002c8e0' dis.txt
+    14000758c:  lea rdx,[rip+0x2534d]        # 0x14002c8e0
+    ```
+
+    That instruction is inside a function. Read upward in `dis.txt` to the prologue. MSVC pads the gap between functions with `int3`, so the first instruction after the padding is the entry point.
+
+    ```
+    1400074c7:  ret
+    1400074c8:  int3            ; padding between functions
+    ...
+    1400074d0:  rex push rbp    ; prologue starts here
+    1400074d2:  push rbx
+    ```
+    (objdump prints the REX-prefixed encoding as `rex push rbp`.)
+
+Either way, `main` starts at `0x1400074d0`. Read it from there.
+
+## 4. Reading main
+
+Print the function with `pdf @ main` in the r2 session, or read `dis.txt` around `0x1400074d0`. The listings below are trimmed to the relevant instructions. r2 renders local variables as names like `var_39h` for `[rbp-0x39]`; both forms refer to the same stack slots.
+
+`main` runs four steps in order. Read the username, read the serial, derive the expected serial from the username, compare. Two MSVC patterns appear repeatedly and are noted once here for reference.
+
+Storage. An MSVC `std::string` is a 32-byte object with a 16-byte inline buffer, a size, and a capacity. Text of 15 bytes or fewer lives in the inline buffer. Longer text moves to the heap and the first field becomes a pointer. The pattern `cmp <capacity>, 0xf` followed by a `cmova` selects between the inline buffer and the heap pointer. These instructions manage the string object and are not part of the validation.
+
+Input. Each field is read with `std::getline(std::cin, s)` and then trimmed. The trim calls `0x1400117b0`, which indexes the locale table and masks with `0x8`, the whitespace bit, so it is `isspace`.
+
+After the username is read and trimmed, its length is checked.
+
+```
+14000775d:  cmp rsi,0x4             ; rsi = trimmed username length
+140007761:  jae 0x140007793        ; length >= 4 continues
+140007763:  lea rdx,[rip+...]      ; # 0x14002c910  "... too short ..."
+```
+
+The gate is on the trimmed length, so trailing spaces do not help reach four characters. A long enough username falls through to the serial prompt, read and trimmed the same way. Then the core. The username is passed to the derivation routine and the result is written to a fresh string.
+
+```
+14000795c:  lea rdx,[rbp-0x39]     ; rdx = username
+140007960:  lea rcx,[rbp-0x19]     ; rcx = output string for the expected serial
+140007964:  call 0x1400066e0       ; expected = derive(username)
+```
+
+The comparison checks length first, then bytes.
+
+```
+140007986:  mov r8,[rbp-0x49]      ; length of the entered serial
+14000798a:  cmp r8,[rbp-0x9]       ; length of the expected serial
+14000798e:  jne 0x1400079ae        ; different length, ACCESS DENIED
+140007995:  call 0x1400297a0       ; compare
+14000799a:  test eax,eax
+14000799c:  jne 0x1400079ae        ; any mismatch, ACCESS DENIED
+14000799e:  ...                    ; equal, ACCESS GRANTED
+```
+
+`0x1400297a0` takes two pointers and a length and returns zero only when every byte matches, which is `memcmp`. The compare is exact and case sensitive. The one routine left to read is `derive` at `0x1400066e0`.
+
+## 5. The derivation routine
+
+`derive` takes the username and returns the expected serial. It creates a `std::stringstream` and appends to it one character at a time, so reading a single iteration is enough. This function reuses `rbp` as the loop index `i` rather than as a frame pointer.
+
+```
+140006712:  xor ebp,ebp                    ; i = 0
+```
+
+The body loads `username[i]` (the `cmp ...,0xf` here is the inline-or-heap selection from the previous section) and transforms it.
+
+```
+14000672f:  lea eax,[rbp+0x5a]             ; eax = i + 0x5A
+140006732:  xor al,BYTE PTR [rcx+rbp*1]    ; al = ((i + 0x5A) & 0xFF) ^ username[i]
+140006735:  add al,0x13                    ; al = (al + 0x13) & 0xFF
+140006737:  movzx edi,al                   ; edi = the byte, 0..255
+```
+
+Each character becomes one byte through a position dependent XOR and an add. The key is `i + 0x5A`, so the same letter maps to different output at different positions. Everything is byte wide, so the key and the result wrap at 8 bits.
+
+The rest of the body formats that byte and appends it. The format-flags field of the stream, written at `[rsp+rcx*1+0x58]`, gets the hex and uppercase bits, the field width is set to two, and the fill character is set to `'0'`, then the byte is inserted as an integer.
+
+```
+14000674b:  or DWORD PTR [rsp+rcx*1+0x58],0x800   ; hex
+14000675c:  or DWORD PTR [rsp+rcx*1+0x58],0x4     ; uppercase
+140006761:  mov edx,0x2                           ; field width = 2
+140006797:  mov BYTE PTR [...],0x30               ; fill '0'
+1400067a6:  call 0x140003b00                      ; stream << (int)byte
+```
+
+Width and fill are reissued every iteration because `setw` only affects the next insertion. The effect is that each byte prints as exactly two uppercase hex digits. The loop advances until `i` reaches the username length.
+
+```
+1400067ab:  inc rbp
+1400067ae:  cmp rbp,[rbx+0x10]             ; i < length ?
+1400067b2:  jb 0x140006720
+```
+
+So character `i` produces
+
+```
+byte = (((i + 0x5A) ^ username[i]) + 0x13) & 0xFF
+serial += "%02X" % byte
+```
+
+and the serial is those two-digit groups joined, twice the username length. Working `test` by hand confirms it.
+
+| i | char | i + 0x5A | ^ char | + 0x13 | out |
+|---|------|----------|--------|--------|-----|
 | 0 | `t` 0x74 | 0x5A | 0x2E | 0x41 | `41` |
 | 1 | `e` 0x65 | 0x5B | 0x3E | 0x51 | `51` |
 | 2 | `s` 0x73 | 0x5C | 0x2F | 0x42 | `42` |
 | 3 | `t` 0x74 | 0x5D | 0x29 | 0x3C | `3C` |
 
-`test` → `4151423C`.
+`test` maps to `4151423C`.
 
-## 7. Keygen
+## 6. Keygen
+
+Complete script. Save as `keygen.py`. It assumes an ASCII username, matching the byte-wise reads in the routine.
 
 ```python
-def keygen(username: str) -> str:
+#!/usr/bin/env python3
+import sys
+
+def keygen(username):
     username = username.strip()
     if len(username) < 4:
-        raise ValueError("username must be >= 4 chars after trimming")
+        raise SystemExit("username must be at least 4 characters")
     out = []
     for i, ch in enumerate(username):
-        b = (((i + 0x5A) & 0xFF) ^ (ord(ch) & 0xFF)) & 0xFF
-        b = (b + 0x13) & 0xFF
-        out.append(f"{b:02X}")
+        byte = (((i + 0x5A) ^ ord(ch)) + 0x13) & 0xFF
+        out.append("%02X" % byte)
     return "".join(out)
+
+if __name__ == "__main__":
+    name = (sys.argv[1] if len(sys.argv) > 1 else "crackme").strip()
+    print(name, keygen(name))
 ```
 
-Sample output:
+```
+$ python3 keygen.py crackme
+crackme 4C3C5051484518
 
-| Username | Serial |
-|---|---|
-| `crackme` | `4C3C5051484518` |
-| `pwn.by` | `3D3F45864F39` |
-| `test` | `4151423C` |
-| `reverse` | `3B513D4B3F3F18` |
-
-## 8. Verification by reimplementation
-
-Reproducing `main`'s exact accept condition (equal length, then byte-exact compare) confirms every generated pair:
-
-```python
-def verify(username, serial):
-    expected = keygen(username)
-    return len(serial) == len(expected) and serial == expected   # case-sensitive
+$ python3 keygen.py test
+test 4151423C
 ```
 
-Expected runtime behavior:
+Type the username and its serial into the program for `ACCESS GRANTED`.
 
-```
-[+] Enter Username (min 4 chars): crackme
-[+] Enter Serial Key: 4C3C5051484518
-[*] Verifying key...
+## Appendix
 
-   [+] ACCESS GRANTED! Congratulations!
-   You have successfully solved CFB1!
-```
-
----
-
-### Appendix
-
-| Address | Meaning |
-|---|---|
-| `0x1400074d0` | `main` |
-| `0x14000775d` | username length gate (`>= 4`) |
-| `0x140007964` | `call derive(username)` |
-| `0x14000798a` | serial length compare |
-| `0x140007995` | `memcmp(entered, expected)` |
-| `0x14000799e` | ACCESS GRANTED branch |
-| `0x1400066e0` | serial derivation routine |
-| `0x14000672f`–`0x140006737` | core transform (`(i+0x5A) ^ c + 0x13`) |
-| `0x1400117b0` | `isspace` (whitespace trim) |
+| Address       | Meaning                                 |
+| ------------- | --------------------------------------- |
+| `0x1400074d0` | `main`                                  |
+| `0x14000775d` | username length gate, at least 4        |
+| `0x140007964` | call to `derive(username)`              |
+| `0x14000798a` | serial length compare                   |
+| `0x140007995` | `memcmp(entered, expected)`             |
+| `0x14000799e` | ACCESS GRANTED branch                   |
+| `0x1400066e0` | serial derivation routine               |
+| `0x14000672f` | core transform, `(i + 0x5A) ^ c + 0x13` |
+| `0x1400117b0` | `isspace`, used for trimming            |

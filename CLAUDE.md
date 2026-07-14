@@ -67,6 +67,7 @@ Cross-linking (RE4B ↔ challenges.re): the **Reverse Engineering for Beginners*
 - `attr_list` — attributes on Markdown elements
 - `pymdownx.superfences` — fenced code blocks with language highlighting
 - `pymdownx.highlight` + `pymdownx.inlinehilite` — syntax highlighting
+- `pymdownx.tabbed` (`alternate_style: true`) — content tabs (`=== "Tab"`), e.g. the radare2/objdump alternatives in the CFB1 writeup
 
 ## File naming convention
 
