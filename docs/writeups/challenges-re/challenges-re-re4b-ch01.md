@@ -1,17 +1,18 @@
-# Challenges.re — RE4B Chapter 1 Exercises
+# RE4B Chapter 1
 
-Solutions to the [challenges.re](https://challenges.re/){ .external-link } exercises referenced in *Reverse Engineering for Beginners*, Chapter 1. Each challenge gives a short disassembly and asks two questions: what the function does (one sentence) and its C equivalent. Book notes: [RE4B Chapter 1](../../readings/books/re4b/re4b-chapter-01.md).
+Solutions to the [challenges.re](https://challenges.re/){ .external-link } exercises referenced in *Reverse Engineering for Beginners*, Chapter 1. Each challenge gives a short listing and asks what the code does. Where a challenge adds follow-up questions, they are answered in place. Book notes are at [RE4B Chapter 1](../../readings/books/re4b/re4b-chapter-01.md).
 
-| # | Book section | Topic |
-| --- | --- | --- |
+| Challenge | Book section | Topic |
+| --------- | ------------ | ----- |
 | [48](#challenge-48-messagebeep-wrapper) | [1.5.6](../../readings/books/re4b/re4b-chapter-01.md#156-exercises) | win32 library wrapper (x86) |
 | [49](#challenge-49-sleep-wrapper) | [1.5.6](../../readings/books/re4b/re4b-chapter-01.md#156-exercises) | Linux library wrapper (x64, AT&T) |
 | [51](#challenge-51-printf-with-missing-arguments) | [1.9.5](../../readings/books/re4b/re4b-chapter-01.md#195-exercises) | stack noise, missing arguments |
-| [52](#challenge-52-printf-of-time) | [1.9.5](../../readings/books/re4b/re4b-chapter-01.md#195-exercises) | timestamp, 64-bit `time_t` truncation |
+| [52](#challenge-52-printf-of-time) | [1.9.5](../../readings/books/re4b/re4b-chapter-01.md#195-exercises) | timestamp, 64-bit time_t truncation |
 
-## Challenge #48 — MessageBeep wrapper
+## Challenge #48, MessageBeep wrapper
 
-Tags: X86, WINDOWS, ASM, L1.
+**Source** [challenges.re/48](https://challenges.re/48/){ .external-link }<br>
+**Tags** X86, WINDOWS, ASM, L1
 
 ```asm
 main:
@@ -21,9 +22,9 @@ main:
     retn
 ```
 
-**Analysis.** One argument (`0xFFFFFFFF`) is pushed and `MessageBeep` is called. The Win32 `MessageBeep(UINT uType)` takes a sound type; `0xFFFFFFFF` (`-1` / `(UINT)MB_ICONERROR`-none) selects the simple standard beep, generated through the PC speaker if no sound device is present. `xor eax, eax` sets the return value to 0 (see the `xor` idiom in [§1.5.1](../../readings/books/re4b/re4b-chapter-01.md#151-x86)); `retn` returns. No stack cleanup is needed because `MessageBeep` uses the stdcall convention and cleans its own argument.
+`push 0xFFFFFFFF` places the single argument, then `call MessageBeep` invokes the Win32 function `MessageBeep(UINT uType)`. The value `0xFFFFFFFF` selects a simple standard beep, which Windows plays through the PC speaker when no sound device is configured. `xor eax, eax` sets the return value to 0, and `retn` returns. `MessageBeep` uses the stdcall convention and removes its own argument, so `main` needs no stack cleanup.
 
-**One sentence.** Plays a simple system beep and returns 0.
+**In one line.** Plays a simple system beep and returns 0.
 
 **C.**
 
@@ -32,9 +33,10 @@ main:
 int main() { MessageBeep(0xFFFFFFFF); return 0; }
 ```
 
-## Challenge #49 — sleep wrapper
+## Challenge #49, sleep wrapper
 
-Tags: X64, LINUX, ASM, L1. AT&T syntax.
+**Source** [challenges.re/49](https://challenges.re/49/){ .external-link }<br>
+**Tags** X64, LINUX, ASM, L1 (AT&T syntax)
 
 ```asm
 main:
@@ -46,9 +48,9 @@ main:
     ret
 ```
 
-**Analysis.** Non-optimizing GCC output: `push rbp` / `mov rbp, rsp` is the prologue, `pop rbp` the epilogue ([§1.6](../../readings/books/re4b/re4b-chapter-01.md#16-function-prologue-and-epilogue)). Under System V x86-64 the first integer argument is passed in `RDI`; `movl $2, %edi` places `2` there — writing the 32-bit `EDI` zeroes the upper half of `RDI` ([§1.5.2](../../readings/books/re4b/re4b-chapter-01.md#152-x86-64)). `sleep(2)` suspends execution for two seconds. The return value is not set, so `main` returns whatever `sleep` left in `EAX` (its count of unslept seconds, normally 0).
+This is non-optimizing GCC output. `push rbp` with `mov rbp, rsp` is the prologue and `pop rbp` is the epilogue. Under the System V x86-64 convention the first integer argument goes in `RDI`, and `movl $2, %edi` writes `2` there, where the 32-bit store to `EDI` clears the upper half of `RDI`. `call sleep` then runs `sleep(2)`, which suspends the thread for two seconds. `main` never sets its own return value, so it returns whatever `sleep` left in `EAX`, which is normally 0 for the count of unslept seconds.
 
-**One sentence.** Sleeps for two seconds.
+**In one line.** Sleeps for two seconds.
 
 **C.**
 
@@ -57,12 +59,14 @@ main:
 int main() { sleep(2); return 0; }
 ```
 
-## Challenge #51 — printf with missing arguments
+## Challenge #51, printf with missing arguments
 
-Tags: L1 (stack).
+**Source** [challenges.re/51](https://challenges.re/51/){ .external-link }<br>
+**Tags** L1
 
 ```c
 #include <stdio.h>
+
 int main()
 {
     printf("%d, %d, %d\n");
@@ -70,24 +74,26 @@ int main()
 }
 ```
 
-**Analysis.** The format string demands three `int`s, but none are supplied. `printf` reads three arguments regardless, from wherever the calling convention says they should be — and prints whatever noise is there ([§1.9.4](../../readings/books/re4b/re4b-chapter-01.md#194-noise-in-the-stack)).
+The format string promises three `int` values and none are supplied. `printf` reads three anyway, from wherever the calling convention says the arguments should be, and prints whatever is there. The challenge asks where those numbers come from under three build settings.
 
-- **MSVC, 32-bit, cdecl.** Only the format-string pointer is pushed; `printf` then reads its 2nd–4th arguments from `[esp+4]`, `[esp+8]`, `[esp+0xC]`. Those slots hold stale values left by earlier code (CRT startup, prior calls) — unpredictable but not random.
-- **MSVC with `/Ox`.** Still stack-passed, but optimization changes which prior code ran and what it left behind, so the three slots hold different leftovers and the printed numbers change.
-- **GCC, x86-64, System V.** The first arguments after the format string are passed in **registers** (`ESI`, `EDX`, `ECX`), not on the stack. `printf` therefore prints whatever those registers happened to contain at the call site — a completely different origin from the stack-based values MSVC prints. This is why the situation differs entirely between compilers: the numbers' source is dictated by the calling convention ([§1.11](../../readings/books/re4b/re4b-chapter-01.md#1114-conclusion)), not by the C source.
+Under 32-bit MSVC (cdecl), only the format-string pointer is pushed, so `printf` fetches its second through fourth arguments from `[esp+4]`, `[esp+8]`, and `[esp+0xC]`. Those slots hold stale values left by earlier code such as the CRT startup, so the numbers are leftover stack contents rather than random.
 
-**One sentence.** Prints three unpredictable "garbage" values read from wherever the (absent) arguments would live — stack slots under 32-bit cdecl (MSVC), registers under x86-64 System V (GCC).
+Under MSVC with `/Ox`, the arguments are still passed on the stack, but optimization changes which earlier code ran and what it left in those slots, so the three printed numbers differ from the unoptimized build.
 
-**C.** Undefined behavior as written; the values have no defined source. It is not reconstructable to well-defined C because the program itself is the bug.
+Under GCC on x86-64 (System V), the first varargs after the format string are passed in registers `ESI`, `EDX`, and `ECX`, not on the stack. `printf` prints whatever those registers held at the call site, a different source entirely from the stack slots MSVC reads. That is why the behavior is not comparable between the two compilers. The origin of the values is fixed by the calling convention, not by the C source.
 
-## Challenge #52 — printf of time()
+**In one line.** It prints three leftover values read from where the absent arguments would have been, stack slots under 32-bit MSVC and registers under x86-64 GCC. The program is undefined behavior as written, so there is no well-defined C to reconstruct.
 
-Tags: stack (X86, ARM, MIPS).
+## Challenge #52, printf of time()
 
-x86 (MSVC):
+**Source** [challenges.re/52](https://challenges.re/52/){ .external-link }<br>
+**Tags** X86, ARM, MIPS, ARM64, ASM, L1
+
+x86 (optimizing MSVC)
 
 ```asm
 $SG3103 DB '%d', 0aH, 00H
+
 _main PROC
     push 0
     call DWORD PTR __imp___time64
@@ -101,7 +107,7 @@ _main PROC
 _main ENDP
 ```
 
-ARM (Thumb / ARM mode, condensed):
+ARM (optimizing Keil, ARM mode)
 
 ```asm
 main PROC
@@ -113,19 +119,20 @@ main PROC
     BL   __2printf
     MOV  r0,#0
     POP  {r4,pc}
-ENDP
+    ENDP
+
 |L0.32| DCB "%d\n",0
 ```
 
-**Analysis.** `time(NULL)` / `_time64(0)` returns the number of seconds since the Unix epoch (1970-01-01 00:00:00 UTC); the result is handed to `printf("%d\n", ...)`. The x86 listing pushes arguments in reverse cdecl order ([§1.11.1](../../readings/books/re4b/re4b-chapter-01.md#1111-x86)): `push 0` is `time`'s argument, then the 64-bit return value (`EDX:EAX`) is pushed as two 32-bit words, then the format pointer. `add esp, 16` cleans four 4-byte slots.
+`time(NULL)` returns the number of seconds since the Unix epoch, 1970-01-01 UTC, and the result is handed to `printf("%d\n", ...)`. In the x86 listing, `push 0` supplies `time`'s `NULL` argument, and `_time64` returns a 64-bit value in the `EDX:EAX` pair. The two `push` instructions place that value on the stack as two 32-bit words, high word then low word, followed by the format-string pointer. `add esp, 16` removes the four 4-byte slots after the call. The ARM version does the same job without the split, since 32-bit `time` returns a single 32-bit value in `r0` that is moved to `r1` as the second `printf` argument.
 
-**Additional questions.**
+**Why did MSVC use `_time64` instead of `time`.** In modern MSVC, `time_t` is 64-bit by default and `time` is a thin wrapper over `_time64`. This is deliberate, since a 32-bit `time_t` overflows in 2038.
 
-- *Why did MSVC replace `time()` with `_time64()`?* In MSVC, `time_t` defaults to the 64-bit `__time64_t`, and `time()` is a wrapper over `_time64()`. This is deliberate: a 32-bit `time_t` overflows in 2038.
-- *Is it correct? Dangerous?* The type is mismatched. `_time64` returns 64 bits (`EDX:EAX`), but the format specifier is `%d`, which consumes a single 32-bit `int`. `printf` reads only the low word (`EAX`) and never consumes the high word (`EDX`) pushed above it — leaving a stray 32-bit value on the stack relative to the format string. It works today only because the current timestamp fits in the low 32 bits. It is technically incorrect and fragile; the correct specifier for a 64-bit `time_t` is `%lld`.
-- *What will `printf` print after 2038?* `%d` interprets the low 32 bits as a **signed** `int`. After 2038-01-19 03:14:07 UTC that value crosses 0x7FFFFFFF and reads as negative, so `printf` prints a negative number even though the underlying 64-bit `_time64` value is still correct — the bug is the truncation to signed 32-bit through `%d`, not the timekeeping.
+**Is it correct, and is it dangerous.** The types do not match. `_time64` returns 64 bits, but `%d` consumes a single 32-bit `int`, so `printf` reads only the low word in `EAX` and ignores the high word in `EDX` that was pushed above it. It works today only because the current timestamp fits in the low 32 bits and is positive. It is technically incorrect and fragile, and the correct specifier for a 64-bit `time_t` is `%lld`.
 
-**One sentence.** Prints the current Unix timestamp (seconds since 1970-01-01 UTC).
+**What `printf` prints after 2038.** `%d` reads the low 32 bits as a signed `int`. After 2038-01-19 that value passes `0x7FFFFFFF` and is read as negative, so `printf` prints a negative number while the underlying 64-bit `_time64` value stays correct. The defect is the truncation to signed 32 bits through `%d`, not the timekeeping.
+
+**In one line.** Prints the current Unix timestamp, the seconds since 1970-01-01 UTC.
 
 **C.**
 
