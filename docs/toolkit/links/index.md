@@ -40,7 +40,7 @@ External sources for tools and malware samples.
 | Dynamic (Behavioral) Monitoring |
 |---|
 | [ProcMon](https://learn.microsoft.com/en-us/sysinternals/downloads/procmon){ .external-link } |
-| [ProcDOT](https://www.procdot.com/){ .external-link } |
+| [ProcDOT](https://www.procdot.com/downloadprocdotbinaries.htm){ .external-link } ([WinDump](https://www.winpcap.org/windump/install/){ .external-link }; [Graphviz](https://graphviz.org/download/){ .external-link }; [Setup](https://princeprafull.medium.com/malware-analysis-using-procdot-ba5cbb1898c5){ .external-link }) |
 | [Process Explorer](https://learn.microsoft.com/en-us/sysinternals/downloads/process-explorer){ .external-link } |
 | [System Informer](https://systeminformer.com/){ .external-link } |
 | [Regshot](https://sourceforge.net/projects/regshot/){ .external-link } |
