@@ -8,7 +8,7 @@
 **Platform:** Windows  
 **Arch:** x86-64
 
-A crackmes.one keygen-style challenge where the key is a route through a maze embedded as raw data in the binary. Solving it is entirely static: locate the grid, recover the movement and validation semantics from the disassembly, and run a shortest-path search.
+A crackmes.one maze runner. The key is not a serial, it is a path. The program reads a string of `W/A/S/D` moves and walks them across a 10x10 grid that is stored as data in the binary, accepting any route that starts at the top left and ends on the goal. The work is to recover the grid and the movement rules, then search for a path. The analysis below is static.
 
 | | |
 |---|---|
@@ -18,204 +18,252 @@ A crackmes.one keygen-style challenge where the key is a route through a maze em
 | Method | Static analysis. No debugger. |
 
 !!! tip "TL;DR"
-    `SDDSSASSDDSSDDDSSDDD`
+    The maze is a 10x10 grid at `0x14002b3c0`, one byte per cell (`0` open, `1` wall, `2` goal). Start is `(0,0)`, goal is `(9,9)`, and moves are `W` up, `S` down, `A` left, `D` right. Any wall-free route works. The shortest is
 
----
+    ```
+    SDDSSASSDDSSDDDSSDDD
+    ```
+
+    A solver that reads the grid and searches for a path is in the [Solving](#6-solving) section.
 
 ## 1. Triage
 
-```bash
-$ file CFB2.exe
-CFB2.exe: PE32+ executable (console) x86-64, for MS Windows, 6 sections
+A 64-bit MSVC console PE.
+
+=== "Radare2"
+
+    ```
+    $ rabin2 -I CFB2.exe
+    arch     x86
+    baddr    0x140000000
+    bintype  pe
+    bits     64
+    class    PE32+
+    cc       ms
+    endian   little
+    lang     c
+    machine  AMD 64
+    os       windows
+    subsys   Windows CUI
+
+    $ rabin2 -S CFB2.exe
+    [Sections]
+
+    nth paddr          size vaddr          vsize perm type name
+    ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+    0   0x00000400  0x29a00 0x140001000  0x2a000 -r-x ---- .text
+    1   0x00029e00  0x12a00 0x14002b000  0x13000 -r-- ---- .rdata
+    2   0x0003c800   0x1400 0x14003e000   0x3000 -rw- ---- .data
+    3   0x0003dc00   0x2600 0x140041000   0x3000 -r-- ---- .pdata
+    4   0x00040200    0x200 0x140044000   0x1000 -rw- ---- .fptable
+    5   0x00040400    0xa00 0x140045000   0x1000 -r-- ---- .reloc
+    ```
+
+=== "Objdump"
+
+    ```
+    $ file CFB2.exe
+    CFB2.exe: PE32+ executable (console) x86-64, for MS Windows, 6 sections
+
+    $ objdump -h CFB2.exe
+    Idx Name          Size      VMA               File off
+      0 .text         00029868  0000000140001000  00000400
+      1 .rdata        000129a6  000000014002b000  00029e00
+      2 .data         00001400  000000014003e000  0003c800
+    ```
+
+Strings live in the file at a **file offset** but the code refers to them by **virtual address**. Matching a string to the instruction that loads it means converting between the two. Each section lists both, and within a section they differ by a fixed delta, `delta = vaddr - paddr`. The strings and the maze both sit in `.rdata`, so
+
+```
+delta(.rdata) = 0x14002b000 - 0x29e00 = 0x140001200
+vaddr = file_offset + 0x140001200
 ```
 
-Section table (relevant for mapping file offsets ↔ virtual addresses later):
+## 2. Strings
 
-| Section | VMA | File offset | Notes |
-|---|---|---|---|
-| `.text` | `0x140001000` | `0x000400` | code |
-| `.rdata` | `0x14002b000` | `0x029e00` | string literals + the maze |
-| `.data` | `0x14003e000` | `0x03c800` | globals (`__security_cookie`, iostream ptrs) |
+Filter for the program's own markers.
 
-Any `.rdata` VMA maps back to disk as `fileoff = 0x29e00 + (vma − 0x14002b000)`. That single relation is all we need to pull embedded data out by hand; no PE-aware tooling required.
+=== "Radare2"
 
-## 2. Strings define the checker's contract
+    ```
+    $ rabin2 -z CFB2.exe | grep -E '\[[-+*]\]'
+    nth paddr      vaddr       len size section type  string
+    14  0x0002a4f8 0x14002b6f8 51  52   .rdata ascii [+] by pwn.by [+]
+    17  0x0002a5a0 0x14002b7a0 39  40   .rdata ascii [*] Welcome to CFB2 - The Maze Runner.\n
+    18  0x0002a5c8 0x14002b7c8 46  47   .rdata ascii [*] Enter your solution path (using W/A/S/D):\n
+    19  0x0002a5f8 0x14002b7f8 9   10   .rdata ascii [+] Key:
+    20  0x0002a608 0x14002b808 32  33   .rdata ascii [-] Error: Key cannot be empty!\n
+    23  0x0002a660 0x14002b860 19  20   .rdata ascii \n[-] Invalid move '
+    24  0x0002a678 0x14002b878 33  34   .rdata ascii [-] Only W, A, S, D are allowed.\n
+    27  0x0002a6b0 0x14002b8b0 27  28   .rdata ascii \n[-] Out of bounds at step
+    28  0x0002a6d0 0x14002b8d0 19  20   .rdata ascii [-] ACCESS DENIED!\n
+    29  0x0002a6e8 0x14002b8e8 24  25   .rdata ascii \n[-] Hit a wall at step
+    31  0x0002a740 0x14002b940 52  53   .rdata ascii    [+] ACCESS GRANTED! Congratulations!\n
+    33  0x0002a7b0 0x14002b9b0 52  53   .rdata ascii    [-] ACCESS DENIED!\n
+    34  0x0002a7f0 0x14002b9f0 67  68   .rdata ascii    [-] You reached the end, but didn't finish the input key there!\n
+    35  0x0002a838 0x14002ba38 52  53   .rdata ascii    [-] You did not reach the finish point (9,9).\n
+    36  0x0002a870 0x14002ba70 29  30   .rdata ascii    [-] Current position: (x:
+    ```
 
-`strings` alone reveals the entire state machine before a single instruction is read:
+=== "Objdump"
 
-```bash
-$ strings -n 6 CFB2.exe
-[*] Welcome to CFB2 - The Maze Runner.
-[*] Enter your solution path (using W/A/S/D):
-[-] Invalid move '
-[-] Only W, A, S, D are allowed.
-[-] Out of bounds at step
-[-] Hit a wall at step
-[-] You did not reach the finish point (9,9).
-[-] You reached the end, but didn't finish the input key there!
-   [+] ACCESS GRANTED! Congratulations!
-```
+    ```
+    $ strings -n 4 CFB2.exe | grep -iE 'maze|w/a/s/d|access|wall|bounds|step|invalid move|finish|empty'
+    [*] Welcome to CFB2 - The Maze Runner.
+    [*] Enter your solution path (using W/A/S/D):
+    [-] Error: Key cannot be empty!
+    [-] Invalid move '
+    [-] Out of bounds at step
+    [-] Hit a wall at step
+       [+] ACCESS GRANTED! Congratulations!
+       [-] You reached the end, but didn't finish the input key there!
+       [-] You did not reach the finish point (9,9).
+    ```
 
-From these we can already state the checker's contract:
-
-- Input is a string of moves drawn from `{W, A, S, D}`.
-- There is a grid with **walls** and **bounds**; the finish is fixed at **`(9,9)`**, implying a 10×10 grid indexed `0..9`.
-- Two distinct end-state failures exist: *not reaching the finish*, and *"reaching the end but not finishing the key there"*, i.e. the terminal move, not merely some intermediate move, must land on the goal.
-
-Everything after this is confirming the exact numeric encoding and pulling the grid bytes.
+The contract is spelled out. Read a `W/A/S/D` path, then reject it for one of three reasons, an invalid move, stepping out of bounds, or hitting a wall. The finish is `(9,9)`, which means a 10x10 grid indexed `0` through `9`. One message stands out, "You reached the end, but didn't finish the input key there," so the final position matters as much as the moves. Next, find where these strings are used.
 
 ## 3. Locating main
 
-MSVC loads each literal with a RIP-relative `lea`, and `objdump` helpfully resolves the target in a trailing comment. The verdict strings all resolve into `.rdata`; grepping the disassembly for that address band collapses to one function:
+Take the `[*] Enter your solution path` prompt and find the instruction that loads it.
 
-```bash
-$ objdump -d -M intel --no-show-raw-insn CFB2.exe > disasm.txt
-$ grep -nE '# 0x14002b[789ab]' disasm.txt
-140006407: lea rdx,[rip+0x253ba]  # 0x14002b7c8   ; "Enter your solution path"
-1400066be: lea rdx,[rip+0x25243]  # 0x14002b908   ; ACCESS GRANTED block
-14000677d: lea rdx,[rip+0x25164]  # 0x14002b8e8   ; "Hit a wall at step"
-...
+=== "Radare2"
+
+    ```
+    $ r2 -A CFB2.exe
+    [0x14000949c]> izz~solution path
+    3430 0x0002a5c8 0x14002b7c8 46 47 .rdata ascii [*] Enter your solution path (using W/A/S/D):\n
+    [0x14000949c]> axt 0x14002b7c8
+    main 0x140006407 [DATA:r--] lea rdx, str.___Enter_your_solution_path__using_W_A_S_D_:_n
+    [0x14000949c]> pdf @ main
+                ; CALL XREF from entry0 @ 0x140009427(x)
+    ┌ 1471: int main (int argc, char **argv, char **envp);
+    │           0x140006370      push rbp
+    │           0x140006372      push rbx
+    │           ...
+    ```
+
+    r2's analysis (`-A`) resolves the cross-reference into the named function `main` and draws its bounds, so the entry at `0x140006370` is given directly.
+
+=== "Objdump"
+
+    ```
+    $ python3 -c "d=open('CFB2.exe','rb').read(); print(hex(d.find(b'[*] Enter your solution path')))"
+    0x2a5c8
+
+    # convert with the delta from Triage: 0x2a5c8 + 0x140001200 = 0x14002b7c8
+
+    $ objdump -d -M intel --no-show-raw-insn CFB2.exe > dis.txt
+    $ grep '# 0x14002b7c8' dis.txt
+    140006407:  lea rdx,[rip+0x253ba]        # 0x14002b7c8
+    ```
+
+    That instruction is inside a function. Read upward in `dis.txt` to the prologue. MSVC pads the gap between functions with `int3`, so the first instruction after the padding is the entry point.
+
+    ```
+    14000636f:  int3            ; padding between functions
+    140006370:  rex push rbp    ; prologue starts here
+    140006372:  push rbx
+    ```
+
+Either way, `main` starts at `0x140006370`. Read it from there.
+
+## 4. Reading main
+
+Print the function with `pdf @ main` in the r2 session, or read `dis.txt` around `0x140006370`. The listings below are trimmed to the relevant instructions.
+
+`main` prints a banner, reads one line with `std::getline`, trims whitespace with an `isspace` helper at `0x140010cc0`, and rejects an empty key. The input is an MSVC `std::string`, so the recurring `cmp <capacity>, 0xf` followed by a `cmova` is the small-string check that selects between the inline buffer and a heap pointer. None of that is the validation. The validation is a single loop that walks the path.
+
+Before the loop, the state is cleared and the maze base is loaded.
+
+```
+140006607:  xor esi,esi            ; x = 0
+140006609:  xor edi,edi            ; y = 0
+14000660b:  xor bl,bl              ; won = 0
+14000660d:  xor r15d,r15d          ; i = 0
+140006619:  lea r14,[rip+0x24da0]  ; # 0x14002b3c0  maze base
 ```
 
-Every hit lands inside the function starting at **`0x140006370`**, which is `main`.
+Each character is upper-cased with `toupper` at `0x140010fe8`, then dispatched. The four moves change one coordinate each.
 
-## 4. Input acquisition (MSVC std::string, SSO)
-
-Before the maze logic, the program reads one line and trims it. Two implementation details are worth calling out because they generate most of the surrounding branch noise:
-
-- The line is read with a `'\n'` delimiter (`mov dl,0xa` before the stream call), a `std::getline(std::cin, s)`.
-- The `std::string` uses **SSO (small string optimization)**. Its layout on the stack is: buffer at `[rbp-0x38]`, size at `[rbp-0x28]`, capacity at `[rbp-0x20]`, initialized to `0xf`:
-
-```asm
-14000643c: mov QWORD PTR [rbp-0x20],0xf     ; capacity = 15 (SSO threshold)
-140006444: mov BYTE  PTR [rbp-0x38],0x0     ; buffer[0] = '\0'
+```
+14000662e:  movzx ecx,BYTE PTR [rax+r15*1]  ; ecx = key[i]
+140006633:  call 0x140010fe8                ; toupper
+140006638:  cmp al,0x41   ; 'A' -> dec esi  (x -= 1)
+14000663c:  cmp al,0x44   ; 'D' -> inc esi  (x += 1)
+140006640:  cmp al,0x53   ; 'S' -> inc edi  (y += 1)
+140006644:  cmp al,0x57   ; 'W' -> dec edi  (y -= 1)
+140006646:  jne 0x1400066eb                 ; anything else, invalid move
 ```
 
-The recurring pattern `cmp QWORD PTR [rbp-0x20],0xf` / `cmova rax,[rbp-0x38]` throughout is simply "is this string heap-allocated or inline?": if capacity > 15 the data pointer is dereferenced from `[rbp-0x38]`, otherwise the buffer *is* `[rbp-0x38]`. Recognizing this prevents mistaking pointer bookkeeping for validation logic. Leading/trailing whitespace is stripped with an `isspace` helper (`0x140010cc0`), then an empty result is rejected:
+So `x` is the column moved by `A` and `D`, `y` is the row moved by `W` and `S`. After each move the position is bounds checked. The compare is unsigned, so a coordinate that dropped below zero wraps to a large value and fails the same `ja`, covering both edges with one test.
 
-```asm
-1400065f6: test r14,r14                     ; r14 = trimmed length
-1400065f9: jne  0x140006607
-1400065fb: lea  rdx,[rip+...] # 0x14002b808  ; "[-] Error: Key cannot be empty!"
+```
+14000665a:  cmp esi,0x9 ; ja 0x1400067e9    ; x > 9, out of bounds
+140006663:  cmp edi,0x9 ; ja 0x1400067e9    ; y > 9, out of bounds
 ```
 
-## 5. The validation loop
+The cell is read from the grid with a row-major index, `y * 10 + x`.
 
-State is initialized as `x = 0`, `y = 0`, a "won" flag, and the loop index `i`, plus the maze base pointer:
-
-```asm
-140006607: xor esi,esi          ; x   = 0
-140006609: xor edi,edi          ; y   = 0
-14000660b: xor bl,bl            ; won = 0
-14000660d: xor r15d,r15d        ; i   = 0
-140006619: lea r14,[rip+0x24da0] ; r14 = 0x14002b3c0  <-- MAZE BASE
+```
+14000666c:  lea eax,[rdi+rdi*4]             ; y * 5
+14000666f:  lea eax,[rsi+rax*2]             ; x + y * 10
+140006674:  movzx edx,BYTE PTR [rax+r14*1]  ; cell = maze[y*10 + x]
+140006679:  cmp dl,r12b   ; r12b = 1        ; cell == 1 ?
+14000667c:  je 0x14000677d                  ; hit a wall
+140006686:  cmp dl,0x2                      ; cell == 2 ?
+140006689:  jne 0x140006699
+14000668b:  lea rax,[rcx-0x1] ; rcx = len   ; rax = len - 1
+140006692:  cmp r15,rax                     ; i == last index ?
+140006695:  cmove ebx,r12d                  ; won = 1 if on goal at the final move
 ```
 
-### 5.1 Move decode
+Cell value `1` is a wall and ends the walk. Cell value `2` is the goal, and the `won` flag is set only when the goal is occupied on the last character of the input. That is the "finish the input key there" rule. The loop then advances.
 
-Each character is upper-cased (`0x140010fe8`, a `toupper` whose fast path is `lea eax,[rcx-0x61]; cmp eax,0x19; ja …; add ecx,-0x20`) and dispatched:
-
-```asm
-140006638: cmp al,'A' -> dec esi   ; x -= 1
-14000663c: cmp al,'D' -> inc esi   ; x += 1
-140006640: cmp al,'S' -> inc edi   ; y += 1
-140006644: cmp al,'W' -> dec edi   ; y -= 1
-140006646: jne 0x1400066eb         ; anything else -> "Invalid move"
+```
+140006699:  inc r15
+14000669c:  cmp r15,rcx ; jb 0x140006620    ; i < len
 ```
 
-| Key | Δ | Direction |
-|---|---|---|
-| `W` | `y − 1` | up |
-| `S` | `y + 1` | down |
-| `A` | `x − 1` | left |
-| `D` | `x + 1` | right |
+After the loop, three conditions must all hold.
 
-### 5.2 Bounds, unsigned on purpose
-
-```asm
-14000665a: cmp esi,0x9 ; ja out_of_bounds
-140006663: cmp edi,0x9 ; ja out_of_bounds
+```
+1400066a5:  test bl,bl  ; je 0x1400067f2    ; won == 1
+1400066ad:  cmp esi,0x9 ; jne 0x1400067f2   ; x == 9
+1400066b6:  cmp edi,esi ; jne 0x1400067f2   ; y == x, so y == 9
+1400066be:  ...                             ; ACCESS GRANTED
 ```
 
-`ja` is an **unsigned** compare. A coordinate that decremented below zero wraps to a large unsigned value, so the single `> 9` test rejects both `< 0` and `> 9` in one branch. `x`/`y` are treated as 32-bit here but only ever hold `0..9` on the valid path.
+The path must end on the goal cell on its last move and finish at `(9,9)`. The start cell `(0,0)` is never wall checked, since validation only inspects a cell after a move lands on it, which makes `(0,0)` the implicit start. Everything needed is now known except the grid itself.
 
-### 5.3 Cell lookup and encoding
+## 5. The maze
 
-The index is row-major with stride 10, computed with two `lea`s:
+The grid base came from the loop, `0x14002b3c0`. Read 100 bytes there and reshape to 10 rows of 10.
 
-```asm
-14000666c: lea eax,[rdi+rdi*4]   ; eax = y*5
-14000666f: lea eax,[rsi+rax*2]   ; eax = x + (y*5)*2 = x + y*10
-140006674: movzx edx,BYTE PTR [rax+r14*1]   ; dl = maze[y*10 + x]
+=== "Radare2"
+
+    ```
+    [0x14000949c]> px 100 @ 0x14002b3c0
+    - offset -   C0C1 C2C3 C4C5 C6C7 C8C9 CACB CCCD CECF  0123456789ABCDEF
+    0x14002b3c0  0001 0101 0101 0101 0101 0000 0001 0000  ................
+    0x14002b3d0  0000 0001 0101 0001 0001 0101 0001 0100  ................
+    0x14002b3e0  0000 0001 0000 0001 0100 0101 0101 0001  ................
+    0x14002b3f0  0101 0100 0000 0100 0000 0001 0101 0100  ................
+    0x14002b400  0101 0101 0001 0100 0000 0000 0001 0001  ................
+    0x14002b410  0100 0101 0101 0001 0000 0101 0101 0101  ................
+    0x14002b420  0000 0002                                ....
+    ```
+
+=== "Objdump"
+
+    ```
+    # maze base 0x14002b3c0 -> paddr 0x14002b3c0 - 0x140001200 = 0x2a1c0
+    $ python3 -c "d=open('CFB2.exe','rb').read(); print(list(d[0x2a1c0:0x2a1c0+100]))"
+    [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, ...]
+    ```
+
+Reshaped, with `.` for open, `#` for wall, `S` at the start and `G` at the goal, the maze is
+
 ```
-
-The byte is then interpreted (`r12b` holds the constant `1`):
-
-```asm
-140006679: cmp dl,1  ; je hit_wall            ==> 1 = WALL
-140006686: cmp dl,2  ; jne next               ==> 2 = GOAL
-14000668b: lea rax,[rcx-1]      ; rcx = len ; rax = len-1
-140006692: cmp r15,rax          ; i == len-1 ?
-140006695: cmove ebx,r12d       ; won = 1  iff on a goal cell at the FINAL step
-```
-
-Cell encoding: **`0` = open, `1` = wall, `2` = goal.** The `won` flag is set only when a goal cell is occupied on the last input character, which is the mechanism behind the *"finished the key there"* rule. The start tile `(0,0)` is never wall-checked; validation only inspects tiles *entered by a move*, making `(0,0)` the implicit valid origin.
-
-## 6. Win gate and failure dispatch
-
-After the loop:
-
-```asm
-1400066a5: test bl,bl  ; je  fail    ; won == 1 ?
-1400066ad: cmp esi,0x9 ; jne fail    ; x == 9 ?
-1400066b6: cmp edi,esi ; jne fail    ; y == x  (== 9) ?
-1400066be: ...                       ; ACCESS GRANTED
-```
-
-Success requires **all three**: finished on a goal tile at the final step, and terminal position exactly `(9,9)`.
-
-The failure handlers form a compact dispatch. Mapping each verdict to the condition that produces it:
-
-| Verdict string | Trigger | Extra info printed |
-|---|---|---|
-| `Key cannot be empty!` | trimmed input length 0 | None |
-| `Invalid move '<c>' at step N` + `Only W, A, S, D are allowed.` | char ∉ {W,A,S,D} | offending char, 1-based step |
-| `Out of bounds at step N! (x:…, y:…)` + `ACCESS DENIED!` | `x>9` or `y>9` (unsigned) | step, coords |
-| `Hit a wall at step N! (x:…, y:…)` + `ACCESS DENIED!` | `maze[y*10+x] == 1` | step, coords |
-| `You did not reach the finish point (9,9).` + current position | loop finished, `(x,y) ≠ (9,9)` | terminal coords |
-| `You reached the end, but didn't finish the input key there!` | loop finished, `(x,y) == (9,9)` **but** `won == 0` | None |
-
-Displayed step numbers are 1-based (`lea rdx,[r15+1]`).
-
-**A note on the "didn't finish the key there" branch.** With this data set it is effectively dead code. `won` is set whenever a goal tile is occupied at `i == len-1`, and `(9,9)` is the *only* goal tile; therefore any run whose terminal position is `(9,9)` must have entered `(9,9)` on the final move, which sets `won = 1` and diverts to *ACCESS GRANTED*. Reaching the post-loop gate with `(x,y) == (9,9)` and `won == 0` is unreachable unless the grid contained a second goal tile. It's a reasonable defensive branch, but it cannot fire against the shipped maze.
-
-## 7. Extracting the maze
-
-Base VMA `0x14002b3c0` → file offset `0x29e00 + (0x14002b3c0 − 0x14002b000) = 0x2a1c0`. Read 100 bytes:
-
-```python
-g = open('CFB2.exe','rb').read()[0x2a1c0:0x2a1c0+100]
-for y in range(10):
-    print(' '.join(f'{c}' for c in g[y*10:(y+1)*10]))
-```
-
-```text
-      x = 0 1 2 3 4 5 6 7 8 9
- y=0:     0 1 1 1 1 1 1 1 1 1
- y=1:     0 0 0 1 0 0 0 0 0 1
- y=2:     1 1 0 1 0 1 1 1 0 1
- y=3:     1 0 0 0 0 1 0 0 0 1
- y=4:     1 0 1 1 1 1 0 1 1 1
- y=5:     1 0 0 0 1 0 0 0 0 1
- y=6:     1 1 1 0 1 1 1 1 0 1
- y=7:     1 0 0 0 0 0 0 1 0 1
- y=8:     1 0 1 1 1 1 0 1 0 0
- y=9:     1 1 1 1 1 1 0 0 0 2
-```
-
-As a map (`S` start `(0,0)`, `G` goal `(9,9)`, `#` wall, `.` open):
-
-```text
 S # # # # # # # # #
 . . . # . . . . . #
 # # . # . # # # . #
@@ -228,86 +276,62 @@ S # # # # # # # # #
 # # # # # # . . . G
 ```
 
-## 8. Solving
+## 6. Solving
 
-The constraints reduce to: find a walk from `(0,0)` to `(9,9)` over 4-connected open tiles, avoiding `1`s. Because `(9,9)` is the sole goal and must also be the terminal tile, *any* wall-free path is a valid key; a BFS yields the shortest one and guarantees the terminal-step-on-goal condition for free.
+The rules reduce to a shortest-path search on a 10x10 grid. Any route from `(0,0)` to `(9,9)` that avoids walls is accepted, and because the goal is the only cell that ends the walk successfully, ending there satisfies the "finish the key there" rule automatically. A breadth-first search reads the grid straight from the binary and returns the shortest path.
 
 ```python
+#!/usr/bin/env python3
+import sys
 from collections import deque
-maze = [g[y*10:(y+1)*10] for y in range(10)]
-MOVES = {'W':(0,-1),'S':(0,1),'A':(-1,0),'D':(1,0)}
 
-q, seen = deque([((0,0),"")]), {(0,0)}
-while q:
-    (x,y), p = q.popleft()
-    if (x,y) == (9,9):
-        print(p); break
-    for ch,(dx,dy) in MOVES.items():
-        nx,ny = x+dx, y+dy
-        if 0<=nx<=9 and 0<=ny<=9 and maze[ny][nx]!=1 and (nx,ny) not in seen:
-            seen.add((nx,ny)); q.append(((nx,ny), p+ch))
+MOVES = {"W": (0, -1), "S": (0, 1), "A": (-1, 0), "D": (1, 0)}
+
+def load_maze(path):
+    data = open(path, "rb").read()
+    base = 0x2a1c0  # maze vaddr 0x14002b3c0 - .rdata delta 0x140001200
+    cells = data[base:base + 100]
+    return [list(cells[r * 10:(r + 1) * 10]) for r in range(10)]
+
+def solve(maze):
+    start, goal = (0, 0), (9, 9)
+    queue = deque([(start, "")])
+    seen = {start}
+    while queue:
+        (x, y), path = queue.popleft()
+        if (x, y) == goal:
+            return path
+        for move, (dx, dy) in MOVES.items():
+            nx, ny = x + dx, y + dy
+            if 0 <= nx <= 9 and 0 <= ny <= 9 and maze[ny][nx] != 1 and (nx, ny) not in seen:
+                seen.add((nx, ny))
+                queue.append(((nx, ny), path + move))
+    return None
+
+if __name__ == "__main__":
+    path = sys.argv[1] if len(sys.argv) > 1 else "CFB2.exe"
+    print(solve(load_maze(path)))
 ```
 
-Result: the shortest solution (20 moves):
-
-```text
+```
+$ python3 solve.py CFB2.exe
 SDDSSASSDDSSDDDSSDDD
 ```
 
-Path overlay (`*` = route):
+Type that path at the prompt for `ACCESS GRANTED`.
 
-```text
-S # # # # # # # # #
-* * * # . . . . . #
-# # * # . # # # . #
-# * * . . # . . . #
-# * # # # # . # # #
-# * * * # . . . . #
-# # # * # # # # . #
-# . . * * * * # . #
-# . # # # # * # . .
-# # # # # # * * * G
-```
+## Appendix
 
-## 9. Verification by reimplementation
-
-Rather than execute the binary, the checker is reimplemented byte-for-byte from §5–§6 and the key is replayed through it:
-
-```python
-def verify(maze, s):
-    x = y = 0; won = False
-    for i, c in enumerate(s.upper()):
-        if c not in MOVES: return f"invalid move at step {i}"
-        dx, dy = MOVES[c]; x += dx; y += dy
-        if not (0 <= x <= 9 and 0 <= y <= 9): return f"out of bounds at step {i}"
-        if maze[y][x] == 1: return f"wall at step {i}"
-        if maze[y][x] == 2 and i == len(s)-1: won = True
-    return "ACCESS GRANTED" if won and (x,y) == (9,9) else "denied"
-
-# verify(maze, "SDDSSASSDDSSDDDSSDDD") -> "ACCESS GRANTED"
-```
-
-Expected runtime behavior:
-
-```text
-[+] Key: SDDSSASSDDSSDDDSSDDD
-
-   [+] ACCESS GRANTED! Congratulations!
-   You have successfully solved CFB2!
-```
-
----
-
-### Appendix
-
-| Address | Meaning |
-|---|---|
-| `0x140006370` | `main` |
-| `0x140006607` | validation loop init |
-| `0x140006620` | per-character move decode |
-| `0x14000665a` | unsigned bounds check |
-| `0x140006674` | `maze[y*10 + x]` load |
-| `0x1400066a5` | win gate (`won && x==9 && y==9`) |
-| `0x14002b3c0` | maze grid (100 bytes, file offset `0x2a1c0`) |
-| `0x140010fe8` | `toupper` helper |
-| `0x140010cc0` | `isspace` helper (whitespace trim) |
+| Address       | Meaning                                      |
+| ------------- | -------------------------------------------- |
+| `0x140006370` | `main`                                       |
+| `0x140006607` | validation loop setup, `x`, `y`, `won`, `i`  |
+| `0x140006619` | maze base load, `0x14002b3c0`                |
+| `0x140006638` | move dispatch, `W` `A` `S` `D`               |
+| `0x14000665a` | bounds check, unsigned `> 9`                 |
+| `0x140006674` | cell read, `maze[y*10 + x]`                  |
+| `0x140006695` | goal-at-final-step flag                      |
+| `0x1400066a5` | win gate, `won` and `x == 9` and `y == 9`    |
+| `0x14002b3c0` | maze grid, 100 bytes                         |
+| `0x140010cc0` | `isspace`, used for trimming                 |
+| `0x140010fe8` | `toupper`, applied to each move              |
