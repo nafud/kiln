@@ -77,6 +77,52 @@ Tool guides are an exception to the prefix rule: each guide is its **own folder*
 
 **Page heading + subtitle convention.** Every content page opens with a single `# h1`, immediately followed by one intro paragraph — extra.css's `h1 + p` rule renders that paragraph as the faint subtitle, so it must be prose, not a list or table. Book-chapter h1s use the uniform house style **`# Chapter N. Title`** (period after the number, e.g. `# Chapter 8. Exceptional Control Flow`) — match it when adding or replacing a chapter; incoming drafts sometimes arrive with an em-dash or a `Book — Chapter N:` prefix, normalize them. Pages must **not** carry YAML frontmatter — no page uses it; Material derives the `<title>` (`"<h1> - Kiln"`) from the h1, auto-generates `<link rel="canonical">` from `site_url`, and the page description falls back to `site_description`. (A `title:`/`canonical:`/`meta-description:` block on an incoming draft is redundant or non-functional here — strip it.)
 
+## Writing style
+
+Every page under `docs/` is a note from one reverse engineer to another. Clear, laconic, technically accurate, on point, dry. Textbook register, not blog register. This holds site-wide (book notes, tool guides, course notes, writeups), not only in writeups. For CSS and design rules see "Styling conventions".
+
+**Voice.** Assume a competent peer. State findings, do not narrate the journey and do not teach down. No hype, no rhetorical questions, no self-congratulation ("as we can clearly see"), no tour guiding ("let's dive in", "now we will"). Prefer impersonal statements over second person. Say a thing once.
+
+**No fillers.** Cut `simply`, `just`, `obviously`, `of course`, `basically`, `note that`, `it is worth noting`, `as we know`. `in order to` becomes `to`. Delete any sentence that only announces the next one. A clause carrying no fact is cut.
+
+**Punctuation.** Two hard bans, both in prose only.
+
+- No em dashes (`—`) and no double hyphens (`--`). Recast with a comma, parentheses, or a second sentence.
+- No colons, including in a caption that introduces a code block. A bold lead-in label ends with a period (`**Storage.**`, `**In one line.**`), never a colon.
+- Both bans leave content alone. Hyphens inside tokens stay (`x86-64`, `PE32+`, `case-sensitive`, `2-digit`), and so do colons inside code spans, code blocks, URLs, table syntax, and the metadata-block labels described below.
+
+**Accuracy.** Nothing is asserted that was not checked.
+
+- Every address, instruction, constant, offset, hash, and console line is verified against the actual file or an actual tool run. Never reconstruct output from memory or from expectation.
+- A command shown must reproduce the output shown. When output is filtered for readability, show the filter (`strings -n 6 CFB1.exe | grep -E '\[[-+*]\]'`) instead of silently trimming a raw dump.
+- Do not imply a tool was run when it was not, or that a binary was executed when the work was static.
+- Justify an identification rather than naming it. `0x1400297a0` is `memcmp` because it takes two pointers and a length and returns zero only on full equality.
+- Effects before encodings. "Each byte prints as two uppercase hex digits" first, the flag bits that cause it second.
+- State assumptions in place (ASCII input, byte-wide wrap).
+- Scripts are complete and runnable, with a filename, an invocation, and their real output. No fragment that errors when pasted.
+
+**Reproducibility.** A reader holding the same file and the note must reach the same result. Derive a constant before using it (`delta(.rdata) = vaddr - paddr`), then apply it. Prefer the mechanical path a reader can repeat over a shortcut that only worked because the author already knew the answer.
+
+### Writeup skeleton
+
+[crackmes-one-cfb1.md](docs/writeups/crackmes-one/crackmes-one-cfb1.md) and [crackmes-one-cfb2.md](docs/writeups/crackmes-one/crackmes-one-cfb2.md) are the reference implementations. The order is fixed.
+
+1. `# h1`, the challenge name alone (`# CFB1`), no subtitle in the title.
+2. Metadata block, a single paragraph of bold label and value lines joined by Markdown hard breaks (two trailing spaces), ordered Source (link to the challenge), Author, Difficulty, Quality, Language, Platform, Arch. It is the `h1 + p` paragraph, so extra.css renders it as the faint grey block. Keep it a paragraph; a table here loses the styling.
+3. Intro prose, one paragraph, stating what the challenge is and what solving it takes. Each writeup stands alone and never cross-references a sibling challenge.
+4. Info table, exactly `Target` (executable name only), `Image base`, `SHA-256`, and `Method` (`Static analysis. No debugger.`). No Toolchain or Tools-used rows.
+5. `!!! tip "TL;DR"`, titled exactly `TL;DR`, holding the answer (formula or key) and a link to the section carrying the full script.
+6. Numbered sections forming the reproducible spine. Triage, Strings, Locating main, Reading main, the challenge-specific routine, then the keygen or solver.
+7. `## Appendix`, titled exactly that, an address table of the landmarks used.
+
+There is no Summary section. The high-level statement is item 3, and the answer is item 5.
+
+**Tool tabs.** Where a step has two tool paths, use `pymdownx.tabbed` with Radare2 first so it is the default tab, then Objdump, as `=== "Radare2"` and `=== "Objdump"` with bodies indented four spaces. Radare2 is the primary workflow and objdump is the no-frills fallback. Both bodies carry real output from that tool.
+
+### Exercise notes
+
+[challenges-re-re4b-ch01.md](docs/writeups/challenges-re/challenges-re-re4b-ch01.md) is the reference. Per exercise, an `## h2` carrying the number and topic, a metadata paragraph (Source link, Tags), the listing copied verbatim from the source, analysis prose, an `**In one line.**` answer, and a `**C.**` block where a C equivalent exists. Answer the questions the challenge actually asks. Where it asks three, answer three, and do not force a C equivalent onto code whose behavior is undefined.
+
 ## Adding content
 
 To add a new top-level section:
@@ -100,7 +146,7 @@ To add a new page within an existing section (e.g., `docs/readings/books/csapp/c
 Exception: on writeup-collection landing pages (e.g. `writeups/crackmes-one/index.md`), step 3 is a row in the metadata table instead of a card:
 
 ```markdown
-| [CFB1](crackmes-one-cfb1.md) | Windows x86-64 | Easy | pwn.by |
+| [CFB1](crackmes-one-cfb1.md) | 2.2 | 4.3 | x86-64 |
 ```
 
 To add a tool guide: create `docs/toolkit/guides/<tool>/index.md` (the guide **is** the folder's index — see "File naming convention"), add it under `Guides:` in `nav:`, and add a card on `toolkit/guides/index.md`.
