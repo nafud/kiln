@@ -182,6 +182,15 @@ body {
   line-height: 1.5;
 }
 
+/* Opt a lede out of the subtitle styling and render it as normal body text
+   (tool-guide intros, tagged { .plain-intro } via attr_list). */
+.md-typeset h1 + p.plain-intro {
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.7;
+  margin-top: 0.9rem;
+}
+
 .md-typeset h2 {
   font-size: 1.2rem;
   font-weight: 700;
