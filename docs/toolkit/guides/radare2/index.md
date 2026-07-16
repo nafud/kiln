@@ -1,9 +1,7 @@
 # Radare2
 
-r2's command grammar is compositional. A base verb (`p`, `a`, `d`, `w`, `i`,
-`s`) takes sub-letters that narrow the action, an optional `j` for JSON, `~` to
-grep, and `@` to run at a different address. The sections below group the
-commands by task.
+Commands for triage, analysis, debugging, and patching. Every command runs at
+the current seek unless `@` redirects it.
 {: .plain-intro }
 
 ## Launch & Config
