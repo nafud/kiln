@@ -10,7 +10,7 @@ different address. Learn the grammar and you stop memorizing the leaves.
 
 ## Launch & Config
 
-```
+```bash
 r2 <file>              # Open read-only (safe default)
 r2 -w <file>           # Open in read/write (needed for any patching)
 r2 -d <file>           # Open under the debugger (spawns the process)
@@ -26,7 +26,7 @@ jump tables come back wrong; it costs real time on large binaries.
 
 **In-session config (`e`)**
 
-```
+```bash
 e                      # Dump every config var (huge; grep it)
 e~asm.                 # List only asm.* vars
 e <key>=<val>          # Set a var
@@ -46,7 +46,7 @@ syntax, bits, endianness, and pseudocode are all just `e` toggles.
 
 ## Analysis
 
-```
+```bash
 aa                     # Analyze all — fast, symbols + entrypoints only
 aaa                    # aa + function calls, refs, strings (the sane default)
 aaaa                   # aaa + experimental passes (jump tables, emu); slow
@@ -69,7 +69,7 @@ by hand.
 
 **Strings & references**
 
-```
+```bash
 iz                     # Strings in data sections (the usual list)
 izz                    # Strings scanned across the whole binary
 izzz                   # Raw scan, every string incl. unmapped regions
@@ -89,7 +89,7 @@ that uses it.
 
 ## Navigation
 
-```
+```bash
 s <addr|sym>           # Seek to an address, symbol, or flag
 s sym.main             # Jump to main()
 s+<n> / s-<n>          # Seek n bytes forward / back (relative)
@@ -104,7 +104,7 @@ relative to the current seek (`$$`), so seeking is how you "move the cursor."
 
 **Flags (bookmarks)**
 
-```
+```bash
 f <name> [len] @ <addr># Create a named flag
 fl                     # List flags
 fs                     # List flag spaces
@@ -119,7 +119,7 @@ finds nothing, the flag may live in another space — `fs *` searches all.
 
 ## Disassembly
 
-```
+```bash
 pdf                    # Disassemble the current function (most-used)
 pd <n>                 # Disassemble n instructions from here
 pd -<n>                # Disassemble n instructions BEFORE here
@@ -142,7 +142,7 @@ always works, `pdg`/`pdd` are better but need the plugin installed.
 
 ## Print & Inspect
 
-```
+```bash
 px <n>                 # Hexdump n bytes
 pxw <n>                # Dump as 32-bit words
 pxq <n>                # Dump as 64-bit qwords
@@ -177,7 +177,7 @@ quality-of-life feature for reading branchy functions.
 
 ## Searching
 
-```
+```bash
 / <string>             # Search ASCII
 /i <string>            # Search ASCII, case-insensitive
 /x <hexbytes>          # Search a byte pattern
@@ -196,7 +196,7 @@ as `hit0_*` flags you can iterate with `@@ hit*`.
 
 **Search scope**
 
-```
+```bash
 e search.in=dbg.maps   # Search all debugger memory maps
 e search.in=io.maps    # Search all mapped IO sections
 e search.in=block      # Search only the current block (default varies)
@@ -210,7 +210,7 @@ isn't there.
 
 ## Debugging
 
-```
+```bash
 dc                     # Continue
 ds                     # Step one instruction (into)
 dso                    # Step over (skips the call)
@@ -242,7 +242,7 @@ a `call` drops you inside the callee; `dso` runs the call and returns. After any
     Open with `r2 -w <file>` (or `oo+` mid-session) before any write. Writes hit
     the file on disk — work on a copy.
 
-```
+```bash
 wx <hexbytes>          # Write raw hex at the current offset
 wa <asm>               # Assemble and write an instruction
 wao nop                # NOP out the current instruction (auto-sizes)
@@ -255,13 +255,13 @@ wn <byte> <n>          # Write n copies of a byte
 (right length, right no-op for the arch). `wa` assembles for you, so you write
 `wa jmp 0x401260` instead of hand-encoding. Combine writes with iterators:
 
-```
+```bash
 wx 90 @@ sym.*         # Write a byte at every symbol (batch patch)
 ```
 
 **One-liner patch from the shell**
 
-```
+```bash
 r2 -w -qc 'wx 90 @ 0x401234' ./binary
 r2 -w -qc 's 0x401234; wa jmp 0x401260; pd 1' ./binary   # patch + verify
 ```
@@ -270,7 +270,7 @@ r2 -w -qc 's 0x401234; wa jmp 0x401260; pd 1' ./binary   # patch + verify
 
 ## Binary Info
 
-```
+```bash
 i                      # File info summary
 iI                     # Detailed: arch, bits, OS, endian, PIC/NX/canary
 ih                     # File/format header fields (ELF/PE/Mach-O header)
@@ -291,7 +291,7 @@ canary, RELRO) without leaving r2.
 
 **From the shell (no session)**
 
-```
+```bash
 rabin2 -I <file>       # Info summary (mirrors iI)
 rabin2 -z <file>       # Strings
 rabin2 -i <file>       # Imports
@@ -306,7 +306,7 @@ quick triage when you don't want a full session.
 
 ## Scripting & Output
 
-```
+```bash
 ~<str>                 # Grep r2 output   (afl~main)
 ~[n]                   # Keep column n of each line (afl~[0] = addresses)
 ~:0                    # Keep row 0 (first line)
@@ -323,14 +323,14 @@ listing into a batch of actions.
 
 **Batch from the shell**
 
-```
+```bash
 r2 -qc 'aaa; aflj' <file>        # Analyze, dump functions as JSON, quit
 r2 -i script.r2 <file>           # Run a full script on load
 ```
 
 **Iterators (`@@`)**
 
-```
+```bash
 @@ <flag-glob>         # Run the command at each matching flag
 @@ sym.*               # ... at every symbol
 @@ hit*                # ... at every search hit
@@ -353,7 +353,7 @@ afl @@ sym.*           # Analyze each symbol's function
 
 **Static triage entry point**
 
-```
+```bash
 r2 -A ./binary
 afl              # what functions exist
 iI               # arch, protections (NX/PIE/canary)
@@ -362,7 +362,7 @@ s sym.main ; pdf # read main
 
 **Follow a string to its use site**
 
-```
+```bash
 izz                            # find the string
 axt @ str.interesting_string   # who references it
 s <ref-addr> ; pdf             # read that function
@@ -370,14 +370,14 @@ s <ref-addr> ; pdf             # read that function
 
 **ROP hunting**
 
-```
+```bash
 /R/ pop rdi; ret               # gadget by regex
 /R/ pop rsi; pop r15           # multi-instruction candidates
 ```
 
 **Patch and verify a jump**
 
-```
+```bash
 r2 -w ./binary
 s 0x401234
 wa jmp 0x401260                # or: wao nop  to kill a check
@@ -386,7 +386,7 @@ pd 1                           # confirm the new instruction
 
 **Debug to a target, inspect the stack**
 
-```
+```bash
 r2 -d ./binary
 db 0x401234 ; dc               # break and run to it
 dr                             # registers

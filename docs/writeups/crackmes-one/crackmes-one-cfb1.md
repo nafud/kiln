@@ -20,7 +20,7 @@ A crackmes.one keygen. There is no stored password to grep for. The program deri
 !!! tip "TL;DR"
     For a username of length `n`, the serial is `2n` uppercase hex digits. For each character `c` at index `i` (0-based),
 
-    ```
+    ```text
     byte = (((i + 0x5A) ^ c) + 0x13) & 0xFF
     ```
 
@@ -32,7 +32,7 @@ A 64-bit MSVC console PE.
 
 === "Radare2"
 
-    ```
+    ```console
     $ rabin2 -I CFB1.exe
     arch     x86
     baddr    0x140000000
@@ -61,7 +61,7 @@ A 64-bit MSVC console PE.
 
 === "Objdump"
 
-    ```
+    ```console
     $ file CFB1.exe
     CFB1.exe: PE32+ executable (console) x86-64, for MS Windows, 6 sections
 
@@ -74,7 +74,7 @@ A 64-bit MSVC console PE.
 
 Strings live in the file at a **file offset** but the code refers to them by **virtual address**. Matching a string to the instruction that loads it means converting between the two. Each section lists both, and within a section they differ by a fixed delta, `delta = vaddr - paddr`. The strings sit in `.rdata`, so
 
-```
+```text
 delta(.rdata) = 0x14002c000 - 0x2a800 = 0x140001800
 vaddr = file_offset + 0x140001800
 ```
@@ -85,7 +85,7 @@ vaddr = file_offset + 0x140001800
 
 === "Radare2"
 
-    ```
+    ```console
     $ rabin2 -z CFB1.exe | grep '\['
     nth paddr      vaddr       len size section type  string
     15  0x0002b038 0x14002c838 51  52   .rdata ascii [+] by pwn.by [+]
@@ -102,7 +102,7 @@ vaddr = file_offset + 0x140001800
 
 === "Objdump"
 
-    ```
+    ```console
     $ strings -n 6 CFB1.exe | grep -E '\[[-+*]\]'
                [+] by pwn.by [+]
     [+] Enter Username (min 4 chars):
@@ -126,7 +126,7 @@ Take the `[+] Enter Username` prompt and find the instruction that loads it.
 
 === "Radare2"
 
-    ```
+    ```console
     $ r2 -A CFB1.exe
     [0x140009f8c]> izz~Enter Username
     3439 0x0002b0e0 0x14002c8e0 34 35 .rdata ascii [+] Enter Username (min 4 chars):
@@ -143,7 +143,7 @@ Take the `[+] Enter Username` prompt and find the instruction that loads it.
 
 === "Objdump"
 
-    ```
+    ```console
     $ python3 -c "d=open('CFB1.exe','rb').read(); print(hex(d.find(b'[+] Enter Username')))"
     0x2b0e0
 
@@ -156,7 +156,7 @@ Take the `[+] Enter Username` prompt and find the instruction that loads it.
 
     That instruction is inside a function. Read upward in `dis.txt` to the prologue. MSVC pads the gap between functions with `int3`, so the first instruction after the padding is the entry point.
 
-    ```
+    ```nasm
     1400074c7:  ret
     1400074c8:  int3            ; padding between functions
     ...
@@ -179,7 +179,7 @@ Input. Each field is read with `std::getline(std::cin, s)` and then trimmed. The
 
 After the username is read and trimmed, its length is checked.
 
-```
+```nasm
 14000775d:  cmp rsi,0x4             ; rsi = trimmed username length
 140007761:  jae 0x140007793        ; length >= 4 continues
 140007763:  lea rdx,[rip+...]      ; # 0x14002c910  "... too short ..."
@@ -187,7 +187,7 @@ After the username is read and trimmed, its length is checked.
 
 The gate is on the trimmed length, so trailing spaces do not help reach four characters. A long enough username falls through to the serial prompt, read and trimmed the same way. Then the core. The username is passed to the derivation routine and the result is written to a fresh string.
 
-```
+```nasm
 14000795c:  lea rdx,[rbp-0x39]     ; rdx = username
 140007960:  lea rcx,[rbp-0x19]     ; rcx = output string for the expected serial
 140007964:  call 0x1400066e0       ; expected = derive(username)
@@ -195,7 +195,7 @@ The gate is on the trimmed length, so trailing spaces do not help reach four cha
 
 The comparison checks length first, then bytes.
 
-```
+```nasm
 140007986:  mov r8,[rbp-0x49]      ; length of the entered serial
 14000798a:  cmp r8,[rbp-0x9]       ; length of the expected serial
 14000798e:  jne 0x1400079ae        ; different length, ACCESS DENIED
@@ -211,13 +211,13 @@ The comparison checks length first, then bytes.
 
 `derive` takes the username and returns the expected serial. It creates a `std::stringstream` and appends to it one character at a time, so reading a single iteration is enough. This function reuses `rbp` as the loop index `i` rather than as a frame pointer.
 
-```
+```nasm
 140006712:  xor ebp,ebp                    ; i = 0
 ```
 
 The body loads `username[i]` (the `cmp ...,0xf` here is the inline-or-heap selection from the previous section) and transforms it.
 
-```
+```nasm
 14000672f:  lea eax,[rbp+0x5a]             ; eax = i + 0x5A
 140006732:  xor al,BYTE PTR [rcx+rbp*1]    ; al = ((i + 0x5A) & 0xFF) ^ username[i]
 140006735:  add al,0x13                    ; al = (al + 0x13) & 0xFF
@@ -228,7 +228,7 @@ Each character becomes one byte through a position dependent XOR and an add. The
 
 The rest of the body formats that byte and appends it. The format-flags field of the stream, written at `[rsp+rcx*1+0x58]`, gets the hex and uppercase bits, the field width is set to two, and the fill character is set to `'0'`, then the byte is inserted as an integer.
 
-```
+```nasm
 14000674b:  or DWORD PTR [rsp+rcx*1+0x58],0x800   ; hex
 14000675c:  or DWORD PTR [rsp+rcx*1+0x58],0x4     ; uppercase
 140006761:  mov edx,0x2                           ; field width = 2
@@ -238,7 +238,7 @@ The rest of the body formats that byte and appends it. The format-flags field of
 
 Width and fill are reissued every iteration because `setw` only affects the next insertion. The effect is that each byte prints as exactly two uppercase hex digits. The loop advances until `i` reaches the username length.
 
-```
+```nasm
 1400067ab:  inc rbp
 1400067ae:  cmp rbp,[rbx+0x10]             ; i < length ?
 1400067b2:  jb 0x140006720
@@ -246,7 +246,7 @@ Width and fill are reissued every iteration because `setw` only affects the next
 
 So character `i` produces
 
-```
+```text
 byte = (((i + 0x5A) ^ username[i]) + 0x13) & 0xFF
 serial += "%02X" % byte
 ```
@@ -285,7 +285,7 @@ if __name__ == "__main__":
     print(name, keygen(name))
 ```
 
-```
+```console
 $ python3 keygen.py crackme
 crackme 4C3C5051484518
 

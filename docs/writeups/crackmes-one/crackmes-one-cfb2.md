@@ -20,7 +20,7 @@ A crackmes.one maze runner. The key is not a serial, it is a path. The program r
 !!! tip "TL;DR"
     The maze is a 10x10 grid at `0x14002b3c0`, one byte per cell (`0` open, `1` wall, `2` goal). Start is `(0,0)`, goal is `(9,9)`, and moves are `W` up, `S` down, `A` left, `D` right. Any wall-free route works. The shortest is
 
-    ```
+    ```text
     SDDSSASSDDSSDDDSSDDD
     ```
 
@@ -32,7 +32,7 @@ A 64-bit MSVC console PE.
 
 === "Radare2"
 
-    ```
+    ```console
     $ rabin2 -I CFB2.exe
     arch     x86
     baddr    0x140000000
@@ -61,7 +61,7 @@ A 64-bit MSVC console PE.
 
 === "Objdump"
 
-    ```
+    ```console
     $ file CFB2.exe
     CFB2.exe: PE32+ executable (console) x86-64, for MS Windows, 6 sections
 
@@ -74,7 +74,7 @@ A 64-bit MSVC console PE.
 
 Strings live in the file at a **file offset** but the code refers to them by **virtual address**. Matching a string to the instruction that loads it means converting between the two. Each section lists both, and within a section they differ by a fixed delta, `delta = vaddr - paddr`. The strings and the maze both sit in `.rdata`, so
 
-```
+```text
 delta(.rdata) = 0x14002b000 - 0x29e00 = 0x140001200
 vaddr = file_offset + 0x140001200
 ```
@@ -85,7 +85,7 @@ Filter for the program's own markers.
 
 === "Radare2"
 
-    ```
+    ```console
     $ rabin2 -z CFB2.exe | grep -E '\[[-+*]\]'
     nth paddr      vaddr       len size section type  string
     14  0x0002a4f8 0x14002b6f8 51  52   .rdata ascii [+] by pwn.by [+]
@@ -107,7 +107,7 @@ Filter for the program's own markers.
 
 === "Objdump"
 
-    ```
+    ```console
     $ strings -n 4 CFB2.exe | grep -iE 'maze|w/a/s/d|access|wall|bounds|step|invalid move|finish|empty'
     [*] Welcome to CFB2 - The Maze Runner.
     [*] Enter your solution path (using W/A/S/D):
@@ -128,7 +128,7 @@ Take the `[*] Enter your solution path` prompt and find the instruction that loa
 
 === "Radare2"
 
-    ```
+    ```console
     $ r2 -A CFB2.exe
     [0x14000949c]> izz~solution path
     3430 0x0002a5c8 0x14002b7c8 46 47 .rdata ascii [*] Enter your solution path (using W/A/S/D):\n
@@ -146,7 +146,7 @@ Take the `[*] Enter your solution path` prompt and find the instruction that loa
 
 === "Objdump"
 
-    ```
+    ```console
     $ python3 -c "d=open('CFB2.exe','rb').read(); print(hex(d.find(b'[*] Enter your solution path')))"
     0x2a5c8
 
@@ -159,7 +159,7 @@ Take the `[*] Enter your solution path` prompt and find the instruction that loa
 
     That instruction is inside a function. Read upward in `dis.txt` to the prologue. MSVC pads the gap between functions with `int3`, so the first instruction after the padding is the entry point.
 
-    ```
+    ```nasm
     14000636f:  int3            ; padding between functions
     140006370:  rex push rbp    ; prologue starts here
     140006372:  push rbx
@@ -175,7 +175,7 @@ Print the function with `pdf @ main` in the r2 session, or read `dis.txt` around
 
 Before the loop, the state is cleared and the maze base is loaded.
 
-```
+```nasm
 140006607:  xor esi,esi            ; x = 0
 140006609:  xor edi,edi            ; y = 0
 14000660b:  xor bl,bl              ; won = 0
@@ -185,7 +185,7 @@ Before the loop, the state is cleared and the maze base is loaded.
 
 Each character is upper-cased with `toupper` at `0x140010fe8`, then dispatched. The four moves change one coordinate each.
 
-```
+```nasm
 14000662e:  movzx ecx,BYTE PTR [rax+r15*1]  ; ecx = key[i]
 140006633:  call 0x140010fe8                ; toupper
 140006638:  cmp al,0x41   ; 'A' -> dec esi  (x -= 1)
@@ -197,14 +197,14 @@ Each character is upper-cased with `toupper` at `0x140010fe8`, then dispatched. 
 
 So `x` is the column moved by `A` and `D`, `y` is the row moved by `W` and `S`. After each move the position is bounds checked. The compare is unsigned, so a coordinate that dropped below zero wraps to a large value and fails the same `ja`, covering both edges with one test.
 
-```
+```nasm
 14000665a:  cmp esi,0x9 ; ja 0x1400067e9    ; x > 9, out of bounds
 140006663:  cmp edi,0x9 ; ja 0x1400067e9    ; y > 9, out of bounds
 ```
 
 The cell is read from the grid with a row-major index, `y * 10 + x`.
 
-```
+```nasm
 14000666c:  lea eax,[rdi+rdi*4]             ; y * 5
 14000666f:  lea eax,[rsi+rax*2]             ; x + y * 10
 140006674:  movzx edx,BYTE PTR [rax+r14*1]  ; cell = maze[y*10 + x]
@@ -219,14 +219,14 @@ The cell is read from the grid with a row-major index, `y * 10 + x`.
 
 Cell value `1` is a wall and ends the walk. Cell value `2` is the goal, and the `won` flag is set only when the goal is occupied on the last character of the input. That is the "finish the input key there" rule. The loop then advances.
 
-```
+```nasm
 140006699:  inc r15
 14000669c:  cmp r15,rcx ; jb 0x140006620    ; i < len
 ```
 
 After the loop, three conditions must all hold.
 
-```
+```nasm
 1400066a5:  test bl,bl  ; je 0x1400067f2    ; won == 1
 1400066ad:  cmp esi,0x9 ; jne 0x1400067f2   ; x == 9
 1400066b6:  cmp edi,esi ; jne 0x1400067f2   ; y == x, so y == 9
@@ -241,7 +241,7 @@ The grid base came from the loop, `0x14002b3c0`. Read 100 bytes there and reshap
 
 === "Radare2"
 
-    ```
+    ```text
     [0x14000949c]> px 100 @ 0x14002b3c0
     - offset -   C0C1 C2C3 C4C5 C6C7 C8C9 CACB CCCD CECF  0123456789ABCDEF
     0x14002b3c0  0001 0101 0101 0101 0101 0000 0001 0000  ................
@@ -255,7 +255,7 @@ The grid base came from the loop, `0x14002b3c0`. Read 100 bytes there and reshap
 
 === "Objdump"
 
-    ```
+    ```console
     # maze base 0x14002b3c0 -> paddr 0x14002b3c0 - 0x140001200 = 0x2a1c0
     $ python3 -c "d=open('CFB2.exe','rb').read(); print(list(d[0x2a1c0:0x2a1c0+100]))"
     [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, ...]
@@ -263,7 +263,7 @@ The grid base came from the loop, `0x14002b3c0`. Read 100 bytes there and reshap
 
 Reshaped, with `.` for open, `#` for wall, `S` at the start and `G` at the goal, the maze is
 
-```
+```text
 S # # # # # # # # #
 . . . # . . . . . #
 # # . # . # # # . #
@@ -313,7 +313,7 @@ if __name__ == "__main__":
     print(solve(load_maze(path)))
 ```
 
-```
+```console
 $ python3 solve.py CFB2.exe
 SDDSSASSDDSSDDDSSDDD
 ```

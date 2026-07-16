@@ -66,7 +66,7 @@ Cross-linking (RE4B ↔ challenges.re): the **Reverse Engineering for Beginners*
 - `admonition` + `pymdownx.details` — `!!! note`, `??? tip` collapsible blocks
 - `attr_list` — attributes on Markdown elements
 - `pymdownx.superfences` — fenced code blocks with language highlighting
-- `pymdownx.highlight` + `pymdownx.inlinehilite` — Pygments syntax highlighting. Every fence carries a language (`c`, `asm` for AT&T listings, `objdump` for disassembly dumps, `python`, `text` for raw output and formulas); `title="file.ext"` on a fence renders a filename header, styled in extra.css to match the surface recipe
+- `pymdownx.highlight` + `pymdownx.inlinehilite` — Pygments syntax highlighting. Every fence carries a language, chosen by lexer fit not by loose label: `c`; `nasm` for **Intel**-syntax disassembly (`mov r8,[rbp-0x49]`, the crackme writeups) since it colors registers/hex/`;`-comments, `asm` (GAS) for **AT&T** listings (RE4B, challenges.re); `objdump` for objdump dumps; `console` for shell sessions with a `$`/`#` prompt and their output; `bash` for command cheatsheets whose `#` inline comments should grey out (the radare2 guide); `python`; `text` for raw bytes, hexdumps, ASCII diagrams, and formulas. `title="file.ext"` on a fence renders a filename header, styled in extra.css to match the surface recipe. Annotations that Pygments flags as error tokens (the plain-English notes trailing some listings) render as plain text, which is fine
 - `pymdownx.tabbed` (`alternate_style: true`) — content tabs (`=== "Tab"`), e.g. the radare2/objdump alternatives in the CFB1 writeup
 
 ## File naming convention
