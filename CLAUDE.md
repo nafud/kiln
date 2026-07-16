@@ -79,9 +79,11 @@ Tool guides are an exception to the prefix rule: each guide is its **own folder*
 
 ## Writing style
 
-Every page under `docs/` is a note from one reverse engineer to another. Clear, laconic, technically accurate, on point, dry. Textbook register, not blog register. This holds site-wide (book notes, tool guides, course notes, writeups), not only in writeups. For CSS and design rules see "Styling conventions".
+Every page under `docs/` is a note from one reverse engineer to another. Two things matter most, in this order: technical accuracy and coherence. Clarity and concision serve them and never override them, so a sentence is never trimmed or smoothed at the cost of a fact. The register is textbook, not blog. Written for a competent peer who wants the result without being exhausted by it: clear, on point, dry, and easy to read from the first line to the last. This holds site-wide (book notes, tool guides, course notes, writeups), not only in writeups. For CSS and design rules see "Styling conventions".
 
 **Voice.** Assume a competent peer. State findings, do not narrate the journey and do not teach down. No hype, no rhetorical questions, no self-congratulation ("as we can clearly see"), no tour guiding ("let's dive in", "now we will"). Prefer impersonal statements over second person. Say a thing once.
+
+**Flow.** The prose reads as one continuous line of reasoning. Each sentence follows from the one before it, and each paragraph hands off cleanly to the next, so there are no abrupt jumps and no clunky seams. When a step depends on a fact established earlier, carry that fact forward in words rather than assuming the reader reassembles it. Concision means cutting what carries no information, not compressing what remains into fragments, arrow chains, or shorthand. A shorter note the reader has to decode twice is not shorter. Read a finished page top to bottom once; if a transition jars or a sentence lands without a reason to be there, fix it.
 
 **No fillers.** Cut `simply`, `just`, `obviously`, `of course`, `basically`, `note that`, `it is worth noting`, `as we know`. `in order to` becomes `to`. Delete any sentence that only announces the next one. A clause carrying no fact is cut.
 
@@ -102,6 +104,8 @@ Every page under `docs/` is a note from one reverse engineer to another. Clear, 
 - Scripts are complete and runnable, with a filename, an invocation, and their real output. No fragment that errors when pasted.
 
 **Reproducibility.** A reader holding the same file and the note must reach the same result. Derive a constant before using it (`delta(.rdata) = vaddr - paddr`), then apply it. Prefer the mechanical path a reader can repeat over a shortcut that only worked because the author already knew the answer.
+
+**TL;DR.** A book chapter opens with a `!!! tip "TL;DR"` admonition, placed after the intro paragraph and before the first section. It is one dense, well-written paragraph carrying the chapter's load-bearing facts, so a reader gets the whole result before the detail and can decide what to read closely. [csapp-chapter-03.md](docs/readings/books/csapp/csapp-chapter-03.md) is the reference. Writeups carry their own TL;DR holding the answer (formula or key) rather than a chapter summary; see the writeup skeleton.
 
 ### Writeup skeleton
 
