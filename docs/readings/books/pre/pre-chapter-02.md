@@ -79,7 +79,7 @@ System settings live in coprocessors rather than dedicated control registers. Th
 
 Each coprocessor has 16 registers and eight opcodes. They are accessed only through `MRC` (read) and `MCR` (write), which take a coprocessor number, register numbers, and opcodes:
 
-```
+```asm
 MRC p15, 0, r0, c2, c0, 0   ; read CP15 C2/C0 (translation base) into R0
 ```
 
@@ -115,7 +115,7 @@ The immediate form corresponds to `MOV Reg, [Reg + Imm]` on x86, the register fo
 | Pre-indexed     | `LDR Rd, [Rn, offset]!`   | Address computed, then written back to base (prefix `++`/`--`) |
 | Post-indexed    | `LDR Rd, [Rn], offset`    | Base used as address, then base updated (postfix `++`/`--`) |
 
-```
+```asm
 12 F9 01 3D  LDRSB.W R3, [R2,#-1]!  ; R3 = *(R2-1);  R2 = R2-1   (pre-indexed)
 10 F9 01 6B  LDRSB.W R6, [R0],#1    ; R6 = *R0;      R0 = R0+1   (post-indexed)
 ```
@@ -127,7 +127,7 @@ The immediate form corresponds to `MOV Reg, [Reg + Imm]` on x86, the register fo
 
 `LDR Rd, =value` is a pseudo-instruction that loads a 32-bit constant, string address, or imported-function offset from the literal pool — a data area within the code section — using PC-relative addressing. It lets a full 32-bit constant be loaded in one instruction.
 
-```
+```asm
 01: .text:0100B134 35 4B  LDR R3, =0x68DB8BAD   ; actually LDR R3, [PC, #0xD4]
 03: .text:0100B20C ...    dword_100B20C DCD 0x68DB8BAD
 ```
@@ -147,7 +147,7 @@ The immediate form corresponds to `MOV Reg, [Reg + Imm]` on x86, the register fo
 
 Inlined `memcpy` is recognizable as `LDM`/`STM` with writeback moving the same register set between a source and destination pointer. At function boundaries in ARM state they serve as prologue/epilogue.
 
-```
+```asm
 01: F0 4F 2D E9  STMFD SP!, {R4-R11,LR}  ; save regs + return address
 03: F0 8F BD E8  LDMFD SP!, {R4-R11,PC}  ; restore regs and return
 ```
@@ -159,7 +159,7 @@ Inlined `memcpy` is recognizable as `LDM`/`STM` with writeback moving the same r
 
 `PUSH`/`POP` are `LDM`/`STM` specialized to `SP`: they implicitly use `SP` as the base and always write back. `PUSH` is `STMDB SP!`; `POP` is `LDMIA SP!`. The stack grows downward. They are the standard Thumb-state prologue/epilogue and are sometimes used by disassemblers as a heuristic for function boundaries.
 
-```
+```asm
 01: 2D E9 F0 4F  PUSH.W {R4-R11,LR}   ; save registers + return address
 03: BD E8 F0 8F  POP.W  {R4-R11,PC}   ; restore registers and return
 ```
@@ -181,7 +181,7 @@ Unlike x86 with its single `CALL` and `JMP`, ARM has several branch instructions
 
 `MOV` moves a constant, register, or barrel-shifter result. A 32-bit constant that cannot be encoded as an immediate is loaded either via the barrel shifter or by `MOVW` (bottom 16 bits) plus `MOVT` (top 16 bits).
 
-```
+```asm
 01: 4F F0 0A 00  MOV.W R0, #0xA        ; r0 = 0xa
 03: A4 4A A0 E1  MOV R4, R4, LSR #21   ; r4 = r4 >> 21 (barrel shifter)
 ```
@@ -231,7 +231,7 @@ Any suffix appended to a branch makes it conditional (`BLT` = branch if less tha
 
 Instruction-level conditional execution can eliminate branches entirely:
 
-```
+```asm
 01: 00 00 50 E3  CMP R0, #0          ; if (a == NULL)
 02: 01 00 A0 03  MOVEQ R0, #1        ;   return 1
 03: 68 00 D0 15  LDRNEB R0, [R0,#0x68]  ; else return a->off_48
@@ -242,7 +242,7 @@ Instruction-level conditional execution can eliminate branches entirely:
 
 Thumb instructions cannot be conditional (except `B`) without the `IT` (if-then) instruction, which conditionalizes up to four following instructions. Syntax is `ITxyz cc`, where `cc` is the condition for the first instruction and `x`, `y`, `z` describe the second through fourth: `T` means match `cc`, `E` means the inverse of `cc`.
 
-```
+```asm
 01: 00 2B  CMP R3, #0
 02: 12 BF  ITEE NE            ; NE, then E/E/E = inverse for the next three
 03: ...    CLZNE.W R0, R12    ; executes if NE
@@ -254,7 +254,7 @@ Thumb instructions cannot be conditional (except `B`) without the `IT` (if-then)
 
 Compilers build a jump table of addresses (ARM) or offsets (Thumb) and branch indirectly by loading the destination into `PC`. In ARM state this is `LDR PC, [PC, Rn, LSL#2]`; because `PC` reads 8 bytes ahead, the table sits 8 bytes past the `LDR`.
 
-```
+```asm
 02: 0B 00 51 E3  CMP R1, #0xB              ; range check
 03: 01 F1 9F 97  LDRLS PC, [PC,R1,LSL#2]   ; index into table, branch
 04: 14 00 00 EA  B loc_DD10                ; default
@@ -284,7 +284,7 @@ User code (USR) requests OS services through a software interrupt, since ARM has
 | Linux (ARM)  | `R7`                        | `R0`–`R2`         |
 | Windows RT   | `R12`                       | —                 |
 
-```
+```text
 Linux:                          Windows RT (ZwCreateFile):
 MOV R7, #0x92   ; syscall no.    MOV.W R12, #0x53
 SVC 0                            SVC 1
@@ -299,7 +299,7 @@ Software breakpoints are implemented via the `BKPT` instruction (triggers the pr
 
 Every ARM-state instruction encodes a condition in the top four bits (28–31). The default `AL` (always) is `0b1110` = `0xE`. Consequently ARM-state machine code shows a recurring `0xE*` byte every four bytes.
 
-```
+```text
 FE FF FF EA FE FF FF EA FE FF FF EA FE FF FF EA
 FE FF FF EA 1C F1 9F E5 00 00 A0 E1 18 01 9F E5
 ```

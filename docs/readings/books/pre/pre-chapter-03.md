@@ -80,7 +80,7 @@ typedef struct _KSERVICE_TABLE_DESCRIPTOR {
 - **x86:** `Base` is a plain array of function pointers.
 - **x64 / ARM:** `Base` is an array of 32-bit integers. The top 20 bits encode the offset from `KiServiceTable`; the bottom 4 bits encode the count of stack arguments.
 
-```
+```text
 real_address = KiServiceTable + (KiServiceTable[index] >> 4)
 stack_args   = KiServiceTable[index] & 0xF
 ```

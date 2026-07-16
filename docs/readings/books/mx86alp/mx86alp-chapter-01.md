@@ -167,7 +167,7 @@ Three operand types:
 
 ## Memory Addressing
 
-```
+```text
 EffectiveAddress = BaseReg + IndexReg * ScaleFactor + Disp
 ```
 

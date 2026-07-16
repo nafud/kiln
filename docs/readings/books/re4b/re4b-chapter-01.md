@@ -48,7 +48,7 @@ The radix (base) is the count of digits a system uses: decimal 10, binary 2, hex
 
 Positional notation gives each digit a weight by position. The value of a written number is the sum of each digit times its base raised to the digit's position index (rightmost = 0):
 
-```
+```text
 1234    (decimal) = 10^3·1 + 10^2·2 + 10^1·3 + 10^0·4
 0b101011 (binary) =  2^5·1 +  2^3·1 +  2^1·1 + 2^0·1 = 43
 ```

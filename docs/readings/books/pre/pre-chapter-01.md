@@ -63,7 +63,7 @@ Two notations exist for x86 assembly: Intel and AT&T. They encode identical inst
 | Operation width       | implicit           | mnemonic suffix (`MOVL`, `MOVB`) |
 | Operand order         | `dst, src`         | `src, dst`                  |
 
-```
+```text
 Intel                       AT&T
 mov ecx, AABBCCDDh          movl $0xAABBCCDD, %ecx
 mov ecx, [eax]              movl (%eax), %ecx
@@ -76,7 +76,7 @@ Windows tools (IDA Pro, OllyDbg, MASM) use Intel notation; UNIX tools (GCC) freq
 
 `MOV` is the most common instruction. Its simplest forms move an immediate or register into a register. Memory access is written with square brackets.
 
-```
+```asm
 01: C7 00 01 00 00 00  mov dword ptr [eax], 1   ; *eax = 1
 02: 8B 08              mov ecx, [eax]           ; ecx = *eax
 03: 89 18              mov [eax], ebx           ; *eax = ebx
@@ -94,7 +94,7 @@ Memory access granularity is byte, word, or doubleword. The default is 4 bytes, 
 
 The array form is `[base + index * scale]`, where scale matches element size:
 
-```
+```asm
 01: 8B 34 B5 40 05 ...  mov esi, [_KdLogBuffer + esi*4]  ; 4-byte elements
 02: 89 04 F7            mov [edi+esi*8], eax             ; 8-byte elements
 ```
@@ -103,7 +103,7 @@ The array form is `[base + index * scale]`, where scale matches element size:
 
 `MOVSB`/`MOVSW`/`MOVSD` copy 1, 2, or 4 bytes between memory addresses, implicitly using `ESI` (source) and `EDI` (destination) and auto-adjusting both per the direction flag (`DF`) in `EFLAGS`. When `DF` is 0 the addresses decrement; otherwise they increment. The `REP` prefix repeats the instruction up to `ECX` times.
 
-```
+```asm
 01: BE 28 B5 41 00  mov esi, offset _RamdiskBootDiskGuid
 02: 8D BD 40 FF FF  lea edi, [ebp-0C0h]
 03: A5             movsd    ; four movsd = memcpy of a 16-byte GUID
@@ -122,7 +122,7 @@ The array form is `[base + index * scale]`, where scale matches element size:
 
 Addition, subtraction, and the bit operations (`AND`, `OR`, `XOR`, `NOT`, shifts) map directly to instructions.
 
-```
+```asm
 01: 83 C4 14  add esp, 14h        ; esp = esp + 0x14
 02: 2B C8     sub ecx, eax        ; ecx = ecx - eax
 04: 41        inc ecx             ; ecx = ecx + 1
@@ -169,7 +169,7 @@ A calling convention is defined by the platform ABI: how parameters are passed, 
 
 The function prologue establishes a new frame; the epilogue restores the previous one.
 
-```
+```asm
 addme:
 01: 55        push ebp            ; prologue: save caller's frame
 02: 8B EC     mov  ebp, esp       ; prologue: new frame base
@@ -219,7 +219,7 @@ An if-else is a compare or test followed by a `Jcc`. `test edx, edx` followed by
 
 A switch is a sequence of if-else comparisons. When cases are dense and consecutive, the compiler builds a jump table: an array of handler addresses indexed directly by the case value, eliminating per-case comparisons.
 
-```
+```asm
 01: cmp edi, 5                    ; range check
 02: ja  short loc_10001141        ; default
 03: jmp ds:off_100011A4[edi*4]    ; index into jump table
@@ -233,7 +233,7 @@ Loops are `Jcc` and `JMP` combinations — equivalent to if-else plus goto. A `f
 
 The `LOOP` instruction executes a block up to `ECX` times, decrementing `ECX` each iteration:
 
-```
+```asm
 01: 8B CA     mov ecx, edx
 02: loc:
 03: AD        lodsd
@@ -309,7 +309,7 @@ There are 18 64-bit GPRs. 64-bit registers take the `R` prefix (`RAX`, `RBP`). E
 
 x64 adds RIP-relative addressing: instructions reference data at an offset from `RIP`, primarily to support position-independent code.
 
-```
+```asm
 01: 48 8B 05 00 00 00 00  mov rax, qword ptr cs:loc_A  ; "mov rax, [rip]"
 03: loc_A:
 ```
@@ -320,7 +320,7 @@ Most arithmetic is promoted to 64 bits even with 32-bit operands. Writing to a 3
 
 Virtual addresses are 64 bits wide, but current Intel/AMD processors implement only 48. An address is canonical if bits 63 down to the most significant implemented bit are all identical — in practice, bits 48–63 must match bit 47. Dereferencing a non-canonical address raises an exception.
 
-```
+```text
 0xfffff801`c9c11000   canonical
 0x000007f7`bdb67000   canonical
 0xffff0800`00000000   non-canonical (bits 48-63 do not match bit 47)

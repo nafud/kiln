@@ -135,7 +135,7 @@ Related object modules can be packaged into a single **static library** (archive
 
 On Linux, static libraries are stored as **archives** — concatenated relocatable object files with a header describing each member's size and location — with suffix `.a`:
 
-```
+```console
 linux> gcc -c addvec.c multvec.c
 linux> ar rcs libvector.a addvec.o multvec.o
 linux> gcc -c main2.c
@@ -154,7 +154,7 @@ During symbol resolution the linker scans the relocatable files and archives **l
 
 Ordering is therefore significant. If a library precedes the object file that references it, its members are never pulled in:
 
-```
+```console
 linux> gcc -static ./libvector.a main2.c
 /tmp/cc9XH6Rp.o: In function `main':
 /tmp/cc9XH6Rp.o(.text+0x18): undefined reference to `addvec'
@@ -215,7 +215,7 @@ foreach section s {
 
 **PC-relative example.** In `main.o`, the call to `sum` is `e8 00 00 00 00` at section offset `0xe`: a 1-byte opcode followed by a 4-byte placeholder. Its relocation entry is `r.offset = 0xf`, `r.symbol = sum`, `r.type = R_X86_64_PC32`, `r.addend = -4`. With `ADDR(.text) = 0x4004d0` and `ADDR(sum) = 0x4004e8`:
 
-```
+```text
 refaddr = 0x4004d0 + 0xf                    = 0x4004df
 *refptr = 0x4004e8 + (-4) - 0x4004df        = 0x5
 ```
@@ -228,7 +228,7 @@ Yielding `4004de: e8 05 00 00 00  callq 4004e8 <sum>`. When the CPU executes the
 
 The executable's format resembles the relocatable one, with differences: the ELF header additionally records the **entry point** (address of the first instruction to execute); `.text`, `.rodata`, and `.data` are relocated to their final run-time addresses; a `.init` section defines the `_init` function called by initialization code; no `.rel` sections are needed.
 
-```
+```text
 ┌────────────────────────────┐
 │ ELF header                 │ ┐
 ├────────────────────────────┤ │
@@ -258,7 +258,7 @@ For any segment, the linker must choose a starting address satisfying `vaddr mod
 
 Since `prog` is not a built-in command, the shell treats it as an executable and invokes the **loader** (any program can do so via `execve`, §8.4.6). The loader copies the executable's code and data from disk into memory and jumps to the entry point — the process called *loading*. The run-time image on Linux x86-64:
 
-```
+```text
 2^48   ┌───────────────────────────────┐
        │ Kernel memory                 │  invisible to user code
 2^48-1 ├───────────────────────────────┤
@@ -293,7 +293,7 @@ Static libraries leave two problems: updated libraries require programmers to no
 
 A **shared library** is an object module that can be loaded at an arbitrary memory address and linked with a program in memory, at load time or run time — a process called *dynamic linking*, performed by a *dynamic linker*. Linux shared objects use the `.so` suffix; Windows calls them DLLs. They are "shared" in two senses: a filesystem holds exactly one `.so` per library, whose code and data are shared by all referencing executables (rather than copied into each, as with archives); and in memory, a single copy of the library's `.text` can be shared by multiple running processes (Chapter 9).
 
-```
+```console
 linux> gcc -shared -fpic -o libvector.so addvec.c multvec.c
 linux> gcc -o prog2l main2.c ./libvector.so
 ```
@@ -311,7 +311,7 @@ An application can also ask the dynamic linker to load and link arbitrary shared
 | `int dlclose(void *handle)` | Unloads the library if no other shared libraries are still using it. Returns 0 or −1. |
 | `const char *dlerror(void)` | Returns a message describing the most recent `dlopen`/`dlsym`/`dlclose` error, or NULL if none. |
 
-```c
+```c title="dll.c"
 #include <stdio.h>
 #include <stdlib.h>
 #include <dlfcn.h>
@@ -397,7 +397,7 @@ Library interpositioning intercepts calls to shared-library functions and execut
 
 A local `malloc.h` redirects calls via the preprocessor:
 
-```c
+```c title="malloc.h"
 #define malloc(size) mymalloc(size)
 #define free(ptr)    myfree(ptr)
 
@@ -411,7 +411,7 @@ The wrappers (compiled with `-DCOMPILETIME` and the *standard* `malloc.h`) call 
 
 The static linker's `--wrap f` flag resolves references to `f` as `__wrap_f`, and references to `__real_f` as `f`. The wrapper `__wrap_malloc` calls `__real_malloc` (the libc function), traces, returns. Build:
 
-```
+```console
 linux> gcc -DLINKTIME -c mymalloc.c
 linux> gcc -c int.c
 linux> gcc -Wl,--wrap,malloc -Wl,--wrap,free -o intl int.o mymalloc.o
@@ -423,7 +423,7 @@ linux> gcc -Wl,--wrap,malloc -Wl,--wrap,free -o intl int.o mymalloc.o
 
 Requires access only to the executable. If `LD_PRELOAD` is set to a list of shared-library pathnames (separated by spaces or colons), the dynamic linker searches those libraries *first* when resolving undefined references — for any function in any shared library, in any executable. The wrappers (built into `mymalloc.so` with `#define _GNU_SOURCE`) locate the real function at run time with `dlsym(RTLD_NEXT, "malloc")`, which returns the next occurrence of the symbol in the search order:
 
-```
+```console
 linux> gcc -DRUNTIME -shared -fpic -o mymalloc.so mymalloc.c -ldl
 linux> gcc -o intr int.c
 linux> LD_PRELOAD="./mymalloc.so" ./intr
