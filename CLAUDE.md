@@ -66,7 +66,7 @@ Cross-linking (RE4B ↔ challenges.re): the **Reverse Engineering for Beginners*
 - `admonition` + `pymdownx.details` — `!!! note`, `??? tip` collapsible blocks
 - `attr_list` — attributes on Markdown elements
 - `pymdownx.superfences` — fenced code blocks with language highlighting
-- `pymdownx.highlight` + `pymdownx.inlinehilite` — syntax highlighting
+- `pymdownx.highlight` + `pymdownx.inlinehilite` — Pygments syntax highlighting. Every fence carries a language (`c`, `asm` for AT&T listings, `objdump` for disassembly dumps, `python`, `text` for raw output and formulas); `title="file.ext"` on a fence renders a filename header, styled in extra.css to match the surface recipe
 - `pymdownx.tabbed` (`alternate_style: true`) — content tabs (`=== "Tab"`), e.g. the radare2/objdump alternatives in the CFB1 writeup
 
 ## File naming convention

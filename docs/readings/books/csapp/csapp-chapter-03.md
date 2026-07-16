@@ -60,7 +60,7 @@ A single instruction performs only an elementary operation, such as adding two r
 
 The running example is `mstore.c`.
 
-```c
+```c title="mstore.c"
 long mult2(long, long);
 
 void multstore(long x, long y, long *dest) {
@@ -71,7 +71,7 @@ void multstore(long x, long y, long *dest) {
 
 `gcc -Og -S mstore.c` stops after compilation and produces `mstore.s`.
 
-```
+```asm title="mstore.s"
 multstore:
   pushq    %rbx
   movq     %rdx, %rbx
@@ -83,13 +83,13 @@ multstore:
 
 `gcc -Og -c mstore.c` compiles and assembles into `mstore.o`. The procedure occupies 14 bytes of object code.
 
-```
+```text
 53 48 89 d3 e8 00 00 00 00 48 89 03 5b c3
 ```
 
 The machine executes a plain byte sequence encoding instructions and retains almost no information about the source. A disassembler regenerates assembly-like text from machine code.
 
-```
+```objdump
 linux> objdump -d mstore.o
 
 0000000000000000 <multstore>:
@@ -202,7 +202,7 @@ The `mov` class copies data from source to destination without transformation.
 
 The source can be an immediate, register, or memory location, and the destination a register or memory location. A move cannot have both operands in memory, so memory-to-memory copies require two instructions through a register. Register operands must match the size suffix. `movl` with a register destination additionally zeroes the upper 4 bytes. The other `mov` variants update only the designated bytes. The five source/destination combinations look as follows.
 
-```
+```asm
 movl $0x4050,%eax        Immediate to register, 4 bytes
 movw %bp,%sp             Register to register,  2 bytes
 movb (%rdi,%rcx),%al     Memory to register,    1 byte
@@ -237,7 +237,7 @@ Two instruction classes copy a smaller source (register or memory) to a larger r
 There is no `movzlq`. Zero extension from 4 to 8 bytes is achieved with `movl` to a register destination, exploiting the upper-4-byte zeroing convention. `cltq` has no operands and is a compact equivalent of `movslq %eax, %rax`.
 
 !!! note "How byte moves differ"
-    ```
+    ```asm
     movabsq $0x0011223344556677, %rax    %rax = 0011223344556677
     movb    $0xAA, %dl                   %dl  = AA
     movb    %dl,%al                      %rax = 00112233445566AA
@@ -256,7 +256,7 @@ long exchange(long *xp, long y) {
 }
 ```
 
-```
+```asm
   xp in %rdi, y in %rsi
 exchange:
   movq    (%rdi), %rax      Get x at xp. Set as return value.
@@ -344,7 +344,7 @@ The CPU maintains single-bit condition code registers describing the most recent
 
 For `t = a + b` the flags are computed as follows.
 
-```
+```text
 CF   (unsigned) t < (unsigned) a
 ZF   (t == 0)
 SF   (t < 0)
@@ -413,7 +413,7 @@ Most jumps use PC-relative encoding. The operand is the difference between the t
 
 The general translation of `if (test-expr) then-statement else else-statement` uses conditional and unconditional jumps.
 
-```
+```c
     t = test-expr;
     if (!t) goto false;
     then-statement
@@ -454,7 +454,7 @@ C loops compile to combinations of tests and jumps. No loop instructions exist.
 
 **Do-while.** `do body while (test-expr)` translates as follows.
 
-```
+```c
 loop:
     body-statement
     t = test-expr;
@@ -463,7 +463,7 @@ loop:
 
 **While.** Two strategies exist. *Jump to middle* jumps unconditionally to the test at the end (used at `-Og`).
 
-```
+```c
     goto test;
 loop:
     body-statement
@@ -474,7 +474,7 @@ test:
 
 *Guarded do* converts to a do-while guarded by an initial skip test (used at higher optimization, e.g. `-O1`).
 
-```
+```c
     t = test-expr;
     if (!t) goto done;
 loop:
@@ -557,7 +557,7 @@ For `T A[N]`, the declaration allocates a contiguous region of L * N bytes, wher
 
 `T D[R][C]` stores elements in row-major order, all of row 0, then row 1, and so on. Element `D[i][j]` sits at
 
-```
+```text
 &D[i][j] = xD + L * (C * i + j)
 ```
 

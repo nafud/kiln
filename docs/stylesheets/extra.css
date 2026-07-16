@@ -339,6 +339,30 @@ tt {
   box-shadow: none;
 }
 
+/* Filename header rendered from ```lang title="file.ext" fences. Material
+   styles span.filename with its own code-bg variable, which doesn't exist
+   in this palette — restyle it as the top edge of the surrounding surface,
+   in the site's label style (minus uppercase: filenames keep their case). */
+.md-typeset .highlight span.filename {
+  display: block;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  padding: 0.55em 1em 0.45em;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+}
+
+/* The pre keeps its own top border as the divider under the filename. */
+.md-typeset .highlight span.filename + pre {
+  margin-top: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
 .ascii-diagram {
   background: transparent !important;
   border: none !important;
