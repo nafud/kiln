@@ -1,6 +1,6 @@
 # Hack This Site
 
-Writeup solutions for Application challenges from
+Writeups of the Application challenges from
 [hackthissite.org](https://www.hackthissite.org/){ .external-link }.
 
 <!-- Solutions get listed here as a metadata Markdown table (the

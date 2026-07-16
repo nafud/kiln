@@ -1,7 +1,8 @@
 # Crackmes.one
 
-Writeup solutions for crackmes from
-[crackmes.one](https://crackmes.one/){ .external-link }.
+Static-analysis writeups of crackmes from
+[crackmes.one](https://crackmes.one/){ .external-link }, each ending in a
+keygen or solver.
 
 | Crackme | Difficulty | Quality | Arch |
 |---|---|---|---|

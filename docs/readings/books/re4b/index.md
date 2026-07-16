@@ -6,7 +6,7 @@ Notes for *Reverse Engineering for Beginners* by Dennis Yurichev.
 
 <a class="home-card" href="re4b-chapter-01/">
 <span class="home-card-title">Chapter 1</span>
-<span class="home-card-text">Code Patterns (1.1–1.11): the comparative method across x86, x86-64, ARM, and MIPS.</span>
+<span class="home-card-text">Code Patterns (1.1–1.11). The comparative method across x86, x86-64, ARM, and MIPS.</span>
 </a>
 
 </div>

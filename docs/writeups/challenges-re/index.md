@@ -1,7 +1,8 @@
 # Challenges.re
 
-My solutions to the exercises at
-[challenges.re](https://challenges.re/){ .external-link }.
+Solutions to the exercises at
+[challenges.re](https://challenges.re/){ .external-link }, cross-linked with
+the book chapters they come from.
 
 | Writeup | Challenges | Book chapter |
 |---|---|---|

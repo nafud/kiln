@@ -1,7 +1,6 @@
 # Bookmarks
 
-Curated external technical blogs and articles worth reading through. Links open
-in a new tab.
+External blogs, articles, and channels worth reading through.
 
 | Bookmarks |
 |---|

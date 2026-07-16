@@ -1,10 +1,10 @@
 # Radare2
 
-Working notes for radare2. Commands are grouped by task, annotated with the
-things that actually bite you in practice. r2's command grammar is
-compositional: a base verb (`p`, `a`, `d`, `w`, `i`, `s`) plus sub-letters that
-narrow the action, an optional `j` for JSON, `~` to grep, and `@` to run at a
-different address. Learn the grammar and you stop memorizing the leaves.
+Working notes for radare2, grouped by task and annotated with the behavior
+that matters in practice. r2's command grammar is compositional, a base verb
+(`p`, `a`, `d`, `w`, `i`, `s`) plus sub-letters that narrow the action, an
+optional `j` for JSON, `~` to grep, and `@` to run at a different address.
+Knowing the grammar replaces memorizing the leaves.
 
 ---
 
