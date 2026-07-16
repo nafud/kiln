@@ -7,12 +7,12 @@ malware samples.
 
 <a class="home-card" href="guides/">
 <span class="home-card-title">Guides</span>
-<span class="home-card-text">Usage guides and cheat sheets for the tools in regular use.</span>
+<span class="home-card-text">Cheat sheets for the tools in regular use.</span>
 </a>
 
 <a class="home-card" href="links/">
 <span class="home-card-title">Links</span>
-<span class="home-card-text">Tool homepages, malware-analysis lab tooling, and malware sample sources.</span>
+<span class="home-card-text">Tool downloads and malware sample sources.</span>
 </a>
 
 </div>

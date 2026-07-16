@@ -19,7 +19,7 @@
 
 <a class="home-card" href="writeups/">
 <span class="home-card-title">Writeups</span>
-<span class="home-card-text">Crackme and challenge writeup solutions.</span>
+<span class="home-card-text">Crackme and challenge solutions.</span>
 </a>
 
 </div>
