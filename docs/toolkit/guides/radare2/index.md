@@ -39,8 +39,8 @@ e dbg.bep=main         # Break at main on launch instead of the ELF entry
 q                      # Quit  (q! to skip the "are you sure" on write mode)
 ```
 
-Config is the lever behind most "why does it look like that" questions —
-syntax, bits, endianness, and pseudocode are all just `e` toggles.
+Config is the lever behind most "why does it look like that" questions.
+Syntax, bits, endianness, and pseudocode are all `e` toggles.
 
 ---
 
@@ -62,10 +62,10 @@ axt                    # Xrefs TO here (who reaches this address)
 axt @@ sym.*           # Xrefs to every symbol, in one pass
 ```
 
-`axt` is the backbone of static tracing: seek to a function or string, run
-`axt`, follow the callers up. `af` is worth knowing because `aaa` regularly
-misses functions that are only reached indirectly — seek to the byte and `af`
-by hand.
+`axt` is the backbone of static tracing. Seek to a function or string, run
+`axt`, and follow the callers up. `af` earns its place because `aaa` regularly
+misses functions reached only indirectly, which a manual seek to the byte
+followed by `af` recovers.
 
 **Strings & references**
 
@@ -79,11 +79,11 @@ iE                     # Exports
 is                     # Symbols
 ```
 
-The `iz` → `izz` → `izzz` ladder trades noise for completeness. Start at `iz`;
-escalate only when the string you expect isn't there (packed/obfuscated data
-often only shows under `izzz`). r2 auto-creates `str.*` flags, so
-`axt @ str.<name>` is the fast path from an interesting string to the code
-that uses it.
+The `iz`, `izz`, `izzz` ladder trades noise for completeness. `iz` is the
+starting point, and escalation pays off only when an expected string is absent
+(packed or obfuscated data often surfaces only under `izzz`). r2 auto-creates
+`str.*` flags, so `axt @ str.<name>` is the fast path from an interesting
+string to the code that uses it.
 
 ---
 
@@ -98,9 +98,9 @@ s+                     # Redo seek       (bare, no number)
 s*                     # Show seek history (undo_/redo_ flags)
 ```
 
-Note the overload: `s-4` moves back four bytes, but bare `s-` undoes your last
-jump. In visual mode the same undo/redo is `u` / `U`. Everything in r2 is
-relative to the current seek (`$$`), so seeking is how you "move the cursor."
+The `s-` form is overloaded. `s-4` moves back four bytes, but bare `s-` undoes
+the last jump. In visual mode the same undo/redo is `u` / `U`. Everything in r2
+is relative to the current seek (`$$`), so seeking is what moves the cursor.
 
 **Flags (bookmarks)**
 
@@ -112,8 +112,9 @@ fs <space>             # Switch flag space (symbols, strings, etc.)
 f- <name>              # Delete a flag
 ```
 
-Flags are namespaced by flag space (`sym`, `str`, `reloc`, …). If `afl~foo`
-finds nothing, the flag may live in another space — `fs *` searches all.
+Flags are namespaced by flag space (`sym`, `str`, `reloc`, …). When `afl~foo`
+finds nothing, the flag may live in another space, and `fs *` searches all of
+them.
 
 ---
 
@@ -133,10 +134,10 @@ ao                     # Analyze the opcode under the cursor (esil, type, size)
 aoj                    # Same, JSON
 ```
 
-`pdf` is where you live. `pds` is underrated for triage: it collapses a
-function down to its calls and string refs so you can judge relevance without
-reading every instruction. Decompilers vary in quality per target — `pdc`
-always works, `pdg`/`pdd` are better but need the plugin installed.
+`pdf` is the everyday command. `pds` is underrated for triage, collapsing a
+function down to its calls and string refs so its relevance is clear without
+reading every instruction. Decompiler quality varies per target. `pdc` always
+works, while `pdg` and `pdd` are better but need their plugin installed.
 
 ---
 
@@ -153,11 +154,11 @@ p8 <n>                 # Raw bytes as a hex string
 p=e                    # Entropy graph across the file (spot packed regions)
 ```
 
-`pxr` is the one to remember for stack/heap inspection — it dereferences each
-word and labels known addresses, so you can read a stack frame at a glance.
-`pf` takes a format string (`x` dword, `q` qword, `s` string, `z`
-null-term, a leading number for arrays) and is how you overlay a struct on raw
-bytes.
+`pxr` is the one to remember for stack and heap inspection, since it
+dereferences each word and labels known addresses, rendering a stack frame
+readable at a glance. `pf` takes a format string (`x` dword, `q` qword, `s`
+string, `z` null-term, a leading number for arrays) and overlays a struct on
+raw bytes.
 
 **Visual mode**
 
@@ -169,9 +170,9 @@ bytes.
 | `v`   | Visual panels (split dashboard view)              |
 | `Vpp` | Visual debugger layout                            |
 
-Inside any visual view: `p`/`P` cycle print modes, `hjkl` move, `:` drops to a
-command prompt, `?` shows context help. `VV` graph mode is the single biggest
-quality-of-life feature for reading branchy functions.
+Inside any visual view, `p`/`P` cycle print modes, `hjkl` move, `:` drops to a
+command prompt, and `?` shows context help. `VV` graph mode is the single
+biggest quality-of-life feature for reading branchy functions.
 
 ---
 
@@ -190,9 +191,9 @@ quality-of-life feature for reading branchy functions.
 //                     # Repeat the last search
 ```
 
-The masked `/x` forms are the workhorses: `/x 80..80` finds a byte, anything,
-then a byte; `value:mask` matches only the bits set in the mask. Results land
-as `hit0_*` flags you can iterate with `@@ hit*`.
+The masked `/x` forms are the workhorses. `/x 80..80` finds a byte, anything,
+then a byte, and `value:mask` matches only the bits set in the mask. Results
+land as `hit0_*` flags, iterable with `@@ hit*`.
 
 **Search scope**
 
@@ -202,9 +203,9 @@ e search.in=io.maps    # Search all mapped IO sections
 e search.in=block      # Search only the current block (default varies)
 ```
 
-Scope is the usual "search finds nothing" culprit — by default r2 may only be
-searching the current section. Widen `search.in` before assuming the pattern
-isn't there.
+Scope is the usual "search finds nothing" culprit, since by default r2 may
+search only the current section. Widen `search.in` before assuming the pattern
+is absent.
 
 ---
 
@@ -229,10 +230,11 @@ doo [args]             # Reopen under debugger with args (alias of ood)
 dk <sig>               # Send a signal to the process
 ```
 
-For "run to this line," prefer `dcu <addr>` over stepping — it continues at
-full speed and stops at the target. `dso` vs `ds` matters constantly: `ds` into
-a `call` drops you inside the callee; `dso` runs the call and returns. After any
-`dc`/`ds`, `V` (or `Vpp`) gives you a live register+disasm dashboard.
+For running to a given line, `dcu <addr>` beats stepping, since it continues at
+full speed and stops at the target. `dso` versus `ds` matters constantly. `ds`
+into a `call` descends into the callee, while `dso` runs the call and returns.
+After any `dc` or `ds`, `V` (or `Vpp`) gives a live register and disasm
+dashboard.
 
 ---
 
@@ -252,8 +254,8 @@ wn <byte> <n>          # Write n copies of a byte
 ```
 
 `wao` is smarter than `wx 90` because it fills the whole instruction correctly
-(right length, right no-op for the arch). `wa` assembles for you, so you write
-`wa jmp 0x401260` instead of hand-encoding. Combine writes with iterators:
+(right length, right no-op for the arch). `wa` assembles the instruction, so
+`wa jmp 0x401260` replaces hand-encoding. Writes combine with iterators.
 
 ```bash
 wx 90 @@ sym.*         # Write a byte at every symbol (batch patch)
@@ -284,10 +286,10 @@ ph sha256              # SHA-256 of the current block
 ph md5 <len>           # Hash a specific length instead of the block size
 ```
 
-Two easy mix-ups: `ih` is the format *header*, `iS` is *sections* — different
-things. And `ie` gives the entrypoint(s) while `iM` gives `main` — the CRT
-entry is not `main`. `iI` is the fastest security-posture check (NX, PIE,
-canary, RELRO) without leaving r2.
+Two easy mix-ups arise here. `ih` is the format *header* while `iS` is
+*sections*, which are different things. And `ie` gives the entrypoint(s) while
+`iM` gives `main`, since the CRT entry is not `main`. `iI` is the fastest
+security-posture check (NX, PIE, canary, RELRO) without leaving r2.
 
 **From the shell (no session)**
 
@@ -299,8 +301,8 @@ rabin2 -e <file>       # Entrypoints
 rabin2 -s <file>       # Symbols
 ```
 
-`rabin2` is the same engine r2 uses for parsing — reach for it in scripts and
-quick triage when you don't want a full session.
+`rabin2` is the same engine r2 uses for parsing, so it fits scripts and quick
+triage where a full session is unwanted.
 
 ---
 
@@ -317,9 +319,9 @@ cmd | host_cmd         # Pipe output to a host program (| less, | grep)
 ```
 
 The internal grep (`~`) is column- and row-aware, which is why r2 scripting
-rarely needs external `grep`/`awk`. The `.` prefix is the metaprogramming hook:
-`.(cmd)` runs a command and executes whatever it prints — that's how you turn a
-listing into a batch of actions.
+rarely needs external `grep`/`awk`. The `.` prefix is the metaprogramming hook.
+`.(cmd)` runs a command and executes whatever it prints, turning a listing into
+a batch of actions.
 
 **Batch from the shell**
 
@@ -340,8 +342,8 @@ afl @@ sym.*           # Analyze each symbol's function
 @@@ <type>             # Extended foreach over a class (functions, imports, …)
 ```
 
-`@@` is r2's `for`-loop; anything you can flag, you can iterate. Pair it with
-`~` and `j` output and most one-off analysis scripts collapse to a single line.
+`@@` is r2's `for`-loop; anything flaggable is iterable. Paired with `~` and
+`j` output, most one-off analysis scripts collapse to a single line.
 
 !!! note "JSON everywhere"
     Append `j` to almost any command for machine-readable output: `aflj`,
