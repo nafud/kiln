@@ -91,6 +91,7 @@ nav:
           - "Computer Systems: A Programmer's Perspective":
               - readings/books/csapp/index.md
               - Chapter 3: readings/books/csapp/csapp-chapter-03.md
+              - Chapter 4: readings/books/csapp/csapp-chapter-04.md
               - Chapter 7: readings/books/csapp/csapp-chapter-07.md
               - Chapter 8: readings/books/csapp/csapp-chapter-08.md
               - Chapter 9: readings/books/csapp/csapp-chapter-09.md
