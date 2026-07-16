@@ -82,6 +82,7 @@ nav:
       - Guides:
           - toolkit/guides/index.md
           - Radare2: toolkit/guides/radare2/index.md
+          - Volatility 3: toolkit/guides/volatility3/index.md
       - Links: toolkit/links/index.md
 
   - Readings:
