@@ -1,5 +1,5 @@
-/* Page chrome: gradient fade below the sticky sidebar title and
-   scroll-to-top/bottom buttons. */
+/* Page chrome: gradient fade below the sticky sidebar title,
+   scroll-to-top/bottom buttons, and the hex reading-progress readout. */
 
 (function () {
   "use strict";
@@ -34,6 +34,51 @@
     scrollButtons.classList.toggle("scroll-hidden", window.scrollY <= 200);
   }
 
+  function formatHex(value, width) {
+    let s = Math.max(0, Math.round(value)).toString(16);
+    while (s.length < width) s = "0" + s;
+    return "0x" + s;
+  }
+
+  /* Hex reading-progress readout: the scroll offset over the full scroll
+     range, styled as byte offsets (0x01f4/0x3fff). The offset pads to
+     the range's hex width, so the readout never changes width while
+     scrolling. Looks its element up fresh per call, like
+     updateScrollButtons, and empties on unscrollable pages (where the
+     cluster can never become visible anyway). The chip only shows
+     around scroll activity: revealScrollProgress fades it in and
+     schedules the fade-out, while its siblings keep the cluster's
+     200px threshold behavior. */
+  function updateScrollProgress() {
+    const readout = document.querySelector(".scroll-progress");
+    if (!readout) return false;
+
+    const doc = document.documentElement;
+    const max = doc.scrollHeight - doc.clientHeight;
+    if (max <= 0) {
+      readout.textContent = "";
+      return false;
+    }
+    const width = Math.round(max).toString(16).length;
+    readout.textContent =
+      formatHex(window.scrollY, width) + "/" + formatHex(max, width);
+    return true;
+  }
+
+  const progressHideDelayMs = 1000;
+
+  const fadeScrollProgress = KilnUtils.debounce(function () {
+    const readout = document.querySelector(".scroll-progress");
+    if (readout) readout.classList.remove("scroll-progress--visible");
+  }, progressHideDelayMs);
+
+  function revealScrollProgress() {
+    const readout = document.querySelector(".scroll-progress");
+    if (!readout || !updateScrollProgress()) return;
+    readout.classList.add("scroll-progress--visible");
+    fadeScrollProgress();
+  }
+
   function makeScrollButton(label, iconSvg, onClick) {
     const button = document.createElement("button");
     button.className = "scroll-btn";
@@ -50,6 +95,12 @@
     if (!document.querySelector(".scroll-buttons")) {
       const container = document.createElement("div");
       container.className = "scroll-buttons scroll-hidden";
+      const progress = document.createElement("span");
+      progress.className = "scroll-progress";
+      /* The hex offsets are visual flavor; progress isn't meaningful
+         read aloud one mutation at a time. */
+      progress.setAttribute("aria-hidden", "true");
+      container.appendChild(progress);
       container.appendChild(
         makeScrollButton(
           "Scroll to top",
@@ -74,6 +125,7 @@
       document.body.appendChild(container);
     }
     updateScrollButtons();
+    updateScrollProgress();
   }
 
   function init() {
@@ -81,10 +133,20 @@
     initScrollButtons();
   }
 
+  function onScroll() {
+    updateScrollButtons();
+    revealScrollProgress();
+  }
+
+  function onResize() {
+    initSidebarFade();
+    updateScrollProgress(); /* the scroll range depends on the viewport */
+  }
+
   /* These handlers look their elements up fresh on every call, so they are
      attached once here rather than re-attached per navigation. */
-  window.addEventListener("scroll", updateScrollButtons);
-  window.addEventListener("resize", KilnUtils.debounce(initSidebarFade, 100));
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", KilnUtils.debounce(onResize, 100));
 
   /* Re-runs on instant-navigation page changes: initSidebarFade and
      initScrollButtons recreate elements that navigation.instant's DOM

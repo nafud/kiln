@@ -560,6 +560,33 @@ tt {
   transition: opacity 150ms ease;
 }
 
+/* Hex reading-progress readout inside the scroll-button cluster. Same
+   surface recipe as its sibling buttons; the label style minus the
+   uppercase (hex offsets stay lowercase, like addresses in content).
+   Non-interactive, so no hover lift. Unlike its siblings it fades out
+   when scrolling stops (page-chrome.js toggles --visible around scroll
+   activity); opacity keeps its flex slot, so the buttons never shift. */
+.scroll-progress {
+  display: flex;
+  align-items: center;
+  height: 38px;
+  padding: 0 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  user-select: none;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.scroll-progress--visible {
+  opacity: 1;
+}
+
 .scroll-btn {
   display: flex;
   align-items: center;
