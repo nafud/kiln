@@ -14,8 +14,10 @@
    group, the same thing its own toggle button does. ? toggles a help
    panel listing the bindings; Escape closes it.
 
-   Material's own bindings (S / F / / for search, P / N for prev/next
-   page) are untouched and stay usable alongside these.
+   Material's own S (search) and P / N (prev/next page) bindings stay
+   usable alongside these. Its two extra search keys, F and /, are
+   swallowed by a capture-phase listener below so S alone owns search;
+   both still type normally in inputs.
 
    Keys are ignored while typing (inputs, textareas, contenteditable)
    and in chords with Ctrl/Alt/Meta. Scrolling is smooth unless the
@@ -155,6 +157,23 @@
       el.isContentEditable
     );
   }
+
+  /* Material also focuses search on F and /; only S should. This
+     capture-phase listener runs before Material's own handler and
+     swallows the two keys outside typing contexts (inside an input
+     the guard lets them through, so they still type). The browser
+     default is left alone. */
+  window.addEventListener(
+    "keydown",
+    function (event) {
+      if (event.ctrlKey || event.altKey || event.metaKey) return;
+      if (isTypingTarget(event.target)) return;
+      if (event.key === "/" || event.key === "f" || event.key === "F") {
+        event.stopImmediatePropagation();
+      }
+    },
+    true
+  );
 
   window.addEventListener("keydown", function (event) {
     if (event.ctrlKey || event.altKey || event.metaKey) return;
