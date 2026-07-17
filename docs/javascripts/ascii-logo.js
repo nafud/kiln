@@ -383,9 +383,13 @@
   function init() {
     const pre = document.querySelector("pre.kiln-ascii");
     state.pre = pre;
+    if (containerObserver) containerObserver.disconnect();
     if (!pre) {
       stopAnimation();
       return;
+    }
+    if (containerObserver && pre.parentElement) {
+      containerObserver.observe(pre.parentElement);
     }
     loadFonts().then(function () {
       if (state.pre === pre && pre.isConnected) rebuild();
@@ -397,6 +401,22 @@
     "resize",
     KilnUtils.debounce(rebuild, CONFIG.resizeDebounceMs)
   );
+
+  /* The grid is sized from the container width, which can change with
+     no window resize (the H sidebar toggle in key-nav.js widens and
+     narrows the content column): rebuild when the container itself
+     resizes, once a frame exists to correct. The signature guard makes
+     redundant fires cheap. */
+  const containerObserver =
+    typeof ResizeObserver === "undefined"
+      ? null
+      : new ResizeObserver(
+          KilnUtils.debounce(function () {
+            if (state.pre && state.pre.isConnected && state.staticFrame) {
+              rebuild();
+            }
+          }, CONFIG.resizeDebounceMs)
+        );
 
   /* Fonts that finish after the first build (e.g. a slow @import of the
      page font) change cell metrics; rebuilding self-heals, and the
