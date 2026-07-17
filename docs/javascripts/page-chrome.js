@@ -31,6 +31,24 @@
     return "0x" + s;
   }
 
+  /* Cached scroll range for the readout. Reading scrollHeight forces a
+     layout flush, so the per-scroll-event path must never touch it —
+     during wheel or middle-button autoscroll that flush lands on every
+     frame of a long page. The range is measured on init, resize, and
+     page change instead, re-measured lazily when the observed offset
+     outruns the cache, and re-synced once per scroll burst from the
+     fade-out callback (off the hot path). */
+  const scrollRange = { max: 0, hexWidth: 1 };
+
+  function measureScrollRange() {
+    const doc = document.documentElement;
+    scrollRange.max = doc.scrollHeight - doc.clientHeight;
+    scrollRange.hexWidth = Math.max(
+      1,
+      Math.round(scrollRange.max).toString(16).length
+    );
+  }
+
   /* Hex reading-progress readout: the scroll offset over the full scroll
      range, styled as byte offsets (0x01f4/0x3fff). The offset pads to
      the range's hex width, so the readout never changes width while
@@ -43,15 +61,16 @@
     const readout = document.querySelector(".scroll-progress");
     if (!readout) return false;
 
-    const doc = document.documentElement;
-    const max = doc.scrollHeight - doc.clientHeight;
-    if (max <= 0) {
+    if (window.scrollY > scrollRange.max) measureScrollRange();
+    if (scrollRange.max <= 0) {
       readout.textContent = "";
       return false;
     }
-    const width = Math.round(max).toString(16).length;
+    const offset = Math.min(window.scrollY, scrollRange.max);
     readout.textContent =
-      formatHex(window.scrollY, width) + "/" + formatHex(max, width);
+      formatHex(offset, scrollRange.hexWidth) +
+      "/" +
+      formatHex(scrollRange.max, scrollRange.hexWidth);
     return true;
   }
 
@@ -59,7 +78,12 @@
 
   const fadeScrollProgress = KilnUtils.debounce(function () {
     const readout = document.querySelector(".scroll-progress");
-    if (readout) readout.classList.remove("scroll-progress--visible");
+    if (!readout) return;
+    /* Scroll burst over: correct the cached range (late layout growth
+       from fonts or images) before the chip fades. */
+    measureScrollRange();
+    updateScrollProgress();
+    readout.classList.remove("scroll-progress--visible");
   }, progressHideDelayMs);
 
   function revealScrollProgress() {
@@ -80,6 +104,7 @@
       progress.setAttribute("aria-hidden", "true");
       document.body.appendChild(progress);
     }
+    measureScrollRange();
     updateScrollProgress();
   }
 
@@ -94,7 +119,8 @@
 
   function onResize() {
     initSidebarFade();
-    updateScrollProgress(); /* the scroll range depends on the viewport */
+    measureScrollRange(); /* the scroll range depends on the viewport */
+    updateScrollProgress();
   }
 
   /* These handlers look their elements up fresh on every call, so they are

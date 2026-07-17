@@ -120,10 +120,13 @@
       case "?":
         toggleHelpPanel();
         break;
-      case "Escape":
-        /* Close-only; Material owns Escape for its search overlay. */
-        toggleHelpPanel(false);
+      case "Escape": {
+        /* Close-only (never creates the panel); Material owns Escape
+           for its search overlay. */
+        const panel = document.querySelector(".key-help");
+        if (panel) panel.classList.remove("key-help--open");
         return;
+      }
       default:
         return;
     }

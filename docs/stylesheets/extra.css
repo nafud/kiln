@@ -112,6 +112,15 @@ body {
   color: var(--color-text-muted);
 }
 
+/* Sidebar and search scroll containers must not chain overscroll into
+   the page: without this, a wheel gesture that runs a sidebar to its
+   end keeps scrolling the main document, and a gesture over a barely-
+   scrollable sidebar stutters, eats a tick, then yanks the page. */
+.md-sidebar__scrollwrap,
+.md-search__scrollwrap {
+  overscroll-behavior: contain;
+}
+
 .md-nav__title {
   color: var(--color-text-primary);
   font-weight: 700;
@@ -658,11 +667,6 @@ tt {
   background: linear-gradient(to bottom, var(--color-bg), transparent);
   pointer-events: none;
   z-index: 9;
-}
-
-.scroll-hidden {
-  opacity: 0;
-  pointer-events: none;
 }
 
 /* Register cards */

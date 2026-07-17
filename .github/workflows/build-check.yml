@@ -47,6 +47,8 @@ jobs:
             'data-md-component="dialog"' \
             'md-sidebar--primary' \
             'md-sidebar--secondary' \
+            'md-sidebar__scrollwrap' \
+            'md-search__scrollwrap' \
             'md-nav--primary' \
             'md-nav__title' \
             'md-main__inner' \
