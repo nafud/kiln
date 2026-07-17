@@ -268,6 +268,36 @@ body {
   display: none;
 }
 
+/* 404 page (overrides/404.html): the lone ASCII "404" centers in the
+   viewport. The :has(.kiln-ascii) flex-stretch rules further down
+   already run the content chain full-height; these center the content
+   column horizontally (no sidebars on this page) and the pre inside it
+   vertically. The margin-bottom override needs the later position in
+   the file to win its specificity tie with the pre.kiln-ascii rule. */
+.md-main__inner:has(.kiln-ascii--404) {
+  /* Inside the .md-main flex column (the :has(.kiln-ascii) stretch
+     rules), the md-grid auto margins shrink this wrapper to fit its
+     content; with only the small pre on the page that collapses the
+     whole width chain and starves the ASCII grid, so generation bails.
+     An explicit width keeps the chain at the 61rem grid cap. */
+  width: 100%;
+}
+
+.md-content:has(.kiln-ascii--404) {
+  /* Same shrink-to-fit hazard one level down: flex: 1 keeps the column
+     at its 900px cap; the auto margins center the capped box. */
+  flex: 1;
+  margin: 0 auto;
+}
+
+.md-content:has(.kiln-ascii--404) .md-content__inner {
+  justify-content: center;
+}
+
+.md-typeset pre.kiln-ascii--404 {
+  margin-bottom: 0 !important;
+}
+
 /* Hide "Copied to clipboard" dialog — replaced by the checkmark below,
    flashed on the copy button by javascripts/code-copy.js */
 

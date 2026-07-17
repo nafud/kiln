@@ -58,6 +58,18 @@ jobs:
             }
           done
 
+          # The 404 override (overrides/404.html) replaces Material's
+          # site_nav and content template blocks; a block rename in a
+          # Material update would silently restore the default 404 page.
+          grep -qF -- 'kiln-ascii--404' site/404.html || {
+            echo "::error::site/404.html lost the ASCII 404 — Material's 404.html or its content block likely changed. Update overrides/404.html."
+            exit 1
+          }
+          if grep -qF -- 'md-sidebar' site/404.html; then
+            echo "::error::site/404.html grew sidebars back — Material's site_nav block was likely renamed. Update overrides/404.html."
+            exit 1
+          fi
+
           # The code-copy checkmark (extra.css + code-copy.js) hooks the
           # copy button, which Material injects at runtime, so it is not in
           # the page HTML — guard the tokens in the theme's CSS bundle instead.

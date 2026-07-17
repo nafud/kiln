@@ -19,7 +19,8 @@
   "use strict";
 
   const CONFIG = {
-    text: "Kiln",
+    text: "Kiln", /* default word; a pre overrides it via data-kiln-text
+                     (the 404 template renders "404" this way) */
     fontFamily: "UnifrakturMaguntia",
     fontFallback: "serif",
     fontStylesheetUrl:
@@ -48,6 +49,8 @@
 
   const state = {
     pre: null,
+    text: CONFIG.text,             /* word being rendered (per-pre, see init) */
+    fontFamily: CONFIG.fontFamily, /* glyph font (per-pre, see init) */
     cols: 0,
     rows: 0,
     baseIndices: null,  /* Int16Array: jittered static ramp index per cell */
@@ -84,7 +87,7 @@
   }
 
   function cssFont(px) {
-    return px + 'px "' + CONFIG.fontFamily + '", ' + CONFIG.fontFallback;
+    return px + 'px "' + state.fontFamily + '", ' + CONFIG.fontFallback;
   }
 
   /* Injects the logo webfont's stylesheet on demand (memoized), so pages
@@ -118,10 +121,17 @@
     if (!document.fonts || !document.fonts.load) {
       return Promise.resolve();
     }
-    return ensureFontStylesheet()
+    /* The Google-Fonts stylesheet carries only CONFIG.fontFamily; a pre
+       overriding the font (data-kiln-font) uses a family the page
+       already loads, so skip the injection. */
+    const stylesheet =
+      state.fontFamily === CONFIG.fontFamily
+        ? ensureFontStylesheet()
+        : Promise.resolve();
+    return stylesheet
       .then(function () {
         return Promise.all([
-          document.fonts.load(cssFont(CONFIG.referenceFontPx), CONFIG.text),
+          document.fonts.load(cssFont(CONFIG.referenceFontPx), state.text),
           document.fonts.ready,
         ]);
       })
@@ -145,7 +155,7 @@
   /* Tight ink bounding box of the logo text at the reference font size. */
   function measureInkBox(ctx) {
     ctx.font = cssFont(CONFIG.referenceFontPx);
-    const m = ctx.measureText(CONFIG.text);
+    const m = ctx.measureText(state.text);
     const left = m.actualBoundingBoxLeft || 0;
     const right = m.actualBoundingBoxRight || m.width;
     const ascent = m.actualBoundingBoxAscent || CONFIG.referenceFontPx * 0.8;
@@ -210,7 +220,7 @@
     const originX = (canvas.width - inkBox.width * scaleX) / 2 + inkBox.left * scaleX;
     const originY = (canvas.height - inkBox.height * scaleY) / 2 + inkBox.ascent * scaleY;
     ctx.setTransform(scaleX, 0, 0, scaleY, originX, originY);
-    ctx.fillText(CONFIG.text, 0, 0);
+    ctx.fillText(state.text, 0, 0);
 
     const alpha = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
     const coverage = new Float32Array(grid.cols * grid.rows);
@@ -318,6 +328,8 @@
        still repaint when the pre is a fresh element from an instant
        navigation and doesn't show the frame yet. */
     const signature = [
+      state.text,
+      state.fontFamily,
       grid.cols,
       grid.rows,
       inkBox.width.toFixed(1),
@@ -387,6 +399,9 @@
       stopAnimation();
       return;
     }
+    state.text = pre.getAttribute("data-kiln-text") || CONFIG.text;
+    state.fontFamily =
+      pre.getAttribute("data-kiln-font") || CONFIG.fontFamily;
     loadFonts().then(function () {
       if (state.pre === pre && pre.isConnected) rebuild();
     });

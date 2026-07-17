@@ -1,0 +1,15 @@
+{#-
+  404 page: blank except for the ASCII logo machinery rendering "404"
+  centered in the viewport (data-kiln-text overrides ascii-logo.js's
+  default word; extra.css centers via the .kiln-ascii--404 rules). The
+  empty site_nav block suppresses both sidebars; the header stays as the
+  way back in. With site_url set, MkDocs emits absolute asset URLs on
+  this page, so it renders correctly at any missing path depth.
+-#}
+{% extends "main.html" %}
+
+{% block site_nav %}{% endblock %}
+
+{% block content %}
+<pre class="kiln-ascii kiln-ascii--404" data-kiln-text="404" data-kiln-font="JetBrains Mono" role="img" aria-label="404">404</pre>
+{% endblock %}
