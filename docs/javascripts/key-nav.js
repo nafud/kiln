@@ -5,8 +5,10 @@
    Material's footer links (the footer is display:none in extra.css but
    present in the DOM; navigation.footer is enabled solely for this).
    Clicking the link, rather than assigning location, keeps
-   navigation.instant in charge. ? toggles a help panel listing the
-   bindings; Escape closes it.
+   navigation.instant in charge. H hides/reveals both sidebars (a body
+   class, styled in extra.css desktop-only and surviving instant
+   navigation since Material never touches body). ? toggles a help
+   panel listing the bindings; Escape closes it.
 
    Material's own bindings (S / F / / for search, P / N for prev/next
    page) are untouched and stay usable alongside these.
@@ -28,6 +30,7 @@
     ["D", "scroll to bottom"],
     ["J / K", "scroll down / up"],
     ["< / >", "previous / next page"],
+    ["H", "hide / show sidebars"],
     ["S", "search"],
     ["?", "toggle this help"],
   ];
@@ -103,6 +106,10 @@
       case "k":
       case "K":
         window.scrollBy({ top: -SCROLL_STEP_PX, behavior: scrollBehavior() });
+        break;
+      case "h":
+      case "H":
+        document.body.classList.toggle("kiln-sidebars-hidden");
         break;
       case "<":
         followPageLink("prev");

@@ -579,6 +579,22 @@ tt {
   opacity: 1;
 }
 
+/* Sidebar hide/reveal (key-nav.js toggles the body class with H).
+   Desktop only: below Material's 76.25em breakpoint the sidebars are
+   off-canvas drawers, and hiding them would break the drawer toggles.
+   The content column keeps its 900px cap and centers in the freed
+   width. */
+@media screen and (min-width: 76.25em) {
+  .kiln-sidebars-hidden .md-sidebar--primary,
+  .kiln-sidebars-hidden .md-sidebar--secondary {
+    display: none;
+  }
+
+  .kiln-sidebars-hidden .md-content {
+    margin: 0 auto;
+  }
+}
+
 /* Keyboard-shortcut help panel (key-nav.js, toggled with ?). Surface
    recipe, plus a resting shadow: unlike the hover-lift surfaces this
    is a floating popover over content and needs the separation. */

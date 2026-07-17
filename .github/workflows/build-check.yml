@@ -46,6 +46,7 @@ jobs:
           for hook in \
             'data-md-component="dialog"' \
             'md-sidebar--primary' \
+            'md-sidebar--secondary' \
             'md-nav--primary' \
             'md-nav__title' \
             'md-main__inner' \
