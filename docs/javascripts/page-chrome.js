@@ -1,5 +1,6 @@
-/* Page chrome: gradient fade below the sticky sidebar title,
-   scroll-to-top/bottom buttons, and the hex reading-progress readout. */
+/* Page chrome: gradient fade below the sticky sidebar title and the
+   hex reading-progress readout. (Scrolling and page switching are
+   keyboard-driven — see key-nav.js.) */
 
 (function () {
   "use strict";
@@ -24,16 +25,6 @@
     fade.style.top = navTitle.offsetHeight + "px";
   }
 
-  /* Looks up the (possibly just-recreated) .scroll-buttons element fresh on
-     every call, since navigation.instant may have removed/replaced it since
-     the scroll listener was registered. */
-  function updateScrollButtons() {
-    const scrollButtons = document.querySelector(".scroll-buttons");
-    if (!scrollButtons) return;
-
-    scrollButtons.classList.toggle("scroll-hidden", window.scrollY <= 200);
-  }
-
   function formatHex(value, width) {
     let s = Math.max(0, Math.round(value)).toString(16);
     while (s.length < width) s = "0" + s;
@@ -43,12 +34,11 @@
   /* Hex reading-progress readout: the scroll offset over the full scroll
      range, styled as byte offsets (0x01f4/0x3fff). The offset pads to
      the range's hex width, so the readout never changes width while
-     scrolling. Looks its element up fresh per call, like
-     updateScrollButtons, and empties on unscrollable pages (where the
-     cluster can never become visible anyway). The chip only shows
-     around scroll activity: revealScrollProgress fades it in and
-     schedules the fade-out, while its siblings keep the cluster's
-     200px threshold behavior. */
+     scrolling. Looks its element up fresh per call, since
+     navigation.instant may have removed/replaced it since the scroll
+     listener was registered; empties on unscrollable pages. The chip
+     only shows around scroll activity: revealScrollProgress fades it
+     in and schedules the fade-out. */
   function updateScrollProgress() {
     const readout = document.querySelector(".scroll-progress");
     if (!readout) return false;
@@ -79,62 +69,26 @@
     fadeScrollProgress();
   }
 
-  function makeScrollButton(label, iconSvg, onClick) {
-    const button = document.createElement("button");
-    button.className = "scroll-btn";
-    button.setAttribute("aria-label", label);
-    button.title = label;
-    button.innerHTML = iconSvg;
-    button.addEventListener("click", onClick);
-    return button;
-  }
-
-  /* Scroll-to-top/bottom buttons.
-     Idempotent and safe to re-run, for the same reason as initSidebarFade. */
-  function initScrollButtons() {
-    if (!document.querySelector(".scroll-buttons")) {
-      const container = document.createElement("div");
-      container.className = "scroll-buttons scroll-hidden";
+  /* Same idempotence contract as initSidebarFade. Created invisible;
+     only scroll activity reveals it. */
+  function initScrollProgress() {
+    if (!document.querySelector(".scroll-progress")) {
       const progress = document.createElement("span");
       progress.className = "scroll-progress";
       /* The hex offsets are visual flavor; progress isn't meaningful
          read aloud one mutation at a time. */
       progress.setAttribute("aria-hidden", "true");
-      container.appendChild(progress);
-      container.appendChild(
-        makeScrollButton(
-          "Scroll to top",
-          '<svg viewBox="0 0 24 24"><path d="M12 8l-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z"/></svg>',
-          function () {
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          }
-        )
-      );
-      container.appendChild(
-        makeScrollButton(
-          "Scroll to bottom",
-          '<svg viewBox="0 0 24 24"><path d="M12 16l6-6-1.41-1.41L12 13.17l-4.59-4.58L6 10z"/></svg>',
-          function () {
-            window.scrollTo({
-              top: document.documentElement.scrollHeight,
-              behavior: "smooth",
-            });
-          }
-        )
-      );
-      document.body.appendChild(container);
+      document.body.appendChild(progress);
     }
-    updateScrollButtons();
     updateScrollProgress();
   }
 
   function init() {
     initSidebarFade();
-    initScrollButtons();
+    initScrollProgress();
   }
 
   function onScroll() {
-    updateScrollButtons();
     revealScrollProgress();
   }
 
@@ -149,7 +103,7 @@
   window.addEventListener("resize", KilnUtils.debounce(onResize, 100));
 
   /* Re-runs on instant-navigation page changes: initSidebarFade and
-     initScrollButtons recreate elements that navigation.instant's DOM
+     initScrollProgress recreate elements that navigation.instant's DOM
      reconciliation may have removed. */
   KilnUtils.onPageChange(init);
 })();

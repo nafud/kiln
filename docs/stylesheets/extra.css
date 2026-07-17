@@ -548,25 +548,16 @@ tt {
   opacity: 1; /* cancel the generic link hover fade */
 }
 
-/* Scroll buttons */
-
-.scroll-buttons {
+/* Hex reading-progress readout, fixed bottom-right (page-chrome.js).
+   Surface recipe; the label style minus the uppercase (hex offsets
+   stay lowercase, like addresses in content). Non-interactive, so no
+   hover lift. Fades in around scroll activity and out when scrolling
+   stops (page-chrome.js toggles --visible). */
+.scroll-progress {
   position: fixed;
   right: 1rem;
   bottom: 1rem;
-  display: flex;
-  gap: 0.4rem;
   z-index: 1000;
-  transition: opacity 150ms ease;
-}
-
-/* Hex reading-progress readout inside the scroll-button cluster. Same
-   surface recipe as its sibling buttons; the label style minus the
-   uppercase (hex offsets stay lowercase, like addresses in content).
-   Non-interactive, so no hover lift. Unlike its siblings it fades out
-   when scrolling stops (page-chrome.js toggles --visible around scroll
-   activity); opacity keeps its flex slot, so the buttons never shift. */
-.scroll-progress {
   display: flex;
   align-items: center;
   height: 38px;
@@ -579,6 +570,7 @@ tt {
   font-weight: 700;
   letter-spacing: 0.05em;
   user-select: none;
+  pointer-events: none;
   opacity: 0;
   transition: opacity 200ms ease;
 }
@@ -587,35 +579,50 @@ tt {
   opacity: 1;
 }
 
-.scroll-btn {
+/* Keyboard-shortcut help panel (key-nav.js, toggled with ?). Surface
+   recipe, plus a resting shadow: unlike the hover-lift surfaces this
+   is a floating popover over content and needs the separation. */
+.key-help {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 1001;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.85rem 0.95rem;
   border: 1px solid var(--color-border);
   border-radius: 4px;
   background: var(--color-surface);
-  color: var(--color-text-muted);
-  cursor: pointer;
-  transition:
-    color 150ms ease,
-    border-color 150ms ease,
-    box-shadow 150ms ease,
-    transform 150ms ease;
+  box-shadow: 0 4px 12px var(--color-shadow);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
 }
 
-.scroll-btn svg {
-  width: 18px;
-  height: 18px;
-  fill: currentColor;
+.key-help--open {
+  opacity: 1;
+  pointer-events: auto;
 }
 
-.scroll-btn:hover {
-  color: var(--color-accent);
-  border-color: var(--color-accent);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px var(--color-shadow);
+.key-help-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+}
+
+.key-help-row kbd {
+  min-width: 3.4rem;
+  text-align: center;
+  padding: 0.15rem 0.4rem;
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  background: var(--color-code-bg);
+  color: var(--color-text-primary);
+  font-size: 0.65rem;
+  font-weight: 700;
 }
 
 /* Sticky sidebar title — transparent so it matches sidebar background */

@@ -59,6 +59,9 @@ theme:
     - navigation.tracking
     - navigation.indexes
     - navigation.prune
+    # The footer itself is hidden by extra.css; this feature only exists
+    # to put the per-page prev/next links into the DOM for key-nav.js.
+    - navigation.footer
     - toc.follow
     - search.highlight
     - search.suggest
@@ -74,6 +77,7 @@ extra_javascript:
   - javascripts/ascii-logo.js
   - javascripts/code-copy.js
   - javascripts/heading-shimmer.js
+  - javascripts/key-nav.js
 
 plugins:
   - search

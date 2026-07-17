@@ -70,6 +70,13 @@ jobs:
             exit 1
           fi
 
+          # key-nav.js follows the hidden footer's prev/next links for the
+          # < / > page-switch keys (navigation.footer puts them in the DOM).
+          grep -qF -- 'md-footer__link' site/readings/index.html || {
+            echo "::error::Material internal 'md-footer__link' is gone from the built HTML — a theme update likely renamed it or navigation.footer stopped emitting it. Update the page-switch keys in docs/javascripts/key-nav.js."
+            exit 1
+          }
+
           # The code-copy checkmark (extra.css + code-copy.js) hooks the
           # copy button, which Material injects at runtime, so it is not in
           # the page HTML — guard the tokens in the theme's CSS bundle instead.
