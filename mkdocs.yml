@@ -72,6 +72,7 @@ extra_javascript:
   - javascripts/page-chrome.js
   - javascripts/ascii-logo.js
   - javascripts/code-copy.js
+  - javascripts/heading-shimmer.js
 
 plugins:
   - search
