@@ -1,13 +1,17 @@
 /* Keyboard navigation.
 
    Scrolling: T jumps to the top, D to the bottom, J/K scroll down/up a
-   step. Pages: < and > follow the previous/next page in nav order, via
-   Material's footer links (the footer is display:none in extra.css but
-   present in the DOM; navigation.footer is enabled solely for this).
-   Clicking the link, rather than assigning location, keeps
-   navigation.instant in charge. H hides/reveals both sidebars (a body
-   class, styled in extra.css desktop-only and surviving instant
-   navigation since Material never touches body). ? toggles a help
+   step, [ and ] to the previous/next h2 section on the page. Pages:
+   < and > follow the previous/next page in nav order, via Material's
+   footer links (the footer is display:none in extra.css but present in
+   the DOM; navigation.footer is enabled solely for this), 0 goes home
+   via the header logo, and 1-4 open the top-level sections in sidebar
+   nav order. Clicking links, rather than assigning location, keeps
+   navigation.instant in charge. H hides/reveals both
+   sidebars (a body class, styled in extra.css desktop-only and
+   surviving instant navigation since Material never touches body).
+   M cycles the color palette by advancing Material's __palette radio
+   group, the same thing its own toggle button does. ? toggles a help
    panel listing the bindings; Escape closes it.
 
    Material's own bindings (S / F / / for search, P / N for prev/next
@@ -29,8 +33,15 @@
     ["T", "scroll to top"],
     ["D", "scroll to bottom"],
     ["J / K", "scroll down / up"],
+    ["[ / ]", "previous / next heading"],
     ["< / >", "previous / next page"],
+    ["0", "go home"],
+    ["1", "toolkit"],
+    ["2", "readings"],
+    ["3", "courses"],
+    ["4", "writeups"],
     ["H", "hide / show sidebars"],
+    ["M", "light / dark / system"],
     ["S", "search"],
     ["?", "toggle this help"],
   ];
@@ -42,6 +53,68 @@
   function followPageLink(direction) {
     const link = document.querySelector(".md-footer__link--" + direction);
     if (link) link.click();
+  }
+
+  function goHome() {
+    const logo = document.querySelector(".md-header a.md-logo");
+    if (logo) logo.click();
+  }
+
+  /* Opens the nth top-level section (1-based, sidebar nav order). The
+     item's link is a plain <a> when collapsed and an <a> inside the
+     index-link container when the section is expanded; either way the
+     first descendant a.md-nav__link is the section landing page. */
+  function goToSection(n) {
+    const items = document.querySelectorAll(
+      ".md-nav--primary > .md-nav__list > .md-nav__item"
+    );
+    const item = items[n - 1];
+    const link = item && item.querySelector("a.md-nav__link");
+    if (link) link.click();
+  }
+
+  /* Scrolls to the previous (direction -1) or next (+1) h2 section.
+     The anchor line sits just below the sticky header; next is the
+     first heading below it, previous the last heading above it, with a
+     small tolerance so the heading currently at the anchor line is not
+     re-selected. */
+  function jumpToHeading(direction) {
+    const headings = document.querySelectorAll(".md-content h2");
+    if (!headings.length) return;
+
+    const header = document.querySelector(".md-header");
+    const offset = (header ? header.offsetHeight : 0) + 16;
+    const tolerance = 4;
+    let target = null;
+    for (let i = 0; i < headings.length; i++) {
+      const top = headings[i].getBoundingClientRect().top;
+      if (direction > 0) {
+        if (top > offset + tolerance) {
+          target = headings[i];
+          break;
+        }
+      } else if (top < offset - tolerance) {
+        target = headings[i]; /* keep the last one above the anchor */
+      }
+    }
+    if (!target) return;
+    window.scrollTo({
+      top: window.scrollY + target.getBoundingClientRect().top - offset,
+      behavior: scrollBehavior(),
+    });
+  }
+
+  /* Advances Material's palette radio group (system, light, dark in
+     mkdocs.yml order) — clicking the next input is exactly what the
+     theme's own toggle button does. */
+  function cyclePalette() {
+    const inputs = document.querySelectorAll('input[name="__palette"]');
+    if (!inputs.length) return;
+    let checked = 0;
+    for (let i = 0; i < inputs.length; i++) {
+      if (inputs[i].checked) checked = i;
+    }
+    inputs[(checked + 1) % inputs.length].click();
   }
 
   function ensureHelpPanel() {
@@ -111,11 +184,30 @@
       case "H":
         document.body.classList.toggle("kiln-sidebars-hidden");
         break;
+      case "[":
+        jumpToHeading(-1);
+        break;
+      case "]":
+        jumpToHeading(1);
+        break;
       case "<":
         followPageLink("prev");
         break;
       case ">":
         followPageLink("next");
+        break;
+      case "0":
+        goHome();
+        break;
+      case "1":
+      case "2":
+      case "3":
+      case "4":
+        goToSection(Number(event.key));
+        break;
+      case "m":
+      case "M":
+        cyclePalette();
         break;
       case "?":
         toggleHelpPanel();

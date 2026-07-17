@@ -49,8 +49,13 @@ jobs:
             'md-sidebar--secondary' \
             'md-sidebar__scrollwrap' \
             'md-search__scrollwrap' \
+            'md-logo' \
+            '__palette' \
             'md-nav--primary' \
             'md-nav__title' \
+            'md-nav__list' \
+            'md-nav__item' \
+            'md-nav__link' \
             'md-main__inner' \
             'md-content__inner' \
             'md-typeset' \
