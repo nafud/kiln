@@ -277,34 +277,38 @@ body {
   display: none;
 }
 
-/* 404 page (overrides/404.html): the lone ASCII "404" centers in the
-   viewport. The :has(.kiln-ascii) flex-stretch rules further down
-   already run the content chain full-height; these center the content
-   column horizontally (no sidebars on this page) and the pre inside it
-   vertically. The margin-bottom override needs the later position in
-   the file to win its specificity tie with the pre.kiln-ascii rule. */
-.md-main__inner:has(.kiln-ascii--404) {
-  /* Inside the .md-main flex column (the :has(.kiln-ascii) stretch
-     rules), the md-grid auto margins shrink this wrapper to fit its
-     content; with only the small pre on the page that collapses the
-     whole width chain and starves the ASCII grid, so generation bails.
-     An explicit width keeps the chain at the 61rem grid cap. */
-  width: 100%;
+/* 404 page (overrides/404.html): a plain "404" centered in the
+   viewport. The content chain is flex-stretched the same way as the
+   homepage's (the :has(.kiln-ascii) rules further down) so the code
+   can center vertically; the width chain shrink-wraps the short text
+   and the md-grid auto margins center it horizontally. */
+.md-main:has(.kiln-404) {
+  display: flex;
+  flex-direction: column;
 }
 
-.md-content:has(.kiln-ascii--404) {
-  /* Same shrink-to-fit hazard one level down: flex: 1 keeps the column
-     at its 900px cap; the auto margins center the capped box. */
+.md-main__inner:has(.kiln-404) {
   flex: 1;
-  margin: 0 auto;
 }
 
-.md-content:has(.kiln-ascii--404) .md-content__inner {
+.md-content:has(.kiln-404) {
+  display: flex;
+  flex-direction: column;
+}
+
+.md-content:has(.kiln-404) .md-content__inner {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
   justify-content: center;
 }
 
-.md-typeset pre.kiln-ascii--404 {
-  margin-bottom: 0 !important;
+.md-typeset .kiln-404 {
+  margin: 0 auto;
+  font-size: 2.6rem;
+  font-weight: 700;
+  color: var(--color-text-faint);
+  user-select: none;
 }
 
 /* Hide "Copied to clipboard" dialog — replaced by the checkmark below,
