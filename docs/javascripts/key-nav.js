@@ -15,11 +15,12 @@
    group, the same thing its own toggle button does. ? toggles a help
    panel listing the bindings; Escape closes it.
 
-   Material's own S (search) and P / N (prev/next page) bindings stay
-   usable alongside these. Its two extra search keys, F and /, are
-   swallowed by a capture-phase listener below so S alone owns search;
-   both still type normally in inputs. The ` jump palette is
-   quick-jump.js.
+   Material's P / N (prev/next page) bindings stay usable alongside
+   these. Its search UI is hidden entirely: S belongs to the jump
+   palette (quick-jump.js preempts Material's handler), and Material's
+   two extra search keys, F and /, are swallowed by a capture-phase
+   listener below so nothing can summon the hidden search form; both
+   still type normally in inputs.
 
    Keys are ignored while typing (inputs, textareas, contenteditable)
    and in chords with Ctrl/Alt/Meta. Scrolling is smooth unless the
@@ -47,9 +48,8 @@
     ["5", "courses"],
     ["6", "writeups"],
     ["H", "show / hide sidebars"],
-    ["M", "light / dark / system"],
-    ["S", "search"],
-    ["`", "jump to a page"],
+    ["M", "light / dark"],
+    ["S / `", "search"],
     ["?", "toggle this help"],
   ];
 
@@ -111,9 +111,10 @@
     });
   }
 
-  /* Advances Material's palette radio group (system, light, dark in
-     mkdocs.yml order) — clicking the next input is exactly what the
-     theme's own toggle button does. */
+  /* Advances Material's palette radio group (dark, light in mkdocs.yml
+     order) — clicking the next input is what the theme's own toggle
+     button did before extra.css hid it; the radios still render because
+     the palette entries keep their toggle blocks. */
   function cyclePalette() {
     const inputs = document.querySelectorAll('input[name="__palette"]');
     if (!inputs.length) return;
@@ -152,11 +153,12 @@
     panel.classList.toggle("key-help--open", force);
   }
 
-  /* Material also focuses search on F and /; only S should. This
+  /* Material also focuses its (hidden) search on F and /. This
      capture-phase listener runs before Material's own handler and
      swallows the two keys outside typing contexts (inside an input
-     the guard lets them through, so they still type). The browser
-     default is left alone. */
+     the guard lets them through, so they still type); S is handled
+     the same way in quick-jump.js, where it opens the palette. The
+     browser default is left alone. */
   window.addEventListener(
     "keydown",
     function (event) {

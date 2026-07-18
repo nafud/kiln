@@ -92,17 +92,18 @@ body {
   display: none !important;
 }
 
-/* Search */
+/* Header controls. Material's search UI is hidden outright — S opens
+   the jump palette (quick-jump.js) instead, and the search plugin
+   survives only to emit the index the palette reads. The palette
+   toggle button is hidden too — M (key-nav.js) advances the same
+   radio group programmatically, which works on hidden inputs. */
 
-.md-search__form {
-  background: var(--color-bg);
-  border: none;
-  border-radius: 4px;
-  box-shadow: none;
+.md-search {
+  display: none !important;
 }
 
-.md-search__input {
-  font-size: 0.72rem;
+[data-md-component="palette"] {
+  display: none;
 }
 
 /* Sidebar */
@@ -112,12 +113,11 @@ body {
   color: var(--color-text-muted);
 }
 
-/* Sidebar and search scroll containers must not chain overscroll into
-   the page: without this, a wheel gesture that runs a sidebar to its
-   end keeps scrolling the main document, and a gesture over a barely-
+/* The sidebar scroll container must not chain overscroll into the
+   page: without this, a wheel gesture that runs a sidebar to its end
+   keeps scrolling the main document, and a gesture over a barely-
    scrollable sidebar stutters, eats a tick, then yanks the page. */
-.md-sidebar__scrollwrap,
-.md-search__scrollwrap {
+.md-sidebar__scrollwrap {
   overscroll-behavior: contain;
 }
 
@@ -683,6 +683,15 @@ body:has(.kiln-ascii) .md-sidebar--secondary {
 
 body:has(.kiln-ascii) .md-header__button[for="__drawer"] {
   display: none;
+}
+
+/* Homepage centering must not depend on the sidebar-reveal class: the
+   sidebars above are gone unconditionally, so without this, pressing H
+   (which drops the body:not(.kiln-sidebars-shown) centering rule)
+   would shift the homepage content into the layout slot of sidebars
+   that are not there. */
+.md-main:has(.kiln-ascii) .md-content {
+  margin: 0 auto;
 }
 
 /* Jump-to-page palette (quick-jump.js; ` or Ctrl+K opens the overlay,

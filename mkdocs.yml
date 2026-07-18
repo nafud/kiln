@@ -35,25 +35,23 @@ theme:
   logo: assets/images/kiln-logo-favicon.png
   favicon: assets/images/kiln-logo-favicon.png
   font: false
+  # Two palettes only, dark first (the default for new visitors); no
+  # auto/system entry. The header toggle button is hidden by extra.css —
+  # the M key (key-nav.js) advances these radios instead, so the
+  # `toggle:` blocks exist only to make Material render the radio group.
   palette:
-    - media: "(prefers-color-scheme)"
+    - scheme: slate
+      primary: black
+      accent: blue
       toggle:
-        icon: material/link
+        icon: material/toggle-switch-off
         name: Switch to light mode
-    - media: "(prefers-color-scheme: light)"
-      scheme: default
+    - scheme: default
       primary: white
       accent: blue
       toggle:
         icon: material/toggle-switch
         name: Switch to dark mode
-    - media: "(prefers-color-scheme: dark)"
-      scheme: slate
-      primary: black
-      accent: blue
-      toggle:
-        icon: material/toggle-switch-off
-        name: Switch to system preference
   features:
     - navigation.instant
     - navigation.tracking
@@ -63,8 +61,6 @@ theme:
     # to put the per-page prev/next links into the DOM for key-nav.js.
     - navigation.footer
     - toc.follow
-    - search.highlight
-    - search.suggest
     - content.code.copy
 
 extra_css:
@@ -80,6 +76,9 @@ extra_javascript:
   - javascripts/key-nav.js
   - javascripts/quick-jump.js
 
+# Material's search UI is hidden by extra.css (S opens the jump palette
+# instead), but the plugin must stay: quick-jump.js builds its page list
+# from the search_index.json this plugin emits.
 plugins:
   - search
 

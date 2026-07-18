@@ -1,12 +1,15 @@
-/* Jump-to-page palette, the site's primary navigation.
+/* Jump-to-page palette, the site's navigation and its search.
 
-   ` (backtick) or Ctrl/Cmd+K toggles an overlay palette on any page:
-   type to fuzzy-match every page by title and path, ArrowDown/ArrowUp
-   to pick, Enter to go. The prompt starts as a clean bar — results
-   only exist while a query is typed. Escape (or a click on the
-   backdrop) closes. The result rows are real links and navigation
-   happens by clicking them, which keeps navigation.instant in charge
-   (same rule as key-nav.js).
+   S, ` (backtick), or Ctrl/Cmd+K summon the prompt on any page — the
+   homepage's inline bar when it is mounted, an overlay everywhere
+   else. Material's own search UI is hidden by extra.css, and the S
+   binding here preempts Material's search handler, so S belongs to
+   the palette. Type to fuzzy-match every page by title and path,
+   ArrowDown/ArrowUp to pick, Enter to go. The prompt starts as a
+   clean bar — results only exist while a query is typed. Escape (or
+   a click on the backdrop) closes. The result rows are real links and
+   navigation happens by clicking them, which keeps navigation.instant
+   in charge (same rule as key-nav.js).
 
    The same component has an inline variant that always mounts on the
    homepage, under the ASCII logo with its input focused, so the
@@ -166,7 +169,6 @@
     const input = document.createElement("input");
     input.className = "kiln-jump-input";
     input.type = "text";
-    input.placeholder = "jump to a page";
     input.spellcheck = false;
     input.autocomplete = "off";
     input.setAttribute("role", "combobox");
@@ -351,31 +353,55 @@
     overlay.input.blur();
   }
 
-  window.addEventListener("keydown", function (event) {
-    const inPalette =
-      event.target instanceof Element && event.target.closest(".kiln-jump");
+  /* Puts the caret in the nearest prompt: the homepage's inline bar
+     when one is mounted, the overlay everywhere else. S, ` and
+     Ctrl/Cmd+K all funnel here. */
+  function openPrompt() {
+    const inline = document.querySelector(".kiln-jump--inline .kiln-jump-input");
+    if (inline) inline.focus();
+    else openOverlay();
+  }
 
-    if ((event.ctrlKey || event.metaKey) && !event.altKey) {
-      if (event.key === "k" || event.key === "K") {
+  /* Capture phase: S must run before (and suppress, via
+     stopImmediatePropagation) Material's own S handler, which would
+     try to focus the hidden search form. */
+  window.addEventListener(
+    "keydown",
+    function (event) {
+      const inPalette =
+        event.target instanceof Element && event.target.closest(".kiln-jump");
+
+      if ((event.ctrlKey || event.metaKey) && !event.altKey) {
+        if (event.key === "k" || event.key === "K") {
+          if (overlayOpen()) closeOverlay();
+          else openPrompt();
+          event.preventDefault();
+        }
+        return;
+      }
+      if (event.ctrlKey || event.altKey || event.metaKey) return;
+
+      if (event.key === "s" || event.key === "S") {
+        if (KilnUtils.isTypingTarget(event.target)) return;
+        openPrompt();
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return;
+      }
+
+      if (event.key === "`") {
+        /* Toggle from anywhere except foreign typing contexts (the
+           palette's own input still closes/blurs on backtick, so the key
+           reads as enter-and-leave-the-prompt). */
+        if (KilnUtils.isTypingTarget(event.target) && !inPalette) return;
         if (overlayOpen()) closeOverlay();
-        else openOverlay();
+        else if (inPalette) event.target.blur();
+        else openPrompt();
         event.preventDefault();
       }
-      return;
-    }
-    if (event.ctrlKey || event.altKey || event.metaKey) return;
-
-    if (event.key === "`") {
-      /* Toggle from anywhere except foreign typing contexts (the
-         palette's own input still closes/blurs on backtick, so the key
-         reads as enter-and-leave-the-prompt). */
-      if (KilnUtils.isTypingTarget(event.target) && !inPalette) return;
-      if (overlayOpen()) closeOverlay();
-      else if (inPalette) event.target.blur();
-      else openOverlay();
-      event.preventDefault();
-    }
-  });
+    },
+    true
+  );
 
   /* ---------- homepage prompt ---------- */
 
