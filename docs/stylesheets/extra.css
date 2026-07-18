@@ -759,22 +759,20 @@ body:has(.kiln-ascii) .md-header__button[for="__drawer"] {
   user-select: none;
 }
 
-/* Resting terminal cursor (quick-jump.js inserts the ▓ span). Like a
-   terminal it shows focus: dim and steady while the prompt is not
-   focused, full-strength and blinking once it is (S, a click, or the
-   homepage autofocus). It disappears at the first typed character,
-   where the native caret takes over — the caret is suppressed on the
-   empty input so the two never show together. The typed/empty switch
-   rides on :placeholder-shown, so the placeholder set in quick-jump.js
-   must stay non-empty. */
+/* Resting terminal cursor (quick-jump.js inserts the █ span). Linux
+   console convention: steady while the prompt is unfocused, blinking
+   once it has focus (S, a click, or the homepage autofocus). It
+   disappears at the first typed character, where the native caret
+   takes over — the caret is suppressed on the empty input so the two
+   never show together. The typed/empty switch rides on
+   :placeholder-shown, so the placeholder set in quick-jump.js must
+   stay non-empty. */
 .kiln-jump-cursor {
   color: var(--color-text-faint);
-  opacity: 0.35;
   user-select: none;
 }
 
 .kiln-jump-row:focus-within .kiln-jump-cursor {
-  opacity: 1;
   animation: kiln-jump-cursor-blink 1.2s step-end infinite;
 }
 
@@ -792,8 +790,6 @@ body:has(.kiln-ascii) .md-header__button[for="__drawer"] {
   }
 }
 
-/* Reduced motion keeps the focus signal: the blink goes, the dim/full
-   opacity step stays. */
 @media (prefers-reduced-motion: reduce) {
   .kiln-jump-row:focus-within .kiln-jump-cursor {
     animation: none;
