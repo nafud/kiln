@@ -9,12 +9,12 @@
    (same rule as key-nav.js).
 
    The same component has an inline variant for the homepage: in
-   jump-bar mode extra.css hides the card grid and both sidebars, and
-   the palette mounts under the ASCII logo with its input focused, so
-   the homepage is a chrome-free prompt. Its results render as a
-   dropdown floating over the content below the bar (extra.css
-   positions the list absolutely), so matching never changes the page
-   height. The mode lives in localStorage ("kiln-home-view") as a
+   jump-bar mode extra.css hides the homepage card grid (section
+   landing pages keep theirs) and the palette mounts under the ASCII
+   logo with its input focused, so the homepage is a clean prompt. Its
+   results render as a dropdown floating over the content below the
+   bar (extra.css positions the list absolutely), so matching never
+   changes the page height. The mode lives in localStorage ("kiln-home-view") as a
    class on the html element ("kiln-home-jump"), applied before first
    paint by the inline script in overrides/main.html so the homepage
    never flashes the other view; the switch button in key-nav.js's help
@@ -203,6 +203,7 @@
       list.appendChild(item);
       input.setAttribute("aria-expanded", "false");
       input.removeAttribute("aria-activedescendant");
+      clampToViewport();
     }
 
     function paintSelection() {
@@ -216,6 +217,19 @@
       if (active && active.scrollIntoView) {
         active.scrollIntoView({ block: "nearest" });
       }
+    }
+
+    /* The inline dropdown floats over the page, but an absolutely
+       positioned box still extends the document's scroll extent when it
+       reaches past the bottom — clamping it to the viewport keeps the
+       homepage from growing a scrollbar. Re-measured per paint; the
+       overlay variant scrolls inside its CSS max-height instead. */
+    function clampToViewport() {
+      if (variant !== "inline") return;
+      list.style.maxHeight = "";
+      const top = list.getBoundingClientRect().top;
+      list.style.maxHeight =
+        Math.max(120, window.innerHeight - top - 16) + "px";
     }
 
     function paintResults() {
@@ -243,6 +257,7 @@
         list.appendChild(item);
       });
       input.setAttribute("aria-expanded", results.length ? "true" : "false");
+      clampToViewport();
       paintSelection();
     }
 

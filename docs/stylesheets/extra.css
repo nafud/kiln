@@ -528,8 +528,15 @@ tt {
   flex-direction: column;
 }
 
+/* width: 100% is a guard, not decoration: as a flex item of the
+   column-flexed .md-main, the auto-margined .md-grid shrink-wraps to
+   fit-content, and on a homepage with no sidebars in flow that
+   collapses the whole column to the text width — the ASCII logo then
+   generates into the narrowed grid. Full width keeps .md-grid's
+   max-width cap and centering. */
 .md-main__inner:has(.kiln-ascii) {
   flex: 1;
+  width: 100%;
 }
 
 .md-content:has(.kiln-ascii) {
@@ -592,18 +599,20 @@ tt {
   opacity: 1;
 }
 
-/* Sidebar hide/reveal (key-nav.js toggles the body class with H).
-   Desktop only: below Material's 76.25em breakpoint the sidebars are
-   off-canvas drawers, and hiding them would break the drawer toggles.
-   The content column keeps its 900px cap and centers in the freed
-   width. */
+/* Sidebars are hidden by default across the whole site; H (key-nav.js)
+   reveals them by putting kiln-sidebars-shown on body, and the choice
+   survives navigation.instant (Material never touches body) until the
+   next full load. Desktop only: below Material's 76.25em breakpoint
+   the sidebars are off-canvas drawers, and hiding them would break the
+   drawer toggles. The content column keeps its 900px cap and centers
+   in the freed width. */
 @media screen and (min-width: 76.25em) {
-  .kiln-sidebars-hidden .md-sidebar--primary,
-  .kiln-sidebars-hidden .md-sidebar--secondary {
+  body:not(.kiln-sidebars-shown) .md-sidebar--primary,
+  body:not(.kiln-sidebars-shown) .md-sidebar--secondary {
     display: none;
   }
 
-  .kiln-sidebars-hidden .md-content {
+  body:not(.kiln-sidebars-shown) .md-content {
     margin: 0 auto;
   }
 }
@@ -697,24 +706,11 @@ tt {
 
 /* Jump-bar mode (html class, applied before first paint by the inline
    script in overrides/main.html and owned by quick-jump.js): the
-   homepage swaps its card grid for the inline palette below, and goes
-   chrome-free — both sidebars hidden, content centered in the freed
-   width. The sidebar rules are desktop-only for the same reason as the
-   H toggle above: below Material's breakpoint the sidebars are
-   off-canvas drawers. Other pages keep their sidebars. */
-.kiln-home-jump .home-grid {
+   homepage swaps its card grid for the inline palette. Scoped to the
+   homepage via the ASCII-logo gate — section landing pages use
+   .home-grid too and keep their cards in every mode. */
+.kiln-home-jump .md-content__inner:has(.kiln-ascii) .home-grid {
   display: none;
-}
-
-@media screen and (min-width: 76.25em) {
-  .kiln-home-jump .md-main:has(.kiln-ascii) .md-sidebar--primary,
-  .kiln-home-jump .md-main:has(.kiln-ascii) .md-sidebar--secondary {
-    display: none;
-  }
-
-  .kiln-home-jump .md-main:has(.kiln-ascii) .md-content {
-    margin: 0 auto;
-  }
 }
 
 /* Jump-to-page palette (quick-jump.js; ` or Ctrl+K opens the overlay,

@@ -7,9 +7,10 @@
    the DOM; navigation.footer is enabled solely for this), 0 goes home
    via the header logo, and 1-4 open the top-level sections in sidebar
    nav order. Clicking links, rather than assigning location, keeps
-   navigation.instant in charge. H hides/reveals both
-   sidebars (a body class, styled in extra.css desktop-only and
-   surviving instant navigation since Material never touches body).
+   navigation.instant in charge. Sidebars are hidden by default
+   site-wide (extra.css); H reveals/re-hides both (a body class,
+   desktop-only and surviving instant navigation since Material never
+   touches body).
    M cycles the color palette by advancing Material's __palette radio
    group, the same thing its own toggle button does. ? toggles a help
    panel listing the bindings; Escape closes it.
@@ -46,7 +47,7 @@
     ["2", "readings"],
     ["3", "courses"],
     ["4", "writeups"],
-    ["H", "hide / show sidebars"],
+    ["H", "show / hide sidebars"],
     ["M", "light / dark / system"],
     ["S", "search"],
     ["`", "jump to a page"],
@@ -211,7 +212,7 @@
         break;
       case "h":
       case "H":
-        document.body.classList.toggle("kiln-sidebars-hidden");
+        document.body.classList.toggle("kiln-sidebars-shown");
         break;
       case "[":
         jumpToHeading(-1);
