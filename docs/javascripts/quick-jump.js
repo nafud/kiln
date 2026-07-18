@@ -6,8 +6,9 @@
    binding here preempts Material's search handler, so S belongs to
    the palette. Type to fuzzy-match every page by title and path,
    ArrowDown/ArrowUp to pick, Enter to go. The prompt rests as a bar
-   with a blinking ▓ cursor and a faint placeholder; results only
-   exist while a query is typed. Escape (or
+   with a ▓ terminal cursor (dim while unfocused, blinking while
+   focused) and a faint placeholder; results only exist while a query
+   is typed. Escape (or
    a click on the backdrop) closes. The result rows are real links and
    navigation happens by clicking them, which keeps navigation.instant
    in charge (same rule as key-nav.js).
@@ -168,10 +169,11 @@
     prompt.textContent = "»";
     prompt.setAttribute("aria-hidden", "true");
 
-    /* Terminal-style resting cursor. extra.css blinks it while the
-       input is empty and hides it (handing off to the native caret)
-       once a query is typed — both driven by :placeholder-shown, so
-       the placeholder below must stay non-empty. */
+    /* Terminal-style resting cursor. extra.css keeps it dim and
+       steady while the prompt is unfocused, blinks it on focus, and
+       hides it (handing off to the native caret) once a query is
+       typed — the typed/empty switch is driven by :placeholder-shown,
+       so the placeholder below must stay non-empty. */
     const cursor = document.createElement("span");
     cursor.className = "kiln-jump-cursor";
     cursor.textContent = "▓";
