@@ -654,6 +654,222 @@ tt {
   font-weight: 700;
 }
 
+/* Home-view switch button inside the help panel (key-nav.js builds it,
+   quick-jump.js owns the mode). Label style plus the button hover lift;
+   the two labels swap on the html mode class, so the button always
+   names the view it switches to. */
+.key-help-switch {
+  margin-top: 0.35rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  background: var(--color-code-bg);
+  color: var(--color-text-secondary);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    color 150ms ease,
+    transform 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.key-help-switch:hover {
+  border-color: var(--color-accent);
+  color: var(--color-text-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px var(--color-shadow);
+}
+
+.key-help-switch-to-cards {
+  display: none;
+}
+
+.kiln-home-jump .key-help-switch-to-jump {
+  display: none;
+}
+
+.kiln-home-jump .key-help-switch-to-cards {
+  display: inline;
+}
+
+/* Jump-bar mode (html class, applied before first paint by the inline
+   script in overrides/main.html and owned by quick-jump.js): the
+   homepage swaps its card grid for the inline palette below. */
+.kiln-home-jump .home-grid {
+  display: none;
+}
+
+/* Jump-to-page palette (quick-jump.js; ` or Ctrl+K opens the overlay,
+   and in jump-bar mode the inline variant sits under the homepage
+   logo). The overlay panel floats over content, so like .key-help it
+   carries a resting shadow; the inline panel is a resting surface like
+   the cards it replaces, so it stays flat. */
+.kiln-jump--overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1002;
+  display: none;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 18vh 1rem 0;
+}
+
+.kiln-jump--overlay.kiln-jump--open {
+  display: flex;
+}
+
+.kiln-jump--inline {
+  width: min(34rem, 100%);
+  margin: 1.2rem auto 0;
+}
+
+.kiln-jump-panel {
+  width: min(34rem, 100%);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-surface);
+  box-shadow: 0 4px 12px var(--color-shadow);
+  overflow: hidden;
+}
+
+.kiln-jump--inline .kiln-jump-panel {
+  box-shadow: none;
+}
+
+.kiln-jump-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.kiln-jump-prompt {
+  color: var(--color-text-faint);
+  font-weight: 700;
+  user-select: none;
+}
+
+.kiln-jump-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: 0.78rem;
+  padding: 0;
+}
+
+.kiln-jump-input::placeholder {
+  color: var(--color-text-faint);
+}
+
+/* The list resets fight .md-typeset's ul styling on the inline
+   variant; the overlay mounts on document.body outside .md-typeset,
+   where they are simply harmless. Same reason the result rules below
+   are written twice — the .md-typeset-scoped copy outranks the generic
+   .md-typeset a link rules (see the .home-card cascade note above). */
+.kiln-jump-results {
+  margin: 0 !important;
+  padding: 0.3rem !important;
+  list-style: none !important;
+  max-height: 46vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.kiln-jump-results li {
+  margin: 0 !important;
+}
+
+.kiln-jump-result a,
+.md-typeset .kiln-jump-results .kiln-jump-result a {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.8rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 3px;
+  text-decoration: none;
+  transition: background-color 150ms ease;
+}
+
+.kiln-jump-result a:hover,
+.md-typeset .kiln-jump-results .kiln-jump-result a:hover {
+  opacity: 1; /* cancel the generic link hover fade */
+  background: var(--color-code-bg);
+}
+
+.kiln-jump-result--active a,
+.md-typeset .kiln-jump-results .kiln-jump-result--active a {
+  background: var(--color-accent-transparent);
+}
+
+.kiln-jump-result-title {
+  color: var(--color-text-primary);
+  font-size: 0.72rem;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.kiln-jump-result--active .kiln-jump-result-title {
+  color: var(--color-accent);
+}
+
+.kiln-jump-result-path {
+  color: var(--color-text-muted);
+  font-size: 0.65rem;
+  max-width: 55%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.kiln-jump-empty {
+  padding: 0.5rem 0.6rem;
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+}
+
+/* Link-hint labels (link-hints.js, activated with F). Floating chips
+   pinned to viewport positions, in the label style; like the other
+   floating layers they carry a shadow for separation. The typed part
+   of a label turns accent as it is matched. */
+.kiln-hints {
+  position: fixed;
+  inset: 0;
+  z-index: 1003;
+  pointer-events: none;
+}
+
+.kiln-hint {
+  position: absolute;
+  transform: translateY(-55%);
+  padding: 0.05rem 0.3rem;
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  background: var(--color-surface);
+  box-shadow: 0 2px 6px var(--color-shadow);
+  color: var(--color-text-primary);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.kiln-hint-typed {
+  color: var(--color-accent);
+}
+
+.kiln-hint--dead {
+  display: none;
+}
+
 /* Sticky sidebar title — transparent so it matches sidebar background */
 
 .md-sidebar--primary .md-nav--primary > .md-nav__title,

@@ -13,6 +13,20 @@ const KilnUtils = {
     };
   },
 
+  /* True when el is a typing context (inputs, textareas, selects,
+     contenteditable), where the keyboard scripts (key-nav.js,
+     link-hints.js, quick-jump.js) must leave keystrokes alone. */
+  isTypingTarget: function (el) {
+    if (!el || !el.tagName) return false;
+    const tag = el.tagName;
+    return (
+      tag === "INPUT" ||
+      tag === "TEXTAREA" ||
+      tag === "SELECT" ||
+      el.isContentEditable
+    );
+  },
+
   /* Runs fn once the page is ready and again after every
      navigation.instant page change. Material's document$ BehaviorSubject
      emits on subscribe, so it alone covers the initial load; the

@@ -78,6 +78,8 @@ extra_javascript:
   - javascripts/code-copy.js
   - javascripts/heading-shimmer.js
   - javascripts/key-nav.js
+  - javascripts/quick-jump.js
+  - javascripts/link-hints.js
 
 plugins:
   - search

@@ -1,0 +1,419 @@
+/* Jump-to-page palette and the home-view mode it powers.
+
+   ` (backtick) or Ctrl/Cmd+K toggles an overlay palette on any page:
+   type to fuzzy-match every page by title and path, ArrowDown/ArrowUp
+   to pick, Enter to go. An empty query lists the top-level sections.
+   Escape (or a click on the backdrop) closes. The result rows are real
+   links and navigation happens by clicking them, which keeps
+   navigation.instant in charge (same rule as key-nav.js).
+
+   The same component has an inline variant for the homepage: in
+   jump-bar mode the card grid is hidden by extra.css and the palette
+   mounts under the ASCII logo with its input focused, so the homepage
+   is a prompt. The mode lives in localStorage ("kiln-home-view") as a
+   class on the html element ("kiln-home-jump"), applied before first
+   paint by the inline script in overrides/main.html so the homepage
+   never flashes the other view; the switch button in key-nav.js's help
+   panel toggles it via the "kiln:home-view-toggle" event, which this
+   script owns. With JS absent nothing sets the class, so the card
+   homepage still works.
+
+   Pages come from the search plugin's search_index.json, the same data
+   Material's search uses, fetched lazily once per full page load — no
+   extra build step. The overlay lives on document.body and survives
+   navigation.instant; the inline variant is remounted per homepage
+   visit via KilnUtils.onPageChange. */
+
+(function () {
+  "use strict";
+
+  const MAX_RESULTS = 8;
+  const MODE_CLASS = "kiln-home-jump";
+  const STORAGE_KEY = "kiln-home-view";
+
+  /* ---------- page data ---------- */
+
+  let pagesPromise = null;
+
+  /* The header logo links to the site root on every page, at the right
+     relative depth, so it doubles as the base for site-absolute URLs
+     (key-nav.js clicks the same element for the 0 key). */
+  function siteBase() {
+    const logo = document.querySelector(".md-header a.md-logo");
+    return new URL(logo ? logo.getAttribute("href") : ".", location.href);
+  }
+
+  /* Fetches the search index and reduces it to pages: entries without a
+     #fragment. Cached for the lifetime of the full page load; a failed
+     fetch clears the cache so a later open retries. */
+  function loadPages() {
+    if (!pagesPromise) {
+      pagesPromise = fetch(new URL("search/search_index.json", siteBase()))
+        .then(function (response) {
+          if (!response.ok) throw new Error("HTTP " + response.status);
+          return response.json();
+        })
+        .then(function (index) {
+          return index.docs
+            .filter(function (doc) {
+              return doc.location.indexOf("#") === -1;
+            })
+            .map(function (doc) {
+              return {
+                title: doc.title,
+                path: doc.location.replace(/\/$/, ""),
+                url: new URL(doc.location, siteBase()),
+              };
+            });
+        })
+        .catch(function (error) {
+          pagesPromise = null;
+          throw error;
+        });
+    }
+    return pagesPromise;
+  }
+
+  /* ---------- fuzzy matching ---------- */
+
+  const BOUNDARY = /[\s/\-._]/;
+
+  /* One query term against one haystack; no match is -Infinity. A
+     literal substring hit is checked first and always outranks the
+     fallback: greedy left-to-right subsequence matching finds the
+     earliest scatter, not the tightest one, so on its own it prefers
+     "Chapter 3 ... repreSentAtion ..." over a compact "csapp" sitting
+     later in the path. In both branches boundary-aligned hits score
+     extra and spread costs a little. */
+  function termScore(term, text) {
+    const at = text.indexOf(term);
+    if (at !== -1) {
+      let score = term.length * 3;
+      if (at === 0 || BOUNDARY.test(text[at - 1])) score += 4;
+      return score;
+    }
+    let score = 0;
+    let from = 0;
+    let prev = -2;
+    for (let i = 0; i < term.length; i++) {
+      const hit = text.indexOf(term[i], from);
+      if (hit === -1) return -Infinity;
+      score += 1;
+      if (hit === prev + 1) score += 2;
+      if (hit === 0 || BOUNDARY.test(text[hit - 1])) score += 2;
+      score -= Math.min((hit - from) * 0.02, 1);
+      prev = hit;
+      from = hit + 1;
+    }
+    return score;
+  }
+
+  /* Whitespace-separated terms must all match, each against title and
+     path together, so "csapp 3" finds the chapter even though "csapp"
+     only appears in the path. */
+  function pageScore(query, page) {
+    const haystack = (page.title + " " + page.path).toLowerCase();
+    const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+    let total = 0;
+    for (let i = 0; i < terms.length; i++) {
+      const score = termScore(terms[i], haystack);
+      if (score === -Infinity) return -Infinity;
+      total += score;
+    }
+    return total;
+  }
+
+  /* An empty query lists the top level (section landing pages and
+     Home), the palette's equivalent of the homepage cards. The page
+     currently open is never offered. */
+  function matchPages(query, pages) {
+    const candidates = pages.filter(function (page) {
+      return page.url.pathname !== location.pathname;
+    });
+    if (!query.trim()) {
+      return candidates.filter(function (page) {
+        return page.path.indexOf("/") === -1;
+      });
+    }
+    const scored = [];
+    candidates.forEach(function (page) {
+      const score = pageScore(query, page);
+      if (score !== -Infinity) scored.push({ page: page, score: score });
+    });
+    scored.sort(function (a, b) {
+      return b.score - a.score;
+    });
+    return scored.slice(0, MAX_RESULTS).map(function (entry) {
+      return entry.page;
+    });
+  }
+
+  /* ---------- palette component ---------- */
+
+  /* Builds one palette instance ("overlay" or "inline" — same markup
+     and behavior, extra.css positions them differently). onDismiss runs
+     on Escape; the overlay closes, the inline variant just blurs. */
+  function createPalette(variant, onDismiss) {
+    const listId = "kiln-jump-results-" + variant;
+
+    const root = document.createElement("div");
+    root.className = "kiln-jump kiln-jump--" + variant;
+
+    const panel = document.createElement("div");
+    panel.className = "kiln-jump-panel";
+
+    const row = document.createElement("label");
+    row.className = "kiln-jump-row";
+
+    const prompt = document.createElement("span");
+    prompt.className = "kiln-jump-prompt";
+    prompt.textContent = "»";
+    prompt.setAttribute("aria-hidden", "true");
+
+    const input = document.createElement("input");
+    input.className = "kiln-jump-input";
+    input.type = "text";
+    input.placeholder = "jump to a page";
+    input.spellcheck = false;
+    input.autocomplete = "off";
+    input.setAttribute("role", "combobox");
+    input.setAttribute("aria-label", "Jump to a page");
+    input.setAttribute("aria-expanded", "false");
+    input.setAttribute("aria-controls", listId);
+
+    const list = document.createElement("ul");
+    list.className = "kiln-jump-results";
+    list.id = listId;
+    list.setAttribute("role", "listbox");
+
+    row.appendChild(prompt);
+    row.appendChild(input);
+    panel.appendChild(row);
+    panel.appendChild(list);
+    root.appendChild(panel);
+
+    let results = [];
+    let selected = 0;
+    let renderSeq = 0;
+
+    function showMessage(text) {
+      list.textContent = "";
+      const item = document.createElement("li");
+      item.className = "kiln-jump-empty";
+      item.textContent = text;
+      list.appendChild(item);
+      input.setAttribute("aria-expanded", "false");
+      input.removeAttribute("aria-activedescendant");
+    }
+
+    function paintSelection() {
+      const items = list.children;
+      for (let i = 0; i < items.length; i++) {
+        items[i].classList.toggle("kiln-jump-result--active", i === selected);
+        items[i].setAttribute("aria-selected", i === selected);
+      }
+      input.setAttribute("aria-activedescendant", listId + "-" + selected);
+      const active = items[selected];
+      if (active && active.scrollIntoView) {
+        active.scrollIntoView({ block: "nearest" });
+      }
+    }
+
+    function paintResults() {
+      list.textContent = "";
+      results.forEach(function (page, i) {
+        const item = document.createElement("li");
+        item.className = "kiln-jump-result";
+        item.id = listId + "-" + i;
+        item.setAttribute("role", "option");
+
+        const link = document.createElement("a");
+        link.href = page.url.href;
+
+        const title = document.createElement("span");
+        title.className = "kiln-jump-result-title";
+        title.textContent = page.title;
+
+        const path = document.createElement("span");
+        path.className = "kiln-jump-result-path";
+        path.textContent = page.path || "/";
+
+        link.appendChild(title);
+        link.appendChild(path);
+        item.appendChild(link);
+        list.appendChild(item);
+      });
+      input.setAttribute("aria-expanded", results.length ? "true" : "false");
+      paintSelection();
+    }
+
+    /* The fetch resolves asynchronously; the sequence guard drops a
+       stale render finishing after a newer keystroke's. */
+    function render() {
+      const seq = ++renderSeq;
+      loadPages().then(
+        function (pages) {
+          if (seq !== renderSeq) return;
+          results = matchPages(input.value, pages);
+          selected = 0;
+          if (results.length) paintResults();
+          else showMessage("no matches");
+        },
+        function () {
+          if (seq !== renderSeq) return;
+          results = [];
+          showMessage("page index unavailable");
+        }
+      );
+    }
+
+    function openSelected() {
+      const item = list.children[selected];
+      const link = item && item.querySelector("a");
+      if (link) link.click();
+    }
+
+    input.addEventListener("input", render);
+
+    input.addEventListener("keydown", function (event) {
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+        if (results.length) {
+          const step = event.key === "ArrowDown" ? 1 : -1;
+          selected = (selected + step + results.length) % results.length;
+          paintSelection();
+        }
+        event.preventDefault();
+      } else if (event.key === "Enter") {
+        openSelected();
+        event.preventDefault();
+      } else if (event.key === "Escape") {
+        onDismiss();
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    });
+
+    return {
+      root: root,
+      input: input,
+      reset: function () {
+        input.value = "";
+        render();
+      },
+    };
+  }
+
+  /* ---------- overlay ---------- */
+
+  let overlay = null;
+
+  function ensureOverlay() {
+    if (overlay) return overlay;
+    overlay = createPalette("overlay", closeOverlay);
+    overlay.root.addEventListener("click", function (event) {
+      if (event.target === overlay.root) closeOverlay();
+    });
+    document.body.appendChild(overlay.root);
+    return overlay;
+  }
+
+  function overlayOpen() {
+    return !!overlay && overlay.root.classList.contains("kiln-jump--open");
+  }
+
+  function openOverlay() {
+    ensureOverlay();
+    overlay.root.classList.add("kiln-jump--open");
+    overlay.reset();
+    overlay.input.focus();
+  }
+
+  function closeOverlay() {
+    if (!overlayOpen()) return;
+    overlay.root.classList.remove("kiln-jump--open");
+    overlay.input.blur();
+  }
+
+  window.addEventListener("keydown", function (event) {
+    const inPalette =
+      event.target instanceof Element && event.target.closest(".kiln-jump");
+
+    if ((event.ctrlKey || event.metaKey) && !event.altKey) {
+      if (event.key === "k" || event.key === "K") {
+        if (overlayOpen()) closeOverlay();
+        else openOverlay();
+        event.preventDefault();
+      }
+      return;
+    }
+    if (event.ctrlKey || event.altKey || event.metaKey) return;
+
+    if (event.key === "`") {
+      /* Toggle from anywhere except foreign typing contexts (the
+         palette's own input still closes/blurs on backtick, so the key
+         reads as enter-and-leave-the-prompt). */
+      if (KilnUtils.isTypingTarget(event.target) && !inPalette) return;
+      if (overlayOpen()) closeOverlay();
+      else if (inPalette) event.target.blur();
+      else openOverlay();
+      event.preventDefault();
+    }
+  });
+
+  /* ---------- home view (cards vs jump bar) ---------- */
+
+  function jumpModeOn() {
+    return document.documentElement.classList.contains(MODE_CLASS);
+  }
+
+  /* Mounts or removes the inline palette to match the mode. The
+     homepage is recognized by the ASCII logo, the same gate the
+     homepage CSS uses; navigation.instant replaces the content DOM, so
+     this runs on every page change. */
+  function syncHomepage(focus) {
+    const ascii = document.querySelector(".md-content .kiln-ascii");
+    const existing = document.querySelector(".kiln-jump--inline");
+    if (ascii && jumpModeOn()) {
+      if (existing) return;
+      const inline = createPalette("inline", function () {
+        inline.input.blur();
+      });
+      ascii.insertAdjacentElement("afterend", inline.root);
+      inline.reset();
+      if (focus !== false) inline.input.focus();
+    } else if (existing) {
+      existing.remove();
+    }
+  }
+
+  function setJumpMode(on) {
+    document.documentElement.classList.toggle(MODE_CLASS, on);
+    try {
+      localStorage.setItem(STORAGE_KEY, on ? "jump" : "cards");
+    } catch (error) {
+      /* Private mode: the switch still works for this page load. */
+    }
+    syncHomepage();
+  }
+
+  /* Dispatched by the switch button in key-nav.js's help panel. */
+  document.addEventListener("kiln:home-view-toggle", function () {
+    setJumpMode(!jumpModeOn());
+  });
+
+  /* overrides/main.html applies the stored mode before first paint;
+     re-applying here is a harmless no-op that keeps the mode working if
+     that template block ever goes missing. */
+  try {
+    if (localStorage.getItem(STORAGE_KEY) === "jump") {
+      document.documentElement.classList.add(MODE_CLASS);
+    }
+  } catch (error) {
+    /* Storage unavailable: stay in the default cards view. */
+  }
+
+  KilnUtils.onPageChange(function () {
+    closeOverlay();
+    syncHomepage();
+  });
+})();

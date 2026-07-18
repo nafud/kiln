@@ -15,9 +15,13 @@
    panel listing the bindings; Escape closes it.
 
    Material's own S (search) and P / N (prev/next page) bindings stay
-   usable alongside these. Its two extra search keys, F and /, are
-   swallowed by a capture-phase listener below so S alone owns search;
-   both still type normally in inputs.
+   usable alongside these. Its extra search key / is swallowed by a
+   capture-phase listener below so S alone owns search (it still types
+   normally in inputs); its other extra search key F is taken over by
+   link-hints.js for link hints. The ` jump palette is quick-jump.js;
+   the help panel carries that script's home-view switch button, wired
+   through the kiln:home-view-toggle event so the mode logic stays in
+   one place.
 
    Keys are ignored while typing (inputs, textareas, contenteditable)
    and in chords with Ctrl/Alt/Meta. Scrolling is smooth unless the
@@ -45,6 +49,8 @@
     ["H", "hide / show sidebars"],
     ["M", "light / dark / system"],
     ["S", "search"],
+    ["`", "jump to a page"],
+    ["F", "follow a link"],
     ["?", "toggle this help"],
   ];
 
@@ -137,6 +143,21 @@
       );
     });
     panel.innerHTML = rows.join("");
+
+    /* Home-view switch (cards vs jump bar). quick-jump.js owns the
+       mode and handles this event; which label shows follows the html
+       mode class via extra.css, so no state is tracked here. */
+    const switchButton = document.createElement("button");
+    switchButton.type = "button";
+    switchButton.className = "key-help-switch";
+    switchButton.innerHTML =
+      '<span class="key-help-switch-to-jump">switch home to jump bar</span>' +
+      '<span class="key-help-switch-to-cards">switch home to cards</span>';
+    switchButton.addEventListener("click", function () {
+      document.dispatchEvent(new CustomEvent("kiln:home-view-toggle"));
+    });
+    panel.appendChild(switchButton);
+
     document.body.appendChild(panel);
     return panel;
   }
@@ -147,28 +168,17 @@
     panel.classList.toggle("key-help--open", force);
   }
 
-  function isTypingTarget(el) {
-    if (!el || !el.tagName) return false;
-    const tag = el.tagName;
-    return (
-      tag === "INPUT" ||
-      tag === "TEXTAREA" ||
-      tag === "SELECT" ||
-      el.isContentEditable
-    );
-  }
-
   /* Material also focuses search on F and /; only S should. This
      capture-phase listener runs before Material's own handler and
-     swallows the two keys outside typing contexts (inside an input
-     the guard lets them through, so they still type). The browser
-     default is left alone. */
+     swallows / outside typing contexts (inside an input the guard lets
+     it through, so it still types); F is claimed by link-hints.js's own
+     capture listener instead. The browser default is left alone. */
   window.addEventListener(
     "keydown",
     function (event) {
       if (event.ctrlKey || event.altKey || event.metaKey) return;
-      if (isTypingTarget(event.target)) return;
-      if (event.key === "/" || event.key === "f" || event.key === "F") {
+      if (KilnUtils.isTypingTarget(event.target)) return;
+      if (event.key === "/") {
         event.stopImmediatePropagation();
       }
     },
@@ -177,7 +187,7 @@
 
   window.addEventListener("keydown", function (event) {
     if (event.ctrlKey || event.altKey || event.metaKey) return;
-    if (isTypingTarget(event.target)) return;
+    if (KilnUtils.isTypingTarget(event.target)) return;
 
     switch (event.key) {
       case "t":

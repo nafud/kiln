@@ -78,6 +78,23 @@ jobs:
             exit 1
           fi
 
+          # quick-jump.js builds its page list from the search plugin's
+          # index; a plugin update that moves or renames it would break
+          # the palette with no build error.
+          test -s site/search/search_index.json || {
+            echo "::error::site/search/search_index.json is missing — the search plugin stopped emitting it. Update the page-list fetch in docs/javascripts/quick-jump.js."
+            exit 1
+          }
+
+          # overrides/main.html injects the pre-paint home-view script
+          # through Material's extrahead block; a block rename in a
+          # Material update would silently drop it (the homepage would
+          # flash cards in jump-bar mode).
+          grep -qF -- 'kiln-home-jump' site/index.html || {
+            echo "::error::site/index.html lost the pre-paint home-view script — Material's extrahead block was likely renamed. Update overrides/main.html."
+            exit 1
+          }
+
           # key-nav.js follows the hidden footer's prev/next links for the
           # < / > page-switch keys (navigation.footer puts them in the DOM).
           grep -qF -- 'md-footer__link' site/readings/index.html || {

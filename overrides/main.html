@@ -1,0 +1,20 @@
+{#-
+  Applies the stored home-view mode (quick-jump.js; "kiln-home-view" in
+  localStorage) as a class on the html element before first paint, so a
+  jump-bar-mode visitor never sees the card grid flash on the homepage.
+  quick-jump.js re-applies the class as a fallback, but only after the
+  deferred scripts load — too late to prevent the flash, which is the
+  sole reason this block exists. With JS off the class is never set and
+  the card homepage renders as-is.
+-#}
+{% extends "base.html" %}
+
+{% block extrahead %}
+  {{ super() }}
+  <script>
+    try {
+      if (localStorage.getItem("kiln-home-view") === "jump")
+        document.documentElement.classList.add("kiln-home-jump");
+    } catch (error) {}
+  </script>
+{% endblock %}
