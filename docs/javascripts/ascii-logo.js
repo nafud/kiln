@@ -6,14 +6,10 @@
    from the measured character cell and the available container width plus a
    viewport-height budget, so the logo always fits without scrollbars.
 
-   Until generation succeeds the pre holds its plain-text fallback;
-   CONFIG.generatedClass switches it to grid sizing. With JS on
-   (html.kiln-js) extra.css hides that fallback and reserves the art's
-   final box, so a cold load neither flashes the title nor shifts the
-   layout when the art lands; with JS off the fallback renders as a
-   styled title. The webfont stylesheet is injected from here rather
-   than @imported in extra.css so only pages that render the logo pay
-   for it.
+   Until generation succeeds the pre shows its plain-text fallback, styled
+   as a title by extra.css; CONFIG.generatedClass switches it to grid
+   sizing. The webfont stylesheet is injected from here rather than
+   @imported in extra.css so only pages that render the logo pay for it.
 
    The logo is static by itself; pointer movement drives a shimmer animation
    whose intensity envelope eases in and out. Idempotent and safe to re-run
@@ -113,16 +109,12 @@
     return fontStylesheetLoaded;
   }
 
-  /* Resolves once the two faces the build depends on are usable: the
-     logo webfont drawn on the canvas, and the pre's own rendered font
-     (JetBrains Mono), whose cell measureCharCell measures — building
-     against fallback metrics would produce a grid that clips or
-     under-fills once the real font swaps in. Deliberately NOT
-     document.fonts.ready: that waits for every face the page pulls
-     (all the JetBrains Mono weights), delaying the logo by the whole
-     cold-load font waterfall; a face that finishes after the build is
-     caught by the loadingdone rebuild at the bottom of this file. */
-  function loadFonts(pre) {
+  /* Resolves once the logo webfont AND the page's own fonts are usable.
+     Waiting for document.fonts.ready matters because measureCharCell
+     depends on the pre's rendered font (JetBrains Mono): building against
+     fallback metrics would produce a grid that clips or under-fills once
+     the real font swaps in. */
+  function loadFonts() {
     if (!document.fonts || !document.fonts.load) {
       return Promise.resolve();
     }
@@ -130,10 +122,7 @@
       .then(function () {
         return Promise.all([
           document.fonts.load(cssFont(CONFIG.referenceFontPx), CONFIG.text),
-          document.fonts.load(
-            "1rem " + getComputedStyle(pre).fontFamily,
-            CONFIG.text
-          ),
+          document.fonts.ready,
         ]);
       })
       .catch(function () { /* keep the fallback font */ });
@@ -402,7 +391,7 @@
     if (containerObserver && pre.parentElement) {
       containerObserver.observe(pre.parentElement);
     }
-    loadFonts(pre).then(function () {
+    loadFonts().then(function () {
       if (state.pre === pre && pre.isConnected) rebuild();
     });
   }
