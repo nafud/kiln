@@ -5,8 +5,9 @@
    else. Material's own search UI is hidden by extra.css, and the S
    binding here preempts Material's search handler, so S belongs to
    the palette. Type to fuzzy-match every page by title and path,
-   ArrowDown/ArrowUp to pick, Enter to go. The prompt starts as a
-   clean bar — results only exist while a query is typed. Escape (or
+   ArrowDown/ArrowUp to pick, Enter to go. The prompt rests as a bar
+   with a blinking ▓ cursor and a faint placeholder; results only
+   exist while a query is typed. Escape (or
    a click on the backdrop) closes. The result rows are real links and
    navigation happens by clicking them, which keeps navigation.instant
    in charge (same rule as key-nav.js).
@@ -167,11 +168,21 @@
     prompt.textContent = "»";
     prompt.setAttribute("aria-hidden", "true");
 
+    /* Terminal-style resting cursor. extra.css blinks it while the
+       input is empty and hides it (handing off to the native caret)
+       once a query is typed — both driven by :placeholder-shown, so
+       the placeholder below must stay non-empty. */
+    const cursor = document.createElement("span");
+    cursor.className = "kiln-jump-cursor";
+    cursor.textContent = "▓";
+    cursor.setAttribute("aria-hidden", "true");
+
     const input = document.createElement("input");
     input.className = "kiln-jump-input";
     input.type = "text";
     input.spellcheck = false;
     input.autocomplete = "off";
+    input.placeholder = "jump to a page";
     input.setAttribute("role", "combobox");
     input.setAttribute("aria-label", "Jump to a page");
     input.setAttribute("aria-expanded", "false");
@@ -183,6 +194,7 @@
     list.setAttribute("role", "listbox");
 
     row.appendChild(prompt);
+    row.appendChild(cursor);
     row.appendChild(input);
     panel.appendChild(row);
     panel.appendChild(list);

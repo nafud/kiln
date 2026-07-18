@@ -759,6 +759,38 @@ body:has(.kiln-ascii) .md-header__button[for="__drawer"] {
   user-select: none;
 }
 
+/* Resting terminal cursor (quick-jump.js inserts the ▓ span). It
+   blinks while the input is empty and disappears at the first typed
+   character, where the native caret takes over — the caret is
+   suppressed on the empty input so the two never show together. Both
+   switches ride on :placeholder-shown, so the placeholder set in
+   quick-jump.js must stay non-empty. */
+.kiln-jump-cursor {
+  color: var(--color-text-faint);
+  user-select: none;
+  animation: kiln-jump-cursor-blink 1.2s step-end infinite;
+}
+
+.kiln-jump-row:has(.kiln-jump-input:not(:placeholder-shown)) .kiln-jump-cursor {
+  display: none;
+}
+
+.kiln-jump-input:placeholder-shown {
+  caret-color: transparent;
+}
+
+@keyframes kiln-jump-cursor-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kiln-jump-cursor {
+    animation: none;
+  }
+}
+
 .kiln-jump-input {
   flex: 1;
   min-width: 0;
@@ -768,6 +800,11 @@ body:has(.kiln-ascii) .md-header__button[for="__drawer"] {
   color: var(--color-text-primary);
   font-size: 0.78rem;
   padding: 0;
+}
+
+.kiln-jump-input::placeholder {
+  color: var(--color-text-faint);
+  opacity: 1; /* Firefox dims placeholders on its own */
 }
 
 /* The list resets fight .md-typeset's ul styling on the inline
