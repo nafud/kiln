@@ -770,10 +770,6 @@ body:has(.kiln-ascii) .md-header__button[for="__drawer"] {
   padding: 0;
 }
 
-.kiln-jump-input::placeholder {
-  color: var(--color-text-faint);
-}
-
 /* The list resets fight .md-typeset's ul styling on the inline
    variant; the overlay mounts on document.body outside .md-typeset,
    where they are simply harmless. Same reason the result rules below

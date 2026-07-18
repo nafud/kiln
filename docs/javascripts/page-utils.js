@@ -15,7 +15,7 @@ const KilnUtils = {
 
   /* True when el is a typing context (inputs, textareas, selects,
      contenteditable), where the keyboard scripts (key-nav.js,
-     link-hints.js, quick-jump.js) must leave keystrokes alone. */
+     quick-jump.js) must leave keystrokes alone. */
   isTypingTarget: function (el) {
     if (!el || !el.tagName) return false;
     const tag = el.tagName;

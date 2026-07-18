@@ -55,6 +55,7 @@
           return response.json();
         })
         .then(function (index) {
+          const base = siteBase();
           return index.docs
             .filter(function (doc) {
               return doc.location.indexOf("#") === -1;
@@ -63,7 +64,7 @@
               return {
                 title: doc.title,
                 path: doc.location.replace(/\/$/, ""),
-                url: new URL(doc.location, siteBase()),
+                url: new URL(doc.location, base),
               };
             });
         })

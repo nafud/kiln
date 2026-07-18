@@ -12,8 +12,9 @@
    reveals/re-hides both elsewhere (a body class, desktop-only and
    surviving instant navigation since Material never touches body).
    M cycles the color palette by advancing Material's __palette radio
-   group, the same thing its own toggle button does. ? toggles a help
-   panel listing the bindings; Escape closes it.
+   group (dark and light; the theme's own toggle button is hidden by
+   extra.css). ? toggles a help panel listing the bindings; Escape
+   closes it.
 
    Material's P / N (prev/next page) bindings stay usable alongside
    these. Its search UI is hidden entirely: S belongs to the jump
@@ -230,8 +231,8 @@
         toggleHelpPanel();
         break;
       case "Escape": {
-        /* Close-only (never creates the panel); Material owns Escape
-           for its search overlay. */
+        /* Close-only (never creates the panel); quick-jump.js owns
+           Escape inside its own inputs. */
         const panel = document.querySelector(".key-help");
         if (panel) panel.classList.remove("key-help--open");
         return;
