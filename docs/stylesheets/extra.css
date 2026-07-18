@@ -92,8 +92,8 @@ body {
   display: none !important;
 }
 
-/* Header controls. Material's search UI is hidden outright — S opens
-   the jump palette (quick-jump.js) instead, and the search plugin
+/* Header controls. Material's search UI is hidden outright — backtick
+   opens the jump palette (quick-jump.js) instead, and the search plugin
    survives only to emit the index the palette reads. The palette
    toggle button is hidden too — M (key-nav.js) advances the same
    radio group programmatically, which works on hidden inputs. */
@@ -776,7 +776,7 @@ body:has(.kiln-ascii) .md-header__button[for="__drawer"] {
 
 /* Resting terminal cursor (quick-jump.js inserts the █ span). Linux
    console convention: steady while the prompt is unfocused, blinking
-   once it has focus (S, a click, or the homepage autofocus). It
+   once it has focus (backtick, a click, or the homepage autofocus). It
    disappears at the first typed character, where the native caret
    takes over — the caret is suppressed on the empty input so the two
    never show together. The typed/empty switch rides on

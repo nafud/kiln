@@ -1,10 +1,10 @@
 /* Jump-to-page palette, the site's navigation and its search.
 
-   S, ` (backtick), or Ctrl/Cmd+K summon the prompt on any page — the
+   ` (backtick) or Ctrl/Cmd+K summons the prompt on any page — the
    homepage's inline bar when it is mounted, an overlay everywhere
-   else. Material's own search UI is hidden by extra.css, and the S
-   binding here preempts Material's search handler, so S belongs to
-   the palette. Type to fuzzy-match every page by title and path,
+   else. Material's own search UI is hidden by extra.css, and its
+   S/F// search bindings are neutralized by key-nav.js's swallow
+   listener. Type to fuzzy-match every page by title and path,
    ArrowDown/ArrowUp to pick, Enter to go. The prompt rests as a bar
    with a █ terminal cursor (steady while unfocused, blinking while
    focused) and a faint placeholder; results only exist while a query
@@ -370,17 +370,17 @@
   }
 
   /* Puts the caret in the nearest prompt: the homepage's inline bar
-     when one is mounted, the overlay everywhere else. S, ` and
-     Ctrl/Cmd+K all funnel here. */
+     when one is mounted, the overlay everywhere else. ` and
+     Ctrl/Cmd+K both funnel here. */
   function openPrompt() {
     const inline = document.querySelector(".kiln-jump--inline .kiln-jump-input");
     if (inline) inline.focus();
     else openOverlay();
   }
 
-  /* Capture phase: S must run before (and suppress, via
-     stopImmediatePropagation) Material's own S handler, which would
-     try to focus the hidden search form. */
+  /* Capture phase, matching key-nav.js's swallow listener (which
+     neutralizes Material's own S/F// search bindings — S is a dead
+     key by design, the palette is backtick's alone). */
   window.addEventListener(
     "keydown",
     function (event) {
@@ -396,14 +396,6 @@
         return;
       }
       if (event.ctrlKey || event.altKey || event.metaKey) return;
-
-      if (event.key === "s" || event.key === "S") {
-        if (KilnUtils.isTypingTarget(event.target)) return;
-        openPrompt();
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        return;
-      }
 
       if (event.key === "`") {
         /* Toggle from anywhere except foreign typing contexts (the

@@ -17,11 +17,11 @@
    closes it.
 
    Material's P / N (prev/next page) bindings stay usable alongside
-   these. Its search UI is hidden entirely: S belongs to the jump
-   palette (quick-jump.js preempts Material's handler), and Material's
-   two extra search keys, F and /, are swallowed by a capture-phase
-   listener below so nothing can summon the hidden search form; both
-   still type normally in inputs.
+   these. Its search UI is hidden entirely, and all three of its
+   search keys — S, F and / — are swallowed by a capture-phase
+   listener below so nothing can summon the hidden search form; the
+   jump palette is backtick's alone (quick-jump.js). All three still
+   type normally in inputs.
 
    Keys are ignored while typing (inputs, textareas, contenteditable)
    and in chords with Ctrl/Alt/Meta. Scrolling is smooth unless the
@@ -44,8 +44,7 @@
     [["[", "]"], "previous / next heading"],
     [["<", ">"], "previous / next page"],
     [["0"], "home"],
-    [["1", "–", "6"], "categories"],
-    [["S", "`"], "search"],
+    [["`"], "search"],
     [["H"], "sidebars"],
     [["M"], "light / dark"],
     [["?"], "this help"],
@@ -161,18 +160,24 @@
     panel.classList.toggle("key-help--open", force);
   }
 
-  /* Material also focuses its (hidden) search on F and /. This
+  /* Material also focuses its (hidden) search on S, F and /. This
      capture-phase listener runs before Material's own handler and
-     swallows the two keys outside typing contexts (inside an input
-     the guard lets them through, so they still type); S is handled
-     the same way in quick-jump.js, where it opens the palette. The
-     browser default is left alone. */
+     swallows the three keys outside typing contexts (inside an input
+     the guard lets them through, so they still type). The palette is
+     summoned by backtick alone (quick-jump.js); S is deliberately a
+     dead key. The browser default is left alone. */
   window.addEventListener(
     "keydown",
     function (event) {
       if (event.ctrlKey || event.altKey || event.metaKey) return;
       if (KilnUtils.isTypingTarget(event.target)) return;
-      if (event.key === "/" || event.key === "f" || event.key === "F") {
+      if (
+        event.key === "/" ||
+        event.key === "f" ||
+        event.key === "F" ||
+        event.key === "s" ||
+        event.key === "S"
+      ) {
         event.stopImmediatePropagation();
       }
     },
