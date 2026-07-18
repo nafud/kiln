@@ -35,23 +35,20 @@
 
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
+  /* Each row is [keys, description]; keys render as one chip each, so
+     paired and ranged bindings share a line. "–" is a plain separator,
+     not a chip. */
   const HELP_ROWS = [
-    ["T", "scroll to top"],
-    ["D", "scroll to bottom"],
-    ["J / K", "scroll down / up"],
-    ["[ / ]", "previous / next heading"],
-    ["< / >", "previous / next page"],
-    ["0", "go home"],
-    ["1", "guides"],
-    ["2", "links"],
-    ["3", "books"],
-    ["4", "bookmarks"],
-    ["5", "courses"],
-    ["6", "writeups"],
-    ["H", "show / hide sidebars"],
-    ["M", "light / dark"],
-    ["S / `", "search"],
-    ["?", "toggle this help"],
+    [["T", "D"], "top / bottom"],
+    [["J", "K"], "scroll down / up"],
+    [["[", "]"], "previous / next heading"],
+    [["<", ">"], "previous / next page"],
+    [["0"], "home"],
+    [["1", "–", "6"], "categories"],
+    [["S", "`"], "search"],
+    [["H"], "sidebars"],
+    [["M"], "light / dark"],
+    [["?"], "this help"],
   ];
 
   function scrollBehavior() {
@@ -134,11 +131,21 @@
     panel.className = "key-help";
     panel.setAttribute("role", "dialog");
     panel.setAttribute("aria-label", "Keyboard shortcuts");
+    const escapeHtml = function (s) {
+      return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    };
     const rows = HELP_ROWS.map(function (row) {
+      const keys = row[0]
+        .map(function (token) {
+          return token === "–"
+            ? '<span class="key-help-sep">–</span>'
+            : "<kbd>" + escapeHtml(token) + "</kbd>";
+        })
+        .join("");
       return (
-        "<div class=\"key-help-row\"><kbd>" +
-        row[0] +
-        "</kbd><span>" +
+        '<div class="key-help-row"><span class="key-help-keys">' +
+        keys +
+        "</span><span>" +
         row[1] +
         "</span></div>"
       );

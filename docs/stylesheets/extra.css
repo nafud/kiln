@@ -651,10 +651,25 @@ tt {
   color: var(--color-text-secondary);
 }
 
+/* Fixed-width, right-aligned keys column: one chip per key, so paired
+   bindings read as two keycaps and every description starts on the
+   same vertical line. */
+.key-help-keys {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 3.9rem;
+}
+
+.key-help-sep {
+  color: var(--color-text-faint);
+}
+
 .key-help-row kbd {
-  min-width: 3.4rem;
+  min-width: 1.4rem;
   text-align: center;
-  padding: 0.15rem 0.4rem;
+  padding: 0.15rem 0.3rem;
   border: 1px solid var(--color-border);
   border-radius: 3px;
   background: var(--color-code-bg);
