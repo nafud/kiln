@@ -2,7 +2,7 @@
 
 Notes on *Reverse Engineering for Beginners* (Dennis Yurichev), Chapter 1, sections 1.1 through 1.11.5. The chapter builds a working knowledge of assembly by compiling minimal C functions and reading the output across four instruction sets — x86, x86-64, ARM, and MIPS — with GCC, MSVC, Keil, and LLVM. The method is comparative: the same C source is fed to different compilers and architectures, and the divergence in output teaches what each part of the code compiles to.
 
-Exercise solutions are kept separately in the [Challenges.re writeups](../../../writeups/challenges-re/challenges-re-re4b-ch01.md).
+Exercise solutions are kept separately in the [Challenges.re writeups](../../writeups/challenges-re/challenges-re-re4b-ch01.md).
 
 ## 1.1 The Method
 
@@ -187,8 +187,8 @@ The only substantive difference between the 32-bit (x86/ARM) and 64-bit (x64/ARM
 
 ### 1.5.6 Exercises
 
-- [Challenge #48](../../../writeups/challenges-re/challenges-re-re4b-ch01.md#challenge-48-messagebeep-wrapper) — win32 function, x86.
-- [Challenge #49](../../../writeups/challenges-re/challenges-re-re4b-ch01.md#challenge-49-sleep-wrapper) — Linux function, x64 (AT&T).
+- [Challenge #48](../../writeups/challenges-re/challenges-re-re4b-ch01.md#challenge-48-messagebeep-wrapper) — win32 function, x86.
+- [Challenge #49](../../writeups/challenges-re/challenges-re-re4b-ch01.md#challenge-49-sleep-wrapper) — Linux function, x64 (AT&T).
 
 ## 1.6 Function Prologue and Epilogue
 
@@ -305,8 +305,8 @@ A function reserves local space by decrementing SP, so allocation cost is consta
 
 ### 1.9.5 Exercises
 
-- [Challenge #51](../../../writeups/challenges-re/challenges-re-re4b-ch01.md#challenge-51-printf-with-missing-arguments) — `printf` with missing arguments (stack).
-- [Challenge #52](../../../writeups/challenges-re/challenges-re-re4b-ch01.md#challenge-52-printf-of-time) — `printf` of `time()` (stack).
+- [Challenge #51](../../writeups/challenges-re/challenges-re-re4b-ch01.md#challenge-51-printf-with-missing-arguments) — `printf` with missing arguments (stack).
+- [Challenge #52](../../writeups/challenges-re/challenges-re-re4b-ch01.md#challenge-52-printf-of-time) — `printf` of `time()` (stack).
 
 ## 1.10 Almost Empty Function
 

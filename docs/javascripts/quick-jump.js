@@ -1,4 +1,4 @@
-/* Jump-to-page palette and the home-view mode it powers.
+/* Jump-to-page palette, the site's primary navigation.
 
    ` (backtick) or Ctrl/Cmd+K toggles an overlay palette on any page:
    type to fuzzy-match every page by title and path, ArrowDown/ArrowUp
@@ -8,19 +8,15 @@
    happens by clicking them, which keeps navigation.instant in charge
    (same rule as key-nav.js).
 
-   The same component has an inline variant for the homepage: in
-   jump-bar mode extra.css hides the homepage card grid (section
-   landing pages keep theirs) and the palette mounts under the ASCII
-   logo with its input focused, so the homepage is a clean prompt. Its
-   results render as a dropdown floating over the content below the
-   bar (extra.css positions the list absolutely), so matching never
-   changes the page height. The mode lives in localStorage ("kiln-home-view") as a
-   class on the html element ("kiln-home-jump"), applied before first
-   paint by the inline script in overrides/main.html so the homepage
-   never flashes the other view; the switch button in key-nav.js's help
-   panel toggles it via the "kiln:home-view-toggle" event, which this
-   script owns. With JS absent nothing sets the class, so the card
-   homepage still works.
+   The same component has an inline variant that always mounts on the
+   homepage, under the ASCII logo with its input focused, so the
+   homepage is a prompt. Its results render as a dropdown floating
+   over the content below the bar (extra.css positions the list
+   absolutely), so matching never changes the page height. The card
+   grid in the homepage Markdown is the no-JS fallback: the pre-paint
+   script in overrides/main.html stamps kiln-js on the html element,
+   and extra.css hides the homepage cards under it (category landing
+   pages keep their card grids — the rule is gated on the ASCII logo).
 
    Pages come from the search plugin's search_index.json, the same data
    Material's search uses, fetched lazily once per full page load — no
@@ -32,8 +28,6 @@
   "use strict";
 
   const MAX_RESULTS = 8;
-  const MODE_CLASS = "kiln-home-jump";
-  const STORAGE_KEY = "kiln-home-view";
 
   /* ---------- page data ---------- */
 
@@ -383,56 +377,22 @@
     }
   });
 
-  /* ---------- home view (cards vs jump bar) ---------- */
+  /* ---------- homepage prompt ---------- */
 
-  function jumpModeOn() {
-    return document.documentElement.classList.contains(MODE_CLASS);
-  }
-
-  /* Mounts or removes the inline palette to match the mode. The
-     homepage is recognized by the ASCII logo, the same gate the
-     homepage CSS uses; navigation.instant replaces the content DOM, so
-     this runs on every page change. */
-  function syncHomepage(focus) {
+  /* Mounts the inline palette on the homepage, recognized by the
+     ASCII logo (the same gate the homepage CSS uses).
+     navigation.instant replaces the content DOM, so this runs on
+     every page change; leaving the homepage discards the mount with
+     the rest of the content. */
+  function syncHomepage() {
     const ascii = document.querySelector(".md-content .kiln-ascii");
-    const existing = document.querySelector(".kiln-jump--inline");
-    if (ascii && jumpModeOn()) {
-      if (existing) return;
-      const inline = createPalette("inline", function () {
-        inline.input.blur();
-      });
-      ascii.insertAdjacentElement("afterend", inline.root);
-      inline.reset();
-      if (focus !== false) inline.input.focus();
-    } else if (existing) {
-      existing.remove();
-    }
-  }
-
-  function setJumpMode(on) {
-    document.documentElement.classList.toggle(MODE_CLASS, on);
-    try {
-      localStorage.setItem(STORAGE_KEY, on ? "jump" : "cards");
-    } catch (error) {
-      /* Private mode: the switch still works for this page load. */
-    }
-    syncHomepage();
-  }
-
-  /* Dispatched by the switch button in key-nav.js's help panel. */
-  document.addEventListener("kiln:home-view-toggle", function () {
-    setJumpMode(!jumpModeOn());
-  });
-
-  /* overrides/main.html applies the stored mode before first paint;
-     re-applying here is a harmless no-op that keeps the mode working if
-     that template block ever goes missing. */
-  try {
-    if (localStorage.getItem(STORAGE_KEY) === "jump") {
-      document.documentElement.classList.add(MODE_CLASS);
-    }
-  } catch (error) {
-    /* Storage unavailable: stay in the default cards view. */
+    if (!ascii || document.querySelector(".kiln-jump--inline")) return;
+    const inline = createPalette("inline", function () {
+      inline.input.blur();
+    });
+    ascii.insertAdjacentElement("afterend", inline.root);
+    inline.reset();
+    inline.input.focus();
   }
 
   KilnUtils.onPageChange(function () {

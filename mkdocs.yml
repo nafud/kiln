@@ -79,49 +79,46 @@ extra_javascript:
   - javascripts/heading-shimmer.js
   - javascripts/key-nav.js
   - javascripts/quick-jump.js
-  - javascripts/link-hints.js
 
 plugins:
   - search
 
 nav:
-  - Toolkit:
-      - toolkit/index.md
-      - Guides:
-          - toolkit/guides/index.md
-          - Radare2: toolkit/guides/radare2/index.md
-          - Volatility 3: toolkit/guides/volatility3/index.md
-      - Links: toolkit/links/index.md
+  - Guides:
+      - guides/index.md
+      - Radare2: guides/radare2/index.md
+      - Volatility 3: guides/volatility3/index.md
 
-  - Readings:
-      - readings/index.md
-      - Books:
-          - readings/books/index.md
-          - "Computer Systems: A Programmer's Perspective":
-              - readings/books/csapp/index.md
-              - Chapter 3: readings/books/csapp/csapp-chapter-03.md
-              - Chapter 4: readings/books/csapp/csapp-chapter-04.md
-              - Chapter 7: readings/books/csapp/csapp-chapter-07.md
-              - Chapter 8: readings/books/csapp/csapp-chapter-08.md
-              - Chapter 9: readings/books/csapp/csapp-chapter-09.md
-          - Modern x86 Assembly Language Programming:
-              - readings/books/mx86alp/index.md
-              - Chapter 1: readings/books/mx86alp/mx86alp-chapter-01.md
-              - Chapter 6: readings/books/mx86alp/mx86alp-chapter-06.md
-          - Practical Reverse Engineering:
-              - readings/books/pre/index.md
-              - Chapter 1: readings/books/pre/pre-chapter-01.md
-              - Chapter 2: readings/books/pre/pre-chapter-02.md
-              - Chapter 3: readings/books/pre/pre-chapter-03.md
-          - Practical Binary Analysis:
-              - readings/books/pba/index.md
-              - Chapter 1: readings/books/pba/pba-chapter-01.md
-              - Chapter 2: readings/books/pba/pba-chapter-02.md
-              - Chapter 3: readings/books/pba/pba-chapter-03.md
-          - Reverse Engineering for Beginners:
-              - readings/books/re4b/index.md
-              - Chapter 1: readings/books/re4b/re4b-chapter-01.md
-      - Bookmarks: readings/bookmarks/index.md
+  - Links: links/index.md
+
+  - Books:
+      - books/index.md
+      - "Computer Systems: A Programmer's Perspective":
+          - books/csapp/index.md
+          - Chapter 3: books/csapp/csapp-chapter-03.md
+          - Chapter 4: books/csapp/csapp-chapter-04.md
+          - Chapter 7: books/csapp/csapp-chapter-07.md
+          - Chapter 8: books/csapp/csapp-chapter-08.md
+          - Chapter 9: books/csapp/csapp-chapter-09.md
+      - Modern x86 Assembly Language Programming:
+          - books/mx86alp/index.md
+          - Chapter 1: books/mx86alp/mx86alp-chapter-01.md
+          - Chapter 6: books/mx86alp/mx86alp-chapter-06.md
+      - Practical Reverse Engineering:
+          - books/pre/index.md
+          - Chapter 1: books/pre/pre-chapter-01.md
+          - Chapter 2: books/pre/pre-chapter-02.md
+          - Chapter 3: books/pre/pre-chapter-03.md
+      - Practical Binary Analysis:
+          - books/pba/index.md
+          - Chapter 1: books/pba/pba-chapter-01.md
+          - Chapter 2: books/pba/pba-chapter-02.md
+          - Chapter 3: books/pba/pba-chapter-03.md
+      - Reverse Engineering for Beginners:
+          - books/re4b/index.md
+          - Chapter 1: books/re4b/re4b-chapter-01.md
+
+  - Bookmarks: bookmarks/index.md
 
   - Courses:
       - courses/index.md

@@ -51,6 +51,7 @@ jobs:
             'md-search__scrollwrap' \
             'md-logo' \
             '__palette' \
+            '__drawer' \
             'md-nav--primary' \
             'md-nav__title' \
             'md-nav__list' \
@@ -86,18 +87,18 @@ jobs:
             exit 1
           }
 
-          # overrides/main.html injects the pre-paint home-view script
+          # overrides/main.html injects the pre-paint kiln-js script
           # through Material's extrahead block; a block rename in a
           # Material update would silently drop it (the homepage would
-          # flash cards in jump-bar mode).
-          grep -qF -- 'kiln-home-jump' site/index.html || {
-            echo "::error::site/index.html lost the pre-paint home-view script — Material's extrahead block was likely renamed. Update overrides/main.html."
+          # flash its fallback cards before the jump bar mounts).
+          grep -qF -- 'kiln-js' site/index.html || {
+            echo "::error::site/index.html lost the pre-paint kiln-js script — Material's extrahead block was likely renamed. Update overrides/main.html."
             exit 1
           }
 
           # key-nav.js follows the hidden footer's prev/next links for the
           # < / > page-switch keys (navigation.footer puts them in the DOM).
-          grep -qF -- 'md-footer__link' site/readings/index.html || {
+          grep -qF -- 'md-footer__link' site/books/index.html || {
             echo "::error::Material internal 'md-footer__link' is gone from the built HTML — a theme update likely renamed it or navigation.footer stopped emitting it. Update the page-switch keys in docs/javascripts/key-nav.js."
             exit 1
           }

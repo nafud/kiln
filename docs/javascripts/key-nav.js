@@ -5,24 +5,21 @@
    < and > follow the previous/next page in nav order, via Material's
    footer links (the footer is display:none in extra.css but present in
    the DOM; navigation.footer is enabled solely for this), 0 goes home
-   via the header logo, and 1-4 open the top-level sections in sidebar
-   nav order. Clicking links, rather than assigning location, keeps
-   navigation.instant in charge. Sidebars are hidden by default
-   site-wide (extra.css); H reveals/re-hides both (a body class,
-   desktop-only and surviving instant navigation since Material never
-   touches body).
+   via the header logo, and 1-6 open the top-level categories in
+   sidebar nav order. Clicking links, rather than assigning location,
+   keeps navigation.instant in charge. Sidebars are hidden by default
+   site-wide and disabled entirely on the homepage (extra.css); H
+   reveals/re-hides both elsewhere (a body class, desktop-only and
+   surviving instant navigation since Material never touches body).
    M cycles the color palette by advancing Material's __palette radio
    group, the same thing its own toggle button does. ? toggles a help
    panel listing the bindings; Escape closes it.
 
    Material's own S (search) and P / N (prev/next page) bindings stay
-   usable alongside these. Its extra search key / is swallowed by a
-   capture-phase listener below so S alone owns search (it still types
-   normally in inputs); its other extra search key F is taken over by
-   link-hints.js for link hints. The ` jump palette is quick-jump.js;
-   the help panel carries that script's home-view switch button, wired
-   through the kiln:home-view-toggle event so the mode logic stays in
-   one place.
+   usable alongside these. Its two extra search keys, F and /, are
+   swallowed by a capture-phase listener below so S alone owns search;
+   both still type normally in inputs. The ` jump palette is
+   quick-jump.js.
 
    Keys are ignored while typing (inputs, textareas, contenteditable)
    and in chords with Ctrl/Alt/Meta. Scrolling is smooth unless the
@@ -43,15 +40,16 @@
     ["[ / ]", "previous / next heading"],
     ["< / >", "previous / next page"],
     ["0", "go home"],
-    ["1", "toolkit"],
-    ["2", "readings"],
-    ["3", "courses"],
-    ["4", "writeups"],
+    ["1", "guides"],
+    ["2", "links"],
+    ["3", "books"],
+    ["4", "bookmarks"],
+    ["5", "courses"],
+    ["6", "writeups"],
     ["H", "show / hide sidebars"],
     ["M", "light / dark / system"],
     ["S", "search"],
     ["`", "jump to a page"],
-    ["F", "follow a link"],
     ["?", "toggle this help"],
   ];
 
@@ -144,21 +142,6 @@
       );
     });
     panel.innerHTML = rows.join("");
-
-    /* Home-view switch (cards vs jump bar). quick-jump.js owns the
-       mode and handles this event; which label shows follows the html
-       mode class via extra.css, so no state is tracked here. */
-    const switchButton = document.createElement("button");
-    switchButton.type = "button";
-    switchButton.className = "key-help-switch";
-    switchButton.innerHTML =
-      '<span class="key-help-switch-to-jump">switch home to jump bar</span>' +
-      '<span class="key-help-switch-to-cards">switch home to cards</span>';
-    switchButton.addEventListener("click", function () {
-      document.dispatchEvent(new CustomEvent("kiln:home-view-toggle"));
-    });
-    panel.appendChild(switchButton);
-
     document.body.appendChild(panel);
     return panel;
   }
@@ -171,15 +154,15 @@
 
   /* Material also focuses search on F and /; only S should. This
      capture-phase listener runs before Material's own handler and
-     swallows / outside typing contexts (inside an input the guard lets
-     it through, so it still types); F is claimed by link-hints.js's own
-     capture listener instead. The browser default is left alone. */
+     swallows the two keys outside typing contexts (inside an input
+     the guard lets them through, so they still type). The browser
+     default is left alone. */
   window.addEventListener(
     "keydown",
     function (event) {
       if (event.ctrlKey || event.altKey || event.metaKey) return;
       if (KilnUtils.isTypingTarget(event.target)) return;
-      if (event.key === "/") {
+      if (event.key === "/" || event.key === "f" || event.key === "F") {
         event.stopImmediatePropagation();
       }
     },
@@ -233,6 +216,8 @@
       case "2":
       case "3":
       case "4":
+      case "5":
+      case "6":
         goToSection(Number(event.key));
         break;
       case "m":

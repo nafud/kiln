@@ -663,53 +663,25 @@ tt {
   font-weight: 700;
 }
 
-/* Home-view switch button inside the help panel (key-nav.js builds it,
-   quick-jump.js owns the mode). Label style plus the button hover lift;
-   the two labels swap on the html mode class, so the button always
-   names the view it switches to. */
-.key-help-switch {
-  margin-top: 0.35rem;
-  padding: 0.4rem 0.6rem;
-  border: 1px solid var(--color-border);
-  border-radius: 3px;
-  background: var(--color-code-bg);
-  color: var(--color-text-secondary);
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  cursor: pointer;
-  transition:
-    border-color 150ms ease,
-    color 150ms ease,
-    transform 150ms ease,
-    box-shadow 150ms ease;
-}
-
-.key-help-switch:hover {
-  border-color: var(--color-accent);
-  color: var(--color-text-primary);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px var(--color-shadow);
-}
-
-.key-help-switch-to-cards {
+/* The homepage card grid is the no-JS fallback for the jump bar:
+   kiln-js is stamped on the html element before first paint by the
+   inline script in overrides/main.html, and under it the cards give
+   way to the inline palette quick-jump.js mounts. Scoped to the
+   homepage via the ASCII-logo gate — category landing pages use
+   .home-grid too and always keep their cards. */
+.kiln-js .md-content__inner:has(.kiln-ascii) .home-grid {
   display: none;
 }
 
-.kiln-home-jump .key-help-switch-to-jump {
+/* The homepage has no sidebars at all (the jump bar and the header are
+   its whole chrome): unconditional, so the H reveal class does not
+   apply there, and at drawer widths the drawer toggle goes with it. */
+body:has(.kiln-ascii) .md-sidebar--primary,
+body:has(.kiln-ascii) .md-sidebar--secondary {
   display: none;
 }
 
-.kiln-home-jump .key-help-switch-to-cards {
-  display: inline;
-}
-
-/* Jump-bar mode (html class, applied before first paint by the inline
-   script in overrides/main.html and owned by quick-jump.js): the
-   homepage swaps its card grid for the inline palette. Scoped to the
-   homepage via the ASCII-logo gate — section landing pages use
-   .home-grid too and keep their cards in every mode. */
-.kiln-home-jump .md-content__inner:has(.kiln-ascii) .home-grid {
+body:has(.kiln-ascii) .md-header__button[for="__drawer"] {
   display: none;
 }
 
@@ -878,39 +850,6 @@ tt {
   font-size: 0.7rem;
 }
 
-/* Link-hint labels (link-hints.js, activated with F). Floating chips
-   pinned to viewport positions, in the label style; like the other
-   floating layers they carry a shadow for separation. The typed part
-   of a label turns accent as it is matched. */
-.kiln-hints {
-  position: fixed;
-  inset: 0;
-  z-index: 1003;
-  pointer-events: none;
-}
-
-.kiln-hint {
-  position: absolute;
-  transform: translateY(-55%);
-  padding: 0.05rem 0.3rem;
-  border: 1px solid var(--color-border);
-  border-radius: 3px;
-  background: var(--color-surface);
-  box-shadow: 0 2px 6px var(--color-shadow);
-  color: var(--color-text-primary);
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.kiln-hint-typed {
-  color: var(--color-accent);
-}
-
-.kiln-hint--dead {
-  display: none;
-}
 
 /* Sticky sidebar title — transparent so it matches sidebar background */
 
