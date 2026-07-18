@@ -697,9 +697,24 @@ tt {
 
 /* Jump-bar mode (html class, applied before first paint by the inline
    script in overrides/main.html and owned by quick-jump.js): the
-   homepage swaps its card grid for the inline palette below. */
+   homepage swaps its card grid for the inline palette below, and goes
+   chrome-free — both sidebars hidden, content centered in the freed
+   width. The sidebar rules are desktop-only for the same reason as the
+   H toggle above: below Material's breakpoint the sidebars are
+   off-canvas drawers. Other pages keep their sidebars. */
 .kiln-home-jump .home-grid {
   display: none;
+}
+
+@media screen and (min-width: 76.25em) {
+  .kiln-home-jump .md-main:has(.kiln-ascii) .md-sidebar--primary,
+  .kiln-home-jump .md-main:has(.kiln-ascii) .md-sidebar--secondary {
+    display: none;
+  }
+
+  .kiln-home-jump .md-main:has(.kiln-ascii) .md-content {
+    margin: 0 auto;
+  }
 }
 
 /* Jump-to-page palette (quick-jump.js; ` or Ctrl+K opens the overlay,
@@ -722,6 +737,7 @@ tt {
 }
 
 .kiln-jump--inline {
+  position: relative; /* anchors the floating results dropdown */
   width: min(34rem, 100%);
   margin: 1.2rem auto 0;
 }
@@ -744,6 +760,19 @@ tt {
   align-items: center;
   gap: 0.55rem;
   padding: 0.6rem 0.8rem;
+}
+
+/* The divider under the input exists only while the list is populated;
+   an empty list collapses entirely, so the resting palette is a clean
+   bar in both variants. The scoped twin outranks Material's
+   `.md-typeset ul:not([hidden]) { display: flow-root }` on the inline
+   variant. */
+.kiln-jump-results:empty,
+.md-typeset .kiln-jump-results:empty {
+  display: none;
+}
+
+.kiln-jump-panel:has(.kiln-jump-results:not(:empty)) .kiln-jump-row {
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -780,6 +809,23 @@ tt {
   max-height: 46vh;
   overflow-y: auto;
   overscroll-behavior: contain;
+}
+
+/* Inline results float over the content below the bar instead of
+   sitting in the flow, so matches never change the page height. As a
+   floating layer the dropdown carries its own surface and shadow (the
+   panel's overflow:hidden no longer clips it). */
+.kiln-jump--inline .kiln-jump-results {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 40vh;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-surface);
+  box-shadow: 0 4px 12px var(--color-shadow);
 }
 
 .kiln-jump-results li {
@@ -824,7 +870,7 @@ tt {
 .kiln-jump-result-path {
   color: var(--color-text-muted);
   font-size: 0.65rem;
-  max-width: 55%;
+  max-width: 42%; /* the title is the primary label; give it the row */
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;

@@ -2,15 +2,19 @@
 
    ` (backtick) or Ctrl/Cmd+K toggles an overlay palette on any page:
    type to fuzzy-match every page by title and path, ArrowDown/ArrowUp
-   to pick, Enter to go. An empty query lists the top-level sections.
-   Escape (or a click on the backdrop) closes. The result rows are real
-   links and navigation happens by clicking them, which keeps
-   navigation.instant in charge (same rule as key-nav.js).
+   to pick, Enter to go. The prompt starts as a clean bar — results
+   only exist while a query is typed. Escape (or a click on the
+   backdrop) closes. The result rows are real links and navigation
+   happens by clicking them, which keeps navigation.instant in charge
+   (same rule as key-nav.js).
 
    The same component has an inline variant for the homepage: in
-   jump-bar mode the card grid is hidden by extra.css and the palette
-   mounts under the ASCII logo with its input focused, so the homepage
-   is a prompt. The mode lives in localStorage ("kiln-home-view") as a
+   jump-bar mode extra.css hides the card grid and both sidebars, and
+   the palette mounts under the ASCII logo with its input focused, so
+   the homepage is a chrome-free prompt. Its results render as a
+   dropdown floating over the content below the bar (extra.css
+   positions the list absolutely), so matching never changes the page
+   height. The mode lives in localStorage ("kiln-home-view") as a
    class on the html element ("kiln-home-jump"), applied before first
    paint by the inline script in overrides/main.html so the homepage
    never flashes the other view; the switch button in key-nav.js's help
@@ -123,18 +127,13 @@
     return total;
   }
 
-  /* An empty query lists the top level (section landing pages and
-     Home), the palette's equivalent of the homepage cards. The page
-     currently open is never offered. */
+  /* The page currently open is never offered. An empty query matches
+     nothing — the prompt stays a clean bar until typed into (render()
+     short-circuits it before this is called). */
   function matchPages(query, pages) {
     const candidates = pages.filter(function (page) {
       return page.url.pathname !== location.pathname;
     });
-    if (!query.trim()) {
-      return candidates.filter(function (page) {
-        return page.path.indexOf("/") === -1;
-      });
-    }
     const scored = [];
     candidates.forEach(function (page) {
       const score = pageScore(query, page);
@@ -248,9 +247,18 @@
     }
 
     /* The fetch resolves asynchronously; the sequence guard drops a
-       stale render finishing after a newer keystroke's. */
+       stale render finishing after a newer keystroke's. An empty query
+       clears the list synchronously (and skips the fetch, so the index
+       is not even loaded until the first real keystroke). */
     function render() {
       const seq = ++renderSeq;
+      if (!input.value.trim()) {
+        results = [];
+        list.textContent = "";
+        input.setAttribute("aria-expanded", "false");
+        input.removeAttribute("aria-activedescendant");
+        return;
+      }
       loadPages().then(
         function (pages) {
           if (seq !== renderSeq) return;
