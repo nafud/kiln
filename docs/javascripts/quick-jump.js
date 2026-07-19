@@ -9,10 +9,10 @@
    with a █ terminal cursor (steady while unfocused, blinking while
    focused) and a faint "type -h for help" placeholder; results only
    exist while a query is typed. Typing -h or --help renders the
-   keyboard bindings (KilnUtils.HELP_ROWS) in the dropdown as usage
-   output, CLI style — that IS the site's help; the h key (key-nav.js)
-   opens the prompt with the flag pre-typed via KilnUtils.summonHelp.
-   Escape (or a click on the backdrop) closes. The result rows are
+   keyboard binding table (HELP_ROWS below) in the dropdown as usage
+   output, CLI style — that IS the site's help, and the flags are its
+   only trigger. Escape (or a click on the backdrop) closes. The
+   result rows are
    real links and navigation happens by clicking them, which keeps
    navigation.instant in charge (same rule as key-nav.js).
 
@@ -36,6 +36,22 @@
   "use strict";
 
   const MAX_RESULTS = 8;
+
+  /* The keyboard bindings -h/--help prints, [keys, description] per
+     row, GNU --help style (keys comma-joined, descriptions
+     lowercase). The bindings themselves live in key-nav.js — keep
+     this table in sync when they change. */
+  const HELP_ROWS = [
+    [["gg", "G"], "jump to top / bottom"],
+    [["k", "j"], "scroll up / down"],
+    [["[", "]"], "navigate headings"],
+    [["<", ">"], "navigate pages"],
+    [["0"], "home"],
+    [["`"], "search"],
+    [["s"], "toggle sidebars"],
+    [["t"], "toggle theme"],
+    [["-h", "--help"], "display this help"],
+  ];
 
   /* ---------- page data ---------- */
 
@@ -276,27 +292,21 @@
       paintSelection();
     }
 
-    /* -h / --help answers exactly like a coreutils command: a usage
-       line, a one-line description, then the option table as plain
-       aligned monospace text in a single pre. Not options — results
-       stays empty, so Arrow/Enter are inert and the listbox stays
-       collapsed for AT. */
+    /* -h / --help answers like a coreutils command: the option table
+       as plain aligned monospace text in a single pre. Not options —
+       results stays empty, so Arrow/Enter are inert and the listbox
+       stays collapsed for AT. */
     function paintHelp() {
       results = [];
       list.textContent = "";
-      const rows = KilnUtils.HELP_ROWS.map(function (row) {
+      const rows = HELP_ROWS.map(function (row) {
         return { keys: row[0].join(", "), label: row[1] };
       });
       const width = rows.reduce(function (w, r) {
         return Math.max(w, r.keys.length);
       }, 0);
-      const lines = [
-        "Usage: kiln [PAGE]",
-        "Kiln is a personal knowledge base, type a name to jump.",
-        "",
-      ];
-      rows.forEach(function (r) {
-        lines.push("  " + r.keys + " ".repeat(width - r.keys.length + 3) + r.label);
+      const lines = rows.map(function (r) {
+        return "  " + r.keys + " ".repeat(width - r.keys.length + 3) + r.label;
       });
       const item = document.createElement("li");
       item.className = "kiln-jump-help";
@@ -420,17 +430,6 @@
     else openOverlay();
   }
 
-  /* The h binding (key-nav.js) lands here: the prompt opens with -h
-     already typed, as if the user ran the flag themselves. The
-     synthetic input event drives the same render path as typing. */
-  KilnUtils.summonHelp = function () {
-    openPrompt();
-    const input = document.activeElement;
-    if (input instanceof Element && input.classList.contains("kiln-jump-input")) {
-      input.value = "-h";
-      input.dispatchEvent(new Event("input"));
-    }
-  };
 
   /* Capture phase, matching key-nav.js's swallow listener (which
      neutralizes Material's own s/S/F// search bindings — lowercase s

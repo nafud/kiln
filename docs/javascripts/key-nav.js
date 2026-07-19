@@ -16,10 +16,10 @@
    both elsewhere (a body class, desktop-only and surviving instant
    navigation since Material never touches body). t cycles the color
    palette by advancing Material's __palette radio group (dark and
-   light; the theme's own toggle button is hidden by extra.css). h
-   summons the jump palette with -h pre-typed — help is the palette's
-   usage output (quick-jump.js), not a separate panel; the binding
-   table itself lives on KilnUtils.HELP_ROWS in page-utils.js.
+   light; the theme's own toggle button is hidden by extra.css).
+   There is no help binding: help is the palette's -h/--help usage
+   output (quick-jump.js, which also owns the binding table those
+   flags print — keep it in sync when bindings here change).
 
    Material's P / N (prev/next page) bindings stay usable alongside
    these. Its search UI is hidden entirely, and its search keys —
@@ -183,12 +183,6 @@
         break;
       case "k":
         window.scrollBy({ top: -SCROLL_STEP_PX, behavior: scrollBehavior() });
-        break;
-      case "h":
-        /* Summon the palette with -h typed, as if the user ran the
-           flag themselves — quick-jump.js registers the hook and
-           renders the usage output. */
-        if (KilnUtils.summonHelp) KilnUtils.summonHelp();
         break;
       case "[":
         jumpToHeading(-1);
