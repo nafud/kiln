@@ -1,7 +1,10 @@
 /* Keyboard navigation.
 
-   Scrolling: T jumps to the top, D to the bottom, J/K scroll down/up a
-   step, [ and ] to the previous/next h2 section on the page. Pages:
+   Scrolling is the vim vocabulary, case-accurate: gg (a two-tap
+   chord) jumps to the top, G to the bottom, lowercase j/k scroll
+   down/up a step (uppercase J/K deliberately do nothing — vim gives
+   them unrelated meanings), [ and ] to the previous/next h2 section
+   on the page. Pages:
    < and > follow the previous/next page in nav order, via Material's
    footer links (the footer is display:none in extra.css but present in
    the DOM; navigation.footer is enabled solely for this), 0 goes home
@@ -41,8 +44,8 @@
   /* Each row is [keys, description]; keys render as one chip each, so
      paired bindings share a line. */
   const HELP_ROWS = [
-    [["T", "D"], "Jump to Top/Bottom"],
-    [["J", "K"], "Scroll Down/Up"],
+    [["gg", "G"], "Jump to Top/Bottom"],
+    [["k", "j"], "Scroll Up/Down"],
     [["[", "]"], "Navigate Headings"],
     [["<", ">"], "Navigate Pages"],
     [["0"], "Home"],
@@ -54,6 +57,9 @@
 
   /* Pointer-idle gap before the homepage help hint fades. */
   const HINT_IDLE_MS = 1200;
+
+  /* Window for the second g of the gg chord (vim's timeoutlen idea). */
+  const GG_CHORD_MS = 600;
 
   function scrollBehavior() {
     return reducedMotion.matches ? "auto" : "smooth";
@@ -230,28 +236,38 @@
     true
   );
 
+  /* Timestamp of the pending first g of a gg chord. */
+  let lastGAt = 0;
+
   window.addEventListener("keydown", function (event) {
     if (event.ctrlKey || event.altKey || event.metaKey) return;
     if (KilnUtils.isTypingTarget(event.target)) return;
 
+    /* The scroll motions are the vim keys, case-accurate: gg (a
+       two-tap chord) and G jump, lowercase j/k step — their
+       uppercase forms deliberately do nothing, as in vim they mean
+       something else entirely. */
     switch (event.key) {
-      case "t":
-      case "T":
-        window.scrollTo({ top: 0, behavior: scrollBehavior() });
+      case "g": {
+        const now = performance.now();
+        if (now - lastGAt < GG_CHORD_MS) {
+          lastGAt = 0;
+          window.scrollTo({ top: 0, behavior: scrollBehavior() });
+        } else {
+          lastGAt = now;
+        }
         break;
-      case "d":
-      case "D":
+      }
+      case "G":
         window.scrollTo({
           top: document.documentElement.scrollHeight,
           behavior: scrollBehavior(),
         });
         break;
       case "j":
-      case "J":
         window.scrollBy({ top: SCROLL_STEP_PX, behavior: scrollBehavior() });
         break;
       case "k":
-      case "K":
         window.scrollBy({ top: -SCROLL_STEP_PX, behavior: scrollBehavior() });
         break;
       case "h":
