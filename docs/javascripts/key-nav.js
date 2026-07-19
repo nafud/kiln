@@ -42,7 +42,7 @@
      paired bindings share a line. */
   const HELP_ROWS = [
     [["T", "D"], "Jump to Top/Bottom"],
-    [["J", "K"], "Scroll Up/Down"],
+    [["J", "K"], "Scroll Down/Up"],
     [["[", "]"], "Navigate Headings"],
     [["<", ">"], "Navigate Pages"],
     [["0"], "Home"],
