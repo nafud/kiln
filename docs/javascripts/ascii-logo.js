@@ -403,7 +403,7 @@
   );
 
   /* The grid is sized from the container width, which can change with
-     no window resize (the H sidebar toggle in key-nav.js widens and
+     no window resize (the S sidebar toggle in key-nav.js widens and
      narrows the content column): rebuild when the container itself
      resizes, once a frame exists to correct. The signature guard makes
      redundant fires cheap. */

@@ -599,7 +599,7 @@ tt {
   opacity: 1;
 }
 
-/* Sidebars are hidden by default across the whole site; H (key-nav.js)
+/* Sidebars are hidden by default across the whole site; S (key-nav.js)
    reveals them by putting kiln-sidebars-shown on body, and the choice
    survives navigation.instant (Material never touches body) until the
    next full load. Desktop only: below Material's 76.25em breakpoint
@@ -617,7 +617,7 @@ tt {
   }
 }
 
-/* Keyboard-shortcut help panel (key-nav.js, toggled with ?). Surface
+/* Keyboard-shortcut help panel (key-nav.js, toggled with H). Surface
    recipe, plus a resting shadow: unlike the hover-lift surfaces this
    is a floating popover over content and needs the separation. */
 .key-help {
@@ -643,6 +643,35 @@ tt {
   pointer-events: auto;
 }
 
+/* Homepage help hint (key-nav.js): sits where the help panel opens,
+   fading with pointer activity like the scroll-progress chip (which
+   stays empty on the unscrollable homepage, so the corner is free).
+   Suppressed while the panel itself is open. */
+.key-hint {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 38px;
+  padding: 0 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 0.7rem;
+  user-select: none;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.key-hint--visible {
+  opacity: 1;
+}
+
 .key-help-row {
   display: flex;
   align-items: center;
@@ -653,20 +682,18 @@ tt {
 
 /* Fixed-width, right-aligned keys column: one chip per key, so paired
    bindings read as two keycaps and every description starts on the
-   same vertical line. */
+   same vertical line. The width is exactly two chips plus the gap —
+   any more turns into dead space before the widest row's first chip. */
 .key-help-keys {
   display: flex;
   justify-content: flex-end;
   align-items: center;
   gap: 0.25rem;
-  min-width: 3.9rem;
+  min-width: 3.05rem;
 }
 
-.key-help-sep {
-  color: var(--color-text-faint);
-}
-
-.key-help-row kbd {
+.key-help-row kbd,
+.key-hint kbd {
   min-width: 1.4rem;
   text-align: center;
   padding: 0.15rem 0.3rem;
@@ -689,7 +716,7 @@ tt {
 }
 
 /* The homepage has no sidebars at all (the jump bar and the header are
-   its whole chrome): unconditional, so the H reveal class does not
+   its whole chrome): unconditional, so the S reveal class does not
    apply there, and at drawer widths the drawer toggle goes with it. */
 body:has(.kiln-ascii) .md-sidebar--primary,
 body:has(.kiln-ascii) .md-sidebar--secondary {
@@ -701,7 +728,7 @@ body:has(.kiln-ascii) .md-header__button[for="__drawer"] {
 }
 
 /* Homepage centering must not depend on the sidebar-reveal class: the
-   sidebars above are gone unconditionally, so without this, pressing H
+   sidebars above are gone unconditionally, so without this, pressing S
    (which drops the body:not(.kiln-sidebars-shown) centering rule)
    would shift the homepage content into the layout slot of sidebars
    that are not there. */

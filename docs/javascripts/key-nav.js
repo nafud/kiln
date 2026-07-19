@@ -8,20 +8,23 @@
    via the header logo, and 1-6 open the top-level categories in
    sidebar nav order. Clicking links, rather than assigning location,
    keeps navigation.instant in charge. Sidebars are hidden by default
-   site-wide and disabled entirely on the homepage (extra.css); H
+   site-wide and disabled entirely on the homepage (extra.css); S
    reveals/re-hides both elsewhere (a body class, desktop-only and
    surviving instant navigation since Material never touches body).
    M cycles the color palette by advancing Material's __palette radio
    group (dark and light; the theme's own toggle button is hidden by
-   extra.css). ? toggles a help panel listing the bindings; Escape
-   closes it.
+   extra.css). H toggles a help panel listing the bindings; Escape
+   closes it. On the homepage (only), pointer movement fades in a
+   bottom-right "Press H for Help" hint that fades back out when the
+   pointer rests.
 
    Material's P / N (prev/next page) bindings stay usable alongside
    these. Its search UI is hidden entirely, and all three of its
-   search keys — S, F and / — are swallowed by a capture-phase
-   listener below so nothing can summon the hidden search form; the
-   jump palette is backtick's alone (quick-jump.js). All three still
-   type normally in inputs.
+   search keys — S, F and / — are neutralized by a capture-phase
+   listener below so nothing can summon the hidden search form: S
+   performs the sidebar toggle from there, F and / are dead keys, and
+   the jump palette is backtick's alone (quick-jump.js). All three
+   still type normally in inputs.
 
    Keys are ignored while typing (inputs, textareas, contenteditable)
    and in chords with Ctrl/Alt/Meta. Scrolling is smooth unless the
@@ -36,19 +39,21 @@
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
   /* Each row is [keys, description]; keys render as one chip each, so
-     paired and ranged bindings share a line. "–" is a plain separator,
-     not a chip. */
+     paired bindings share a line. */
   const HELP_ROWS = [
-    [["T", "D"], "top / bottom"],
-    [["J", "K"], "scroll down / up"],
-    [["[", "]"], "previous / next heading"],
-    [["<", ">"], "previous / next page"],
-    [["0"], "home"],
-    [["`"], "search"],
-    [["H"], "sidebars"],
-    [["M"], "light / dark"],
-    [["?"], "this help"],
+    [["T", "D"], "Jump to Top/Bottom"],
+    [["J", "K"], "Scroll Up/Down"],
+    [["[", "]"], "Navigate Headings"],
+    [["<", ">"], "Navigate Pages"],
+    [["0"], "Home"],
+    [["`"], "Search"],
+    [["S"], "Toggle Sidebars"],
+    [["M"], "Toggle Theme"],
+    [["H"], "Keyboard Shortcuts"],
   ];
+
+  /* Pointer-idle gap before the homepage help hint fades. */
+  const HINT_IDLE_MS = 1200;
 
   function scrollBehavior() {
     return reducedMotion.matches ? "auto" : "smooth";
@@ -136,9 +141,7 @@
     const rows = HELP_ROWS.map(function (row) {
       const keys = row[0]
         .map(function (token) {
-          return token === "–"
-            ? '<span class="key-help-sep">–</span>'
-            : "<kbd>" + escapeHtml(token) + "</kbd>";
+          return "<kbd>" + escapeHtml(token) + "</kbd>";
         })
         .join("");
       return (
@@ -154,30 +157,73 @@
     return panel;
   }
 
-  /* force: true opens, false closes, undefined toggles. */
+  /* force: true opens, false closes, undefined toggles. An opening
+     panel supersedes the homepage hint pointing at it. */
   function toggleHelpPanel(force) {
     const panel = ensureHelpPanel();
     panel.classList.toggle("key-help--open", force);
+    if (panel.classList.contains("key-help--open")) {
+      const hint = document.querySelector(".key-hint");
+      if (hint) hint.classList.remove("key-hint--visible");
+    }
   }
+
+  function toggleSidebars() {
+    document.body.classList.toggle("kiln-sidebars-shown");
+  }
+
+  /* Homepage-only hint at the help panel's own corner: fades in while
+     the pointer moves and back out once it rests (same activity
+     pattern as the scroll-progress chip, which is empty on the
+     unscrollable homepage, so the corner is free). Never shown while
+     the jump bar has focus — letter keys type into it there, so the
+     hint would advertise a key that only inserts an "h" (clicking
+     away, Escape or backtick blurs the bar and frees the keys).
+     Attach-once on document.body; the homepage check runs per move
+     because navigation.instant swaps the content out from under it. */
+  function ensureHint() {
+    let hint = document.querySelector(".key-hint");
+    if (hint) return hint;
+    hint = document.createElement("div");
+    hint.className = "key-hint";
+    hint.setAttribute("aria-hidden", "true");
+    hint.innerHTML = "Press <kbd>H</kbd> for Help";
+    document.body.appendChild(hint);
+    return hint;
+  }
+
+  const restHint = KilnUtils.debounce(function () {
+    const hint = document.querySelector(".key-hint");
+    if (hint) hint.classList.remove("key-hint--visible");
+  }, HINT_IDLE_MS);
+
+  window.addEventListener("pointermove", function () {
+    if (!document.querySelector(".md-content .kiln-ascii")) return;
+    if (KilnUtils.isTypingTarget(document.activeElement)) return;
+    const panel = document.querySelector(".key-help");
+    if (panel && panel.classList.contains("key-help--open")) return;
+    ensureHint().classList.add("key-hint--visible");
+    restHint();
+  });
 
   /* Material also focuses its (hidden) search on S, F and /. This
      capture-phase listener runs before Material's own handler and
-     swallows the three keys outside typing contexts (inside an input
-     the guard lets them through, so they still type). The palette is
-     summoned by backtick alone (quick-jump.js); S is deliberately a
-     dead key. The browser default is left alone. */
+     neutralizes all three outside typing contexts (inside an input the
+     guard lets them through, so they still type). S carries the
+     sidebar toggle and must act from here: Material's bubble-phase
+     handler registered first, so a bubble-phase binding of ours would
+     lose the race — the palette stays backtick's alone (quick-jump.js).
+     F and / are plain dead keys. The browser default is left alone. */
   window.addEventListener(
     "keydown",
     function (event) {
       if (event.ctrlKey || event.altKey || event.metaKey) return;
       if (KilnUtils.isTypingTarget(event.target)) return;
-      if (
-        event.key === "/" ||
-        event.key === "f" ||
-        event.key === "F" ||
-        event.key === "s" ||
-        event.key === "S"
-      ) {
+      if (event.key === "s" || event.key === "S") {
+        toggleSidebars();
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      } else if (event.key === "/" || event.key === "f" || event.key === "F") {
         event.stopImmediatePropagation();
       }
     },
@@ -210,7 +256,7 @@
         break;
       case "h":
       case "H":
-        document.body.classList.toggle("kiln-sidebars-shown");
+        toggleHelpPanel();
         break;
       case "[":
         jumpToHeading(-1);
@@ -238,9 +284,6 @@
       case "m":
       case "M":
         cyclePalette();
-        break;
-      case "?":
-        toggleHelpPanel();
         break;
       case "Escape": {
         /* Close-only (never creates the panel); quick-jump.js owns
