@@ -95,7 +95,7 @@ body {
 /* Header controls. Material's search UI is hidden outright — backtick
    opens the jump palette (quick-jump.js) instead, and the search plugin
    survives only to emit the index the palette reads. The palette
-   toggle button is hidden too — M (key-nav.js) advances the same
+   toggle button is hidden too — t (key-nav.js) advances the same
    radio group programmatically, which works on hidden inputs. */
 
 .md-search {
@@ -599,7 +599,7 @@ tt {
   opacity: 1;
 }
 
-/* Sidebars are hidden by default across the whole site; S (key-nav.js)
+/* Sidebars are hidden by default across the whole site; s (key-nav.js)
    reveals them by putting kiln-sidebars-shown on body, and the choice
    survives navigation.instant (Material never touches body) until the
    next full load. Desktop only: below Material's 76.25em breakpoint
@@ -716,7 +716,7 @@ tt {
 }
 
 /* The homepage has no sidebars at all (the jump bar and the header are
-   its whole chrome): unconditional, so the S reveal class does not
+   its whole chrome): unconditional, so the s reveal class does not
    apply there, and at drawer widths the drawer toggle goes with it. */
 body:has(.kiln-ascii) .md-sidebar--primary,
 body:has(.kiln-ascii) .md-sidebar--secondary {
@@ -728,7 +728,7 @@ body:has(.kiln-ascii) .md-header__button[for="__drawer"] {
 }
 
 /* Homepage centering must not depend on the sidebar-reveal class: the
-   sidebars above are gone unconditionally, so without this, pressing S
+   sidebars above are gone unconditionally, so without this, pressing s
    (which drops the body:not(.kiln-sidebars-shown) centering rule)
    would shift the homepage content into the layout slot of sidebars
    that are not there. */

@@ -3,7 +3,7 @@
    ` (backtick) or Ctrl/Cmd+K summons the prompt on any page — the
    homepage's inline bar when it is mounted, an overlay everywhere
    else. Material's own search UI is hidden by extra.css, and its
-   S/F// search bindings are neutralized by key-nav.js's swallow
+   s/S/F// search bindings are neutralized by key-nav.js's swallow
    listener. Type to fuzzy-match every page by title and path,
    ArrowDown/ArrowUp to pick, Enter to go. The prompt rests as a bar
    with a █ terminal cursor (steady while unfocused, blinking while
@@ -379,8 +379,8 @@
   }
 
   /* Capture phase, matching key-nav.js's swallow listener (which
-     neutralizes Material's own S/F// search bindings — S is a dead
-     key by design, the palette is backtick's alone). */
+     neutralizes Material's own s/S/F// search bindings — lowercase s
+     toggles the sidebars there, the palette is backtick's alone). */
   window.addEventListener(
     "keydown",
     function (event) {

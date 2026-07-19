@@ -10,23 +10,23 @@
    the DOM; navigation.footer is enabled solely for this), 0 goes home
    via the header logo, and 1-6 open the top-level categories in
    sidebar nav order. Clicking links, rather than assigning location,
-   keeps navigation.instant in charge. Sidebars are hidden by default
-   site-wide and disabled entirely on the homepage (extra.css); S
-   reveals/re-hides both elsewhere (a body class, desktop-only and
-   surviving instant navigation since Material never touches body).
-   M cycles the color palette by advancing Material's __palette radio
-   group (dark and light; the theme's own toggle button is hidden by
-   extra.css). H toggles a help panel listing the bindings; Escape
-   closes it. On the homepage (only), pointer movement fades in a
-   bottom-right "Press H for Help" hint that fades back out when the
-   pointer rests.
+   keeps navigation.instant in charge. The letter bindings are all
+   strictly lowercase. Sidebars are hidden by default site-wide and
+   disabled entirely on the homepage (extra.css); s reveals/re-hides
+   both elsewhere (a body class, desktop-only and surviving instant
+   navigation since Material never touches body). t cycles the color
+   palette by advancing Material's __palette radio group (dark and
+   light; the theme's own toggle button is hidden by extra.css). h
+   toggles a help panel listing the bindings; Escape closes it. On the
+   homepage (only), pointer movement fades in a bottom-right "Press h
+   for Help" hint that fades back out when the pointer rests.
 
    Material's P / N (prev/next page) bindings stay usable alongside
-   these. Its search UI is hidden entirely, and all three of its
-   search keys — S, F and / — are neutralized by a capture-phase
-   listener below so nothing can summon the hidden search form: S
-   performs the sidebar toggle from there, F and / are dead keys, and
-   the jump palette is backtick's alone (quick-jump.js). All three
+   these. Its search UI is hidden entirely, and its search keys —
+   s/S, F and / — are neutralized by a capture-phase listener below
+   so nothing can summon the hidden search form: lowercase s performs
+   the sidebar toggle from there, the rest are dead keys, and the
+   jump palette is backtick's alone (quick-jump.js). All of them
    still type normally in inputs.
 
    Keys are ignored while typing (inputs, textareas, contenteditable)
@@ -50,9 +50,9 @@
     [["<", ">"], "Navigate Pages"],
     [["0"], "Home"],
     [["`"], "Search"],
-    [["S"], "Toggle Sidebars"],
-    [["M"], "Toggle Theme"],
-    [["H"], "Keyboard Shortcuts"],
+    [["s"], "Toggle Sidebars"],
+    [["t"], "Toggle Theme"],
+    [["h"], "Keyboard Shortcuts"],
   ];
 
   /* Pointer-idle gap before the homepage help hint fades. */
@@ -193,7 +193,7 @@
     hint = document.createElement("div");
     hint.className = "key-hint";
     hint.setAttribute("aria-hidden", "true");
-    hint.innerHTML = "Press <kbd>H</kbd> for Help";
+    hint.innerHTML = "Press <kbd>h</kbd> for Help";
     document.body.appendChild(hint);
     return hint;
   }
@@ -214,22 +214,28 @@
 
   /* Material also focuses its (hidden) search on S, F and /. This
      capture-phase listener runs before Material's own handler and
-     neutralizes all three outside typing contexts (inside an input the
-     guard lets them through, so they still type). S carries the
-     sidebar toggle and must act from here: Material's bubble-phase
-     handler registered first, so a bubble-phase binding of ours would
-     lose the race — the palette stays backtick's alone (quick-jump.js).
-     F and / are plain dead keys. The browser default is left alone. */
+     neutralizes all of them outside typing contexts (inside an input
+     the guard lets them through, so they still type). Lowercase s
+     carries the sidebar toggle and must act from here: Material's
+     bubble-phase handler registered first, so a bubble-phase binding
+     of ours would lose the race — the palette stays backtick's alone
+     (quick-jump.js). Uppercase S, F and / are plain dead keys. The
+     browser default is left alone. */
   window.addEventListener(
     "keydown",
     function (event) {
       if (event.ctrlKey || event.altKey || event.metaKey) return;
       if (KilnUtils.isTypingTarget(event.target)) return;
-      if (event.key === "s" || event.key === "S") {
+      if (event.key === "s") {
         toggleSidebars();
         event.preventDefault();
         event.stopImmediatePropagation();
-      } else if (event.key === "/" || event.key === "f" || event.key === "F") {
+      } else if (
+        event.key === "S" ||
+        event.key === "/" ||
+        event.key === "f" ||
+        event.key === "F"
+      ) {
         event.stopImmediatePropagation();
       }
     },
@@ -271,7 +277,6 @@
         window.scrollBy({ top: -SCROLL_STEP_PX, behavior: scrollBehavior() });
         break;
       case "h":
-      case "H":
         toggleHelpPanel();
         break;
       case "[":
@@ -297,8 +302,7 @@
       case "6":
         goToSection(Number(event.key));
         break;
-      case "m":
-      case "M":
+      case "t":
         cyclePalette();
         break;
       case "Escape": {
