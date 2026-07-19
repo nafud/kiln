@@ -17,9 +17,9 @@
    navigation since Material never touches body). t cycles the color
    palette by advancing Material's __palette radio group (dark and
    light; the theme's own toggle button is hidden by extra.css). h
-   toggles a help panel listing the bindings; Escape closes it. On the
-   homepage (only), pointer movement fades in a bottom-right "Press h
-   for Help" hint that fades back out when the pointer rests.
+   summons the jump palette with -h pre-typed — help is the palette's
+   usage output (quick-jump.js), not a separate panel; the binding
+   table itself lives on KilnUtils.HELP_ROWS in page-utils.js.
 
    Material's P / N (prev/next page) bindings stay usable alongside
    these. Its search UI is hidden entirely, and its search keys —
@@ -40,23 +40,6 @@
   const SCROLL_STEP_PX = 160;
 
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-
-  /* Each row is [keys, description]; keys render as one chip each, so
-     paired bindings share a line. */
-  const HELP_ROWS = [
-    [["gg", "G"], "Jump to Top/Bottom"],
-    [["k", "j"], "Scroll Up/Down"],
-    [["[", "]"], "Navigate Headings"],
-    [["<", ">"], "Navigate Pages"],
-    [["0"], "Home"],
-    [["`"], "Search"],
-    [["s"], "Toggle Sidebars"],
-    [["t"], "Toggle Theme"],
-    [["h"], "Keyboard Shortcuts"],
-  ];
-
-  /* Pointer-idle gap before the homepage help hint fades. */
-  const HINT_IDLE_MS = 1200;
 
   /* Window for the second g of the gg chord (vim's timeoutlen idea). */
   const GG_CHORD_MS = 600;
@@ -133,84 +116,9 @@
     inputs[(checked + 1) % inputs.length].click();
   }
 
-  function ensureHelpPanel() {
-    let panel = document.querySelector(".key-help");
-    if (panel) return panel;
-
-    panel = document.createElement("div");
-    panel.className = "key-help";
-    panel.setAttribute("role", "dialog");
-    panel.setAttribute("aria-label", "Keyboard shortcuts");
-    const escapeHtml = function (s) {
-      return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    };
-    const rows = HELP_ROWS.map(function (row) {
-      const keys = row[0]
-        .map(function (token) {
-          return "<kbd>" + escapeHtml(token) + "</kbd>";
-        })
-        .join("");
-      return (
-        '<div class="key-help-row"><span class="key-help-keys">' +
-        keys +
-        "</span><span>" +
-        row[1] +
-        "</span></div>"
-      );
-    });
-    panel.innerHTML = rows.join("");
-    document.body.appendChild(panel);
-    return panel;
-  }
-
-  /* force: true opens, false closes, undefined toggles. An opening
-     panel supersedes the homepage hint pointing at it. */
-  function toggleHelpPanel(force) {
-    const panel = ensureHelpPanel();
-    panel.classList.toggle("key-help--open", force);
-    if (panel.classList.contains("key-help--open")) {
-      const hint = document.querySelector(".key-hint");
-      if (hint) hint.classList.remove("key-hint--visible");
-    }
-  }
-
   function toggleSidebars() {
     document.body.classList.toggle("kiln-sidebars-shown");
   }
-
-  /* Homepage-only hint at the help panel's own corner: fades in while
-     the pointer moves and back out once it rests (same activity
-     pattern as the scroll-progress chip, which is empty on the
-     unscrollable homepage, so the corner is free). Never shown while
-     the jump bar has focus — letter keys type into it there, so the
-     hint would advertise a key that only inserts an "h" (clicking
-     away, Escape or backtick blurs the bar and frees the keys).
-     Attach-once on document.body; the homepage check runs per move
-     because navigation.instant swaps the content out from under it. */
-  function ensureHint() {
-    let hint = document.querySelector(".key-hint");
-    if (hint) return hint;
-    hint = document.createElement("div");
-    hint.className = "key-hint";
-    hint.setAttribute("aria-hidden", "true");
-    hint.innerHTML = "Press <kbd>h</kbd> for Help";
-    document.body.appendChild(hint);
-    return hint;
-  }
-
-  const restHint = KilnUtils.debounce(function () {
-    const hint = document.querySelector(".key-hint");
-    if (hint) hint.classList.remove("key-hint--visible");
-  }, HINT_IDLE_MS);
-
-  window.addEventListener("pointermove", function () {
-    if (!document.querySelector(".md-content .kiln-ascii")) return;
-    if (KilnUtils.isTypingTarget(document.activeElement)) return;
-    const panel = document.querySelector(".key-help");
-    if (panel && panel.classList.contains("key-help--open")) return;
-    ensureHint().classList.add("key-hint--visible");
-    restHint();
-  });
 
   /* Material also focuses its (hidden) search on S, F and /. This
      capture-phase listener runs before Material's own handler and
@@ -277,7 +185,10 @@
         window.scrollBy({ top: -SCROLL_STEP_PX, behavior: scrollBehavior() });
         break;
       case "h":
-        toggleHelpPanel();
+        /* Summon the palette with -h typed, as if the user ran the
+           flag themselves — quick-jump.js registers the hook and
+           renders the usage output. */
+        if (KilnUtils.summonHelp) KilnUtils.summonHelp();
         break;
       case "[":
         jumpToHeading(-1);
@@ -305,13 +216,6 @@
       case "t":
         cyclePalette();
         break;
-      case "Escape": {
-        /* Close-only (never creates the panel); quick-jump.js owns
-           Escape inside its own inputs. */
-        const panel = document.querySelector(".key-help");
-        if (panel) panel.classList.remove("key-help--open");
-        return;
-      }
       default:
         return;
     }

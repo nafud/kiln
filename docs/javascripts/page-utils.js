@@ -4,6 +4,22 @@
    read `KilnUtils` from the shared global script scope. */
 
 const KilnUtils = {
+  /* The keyboard bindings, [keys, description] per row — bound by
+     key-nav.js, rendered by quick-jump.js as the -h/--help usage
+     output. Lives here because both scripts need it and this file
+     loads first. */
+  HELP_ROWS: [
+    [["gg", "G"], "Jump to Top/Bottom"],
+    [["k", "j"], "Scroll Up/Down"],
+    [["[", "]"], "Navigate Headings"],
+    [["<", ">"], "Navigate Pages"],
+    [["0"], "Home"],
+    [["`"], "Search"],
+    [["s"], "Toggle Sidebars"],
+    [["t"], "Toggle Theme"],
+    [["-h"], "Help"],
+  ],
+
   /* Debounce, e.g. for resize handlers, to avoid layout thrashing. */
   debounce: function (fn, delay) {
     let timer;

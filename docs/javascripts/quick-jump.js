@@ -7,11 +7,14 @@
    listener. Type to fuzzy-match every page by title and path,
    ArrowDown/ArrowUp to pick, Enter to go. The prompt rests as a bar
    with a █ terminal cursor (steady while unfocused, blinking while
-   focused) and a faint placeholder; results only exist while a query
-   is typed. Escape (or
-   a click on the backdrop) closes. The result rows are real links and
-   navigation happens by clicking them, which keeps navigation.instant
-   in charge (same rule as key-nav.js).
+   focused) and a faint "type -h for help" placeholder; results only
+   exist while a query is typed. Typing -h or --help renders the
+   keyboard bindings (KilnUtils.HELP_ROWS) in the dropdown as usage
+   output, CLI style — that IS the site's help; the h key (key-nav.js)
+   opens the prompt with the flag pre-typed via KilnUtils.summonHelp.
+   Escape (or a click on the backdrop) closes. The result rows are
+   real links and navigation happens by clicking them, which keeps
+   navigation.instant in charge (same rule as key-nav.js).
 
    The same component has an inline variant that always mounts on the
    homepage, under the ASCII logo with its input focused, so the
@@ -185,7 +188,7 @@
     input.type = "text";
     input.spellcheck = false;
     input.autocomplete = "off";
-    input.placeholder = "jump to a page";
+    input.placeholder = "type -h for help";
     input.setAttribute("role", "combobox");
     input.setAttribute("aria-label", "Jump to a page");
     input.setAttribute("aria-expanded", "false");
@@ -273,17 +276,52 @@
       paintSelection();
     }
 
+    /* -h / --help renders the binding table as usage output: the
+       query is a flag, so the dropdown answers like a command would.
+       Rows are not options — results stays empty, so Arrow/Enter are
+       inert and the listbox stays collapsed for AT. */
+    function paintHelp() {
+      results = [];
+      list.textContent = "";
+      KilnUtils.HELP_ROWS.forEach(function (row) {
+        const item = document.createElement("li");
+        item.className = "kiln-jump-help-row";
+        const keys = document.createElement("span");
+        keys.className = "kiln-jump-help-keys";
+        row[0].forEach(function (key) {
+          const kbd = document.createElement("kbd");
+          kbd.textContent = key;
+          keys.appendChild(kbd);
+        });
+        const label = document.createElement("span");
+        label.className = "kiln-jump-help-label";
+        label.textContent = row[1];
+        item.appendChild(keys);
+        item.appendChild(label);
+        list.appendChild(item);
+      });
+      input.setAttribute("aria-expanded", "false");
+      input.removeAttribute("aria-activedescendant");
+      clampToViewport();
+    }
+
     /* The fetch resolves asynchronously; the sequence guard drops a
        stale render finishing after a newer keystroke's. An empty query
        clears the list synchronously (and skips the fetch, so the index
-       is not even loaded until the first real keystroke). */
+       is not even loaded until the first real keystroke); a help flag
+       short-circuits the same way. */
     function render() {
       const seq = ++renderSeq;
-      if (!input.value.trim()) {
+      const query = input.value.trim();
+      if (!query) {
         results = [];
         list.textContent = "";
         input.setAttribute("aria-expanded", "false");
         input.removeAttribute("aria-activedescendant");
+        return;
+      }
+      if (query === "-h" || query === "--help") {
+        paintHelp();
         return;
       }
       loadPages().then(
@@ -377,6 +415,18 @@
     if (inline) inline.focus();
     else openOverlay();
   }
+
+  /* The h binding (key-nav.js) lands here: the prompt opens with -h
+     already typed, as if the user ran the flag themselves. The
+     synthetic input event drives the same render path as typing. */
+  KilnUtils.summonHelp = function () {
+    openPrompt();
+    const input = document.activeElement;
+    if (input instanceof Element && input.classList.contains("kiln-jump-input")) {
+      input.value = "-h";
+      input.dispatchEvent(new Event("input"));
+    }
+  };
 
   /* Capture phase, matching key-nav.js's swallow listener (which
      neutralizes Material's own s/S/F// search bindings — lowercase s

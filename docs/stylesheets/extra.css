@@ -617,65 +617,17 @@ tt {
   }
 }
 
-/* Keyboard-shortcut help panel (key-nav.js, toggled with H). Surface
-   recipe, plus a resting shadow: unlike the hover-lift surfaces this
-   is a floating popover over content and needs the separation. */
-.key-help {
-  position: fixed;
-  right: 1rem;
-  bottom: 1rem;
-  z-index: 1001;
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-  padding: 0.85rem 0.95rem;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  background: var(--color-surface);
-  box-shadow: 0 4px 12px var(--color-shadow);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 150ms ease;
-}
-
-.key-help--open {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-/* Homepage help hint (key-nav.js): sits where the help panel opens,
-   fading with pointer activity like the scroll-progress chip (which
-   stays empty on the unscrollable homepage, so the corner is free).
-   Suppressed while the panel itself is open. */
-.key-hint {
-  position: fixed;
-  right: 1rem;
-  bottom: 1rem;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  height: 38px;
-  padding: 0 0.7rem;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  background: var(--color-surface);
-  color: var(--color-text-muted);
-  font-size: 0.7rem;
-  user-select: none;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 200ms ease;
-}
-
-.key-hint--visible {
-  opacity: 1;
-}
-
-.key-help-row {
+/* -h / --help usage rows (quick-jump.js paints them into the results
+   dropdown when the query is a help flag). Non-interactive: no hover
+   surface, not selectable options. The doubled selectors outrank
+   Material's .md-typeset li typography on the inline variant, same
+   pattern as the result rows below. */
+.kiln-jump-help-row,
+.md-typeset .kiln-jump-results .kiln-jump-help-row {
   display: flex;
   align-items: center;
   gap: 0.7rem;
+  padding: 0.3rem 0.6rem;
   font-size: 0.7rem;
   color: var(--color-text-secondary);
 }
@@ -684,16 +636,17 @@ tt {
    bindings read as two keycaps and every description starts on the
    same vertical line. The width is exactly two chips plus the gap —
    any more turns into dead space before the widest row's first chip. */
-.key-help-keys {
+.kiln-jump-help-keys {
   display: flex;
   justify-content: flex-end;
   align-items: center;
   gap: 0.25rem;
   min-width: 3.05rem;
+  flex-shrink: 0;
 }
 
-.key-help-row kbd,
-.key-hint kbd {
+.kiln-jump-help-keys kbd,
+.md-typeset .kiln-jump-help-keys kbd {
   min-width: 1.4rem;
   text-align: center;
   padding: 0.15rem 0.3rem;
@@ -703,6 +656,7 @@ tt {
   color: var(--color-text-primary);
   font-size: 0.65rem;
   font-weight: 700;
+  box-shadow: none; /* Material gives .md-typeset kbd a resting shadow */
 }
 
 /* The homepage card grid is the no-JS fallback for the jump bar:
@@ -738,9 +692,9 @@ body:has(.kiln-ascii) .md-header__button[for="__drawer"] {
 
 /* Jump-to-page palette (quick-jump.js; ` or Ctrl+K opens the overlay,
    and in jump-bar mode the inline variant sits under the homepage
-   logo). The overlay panel floats over content, so like .key-help it
-   carries a resting shadow; the inline panel is a resting surface like
-   the cards it replaces, so it stays flat. */
+   logo). The overlay panel floats over content, so it carries a
+   resting shadow; the inline panel is a resting surface like the
+   cards it replaces, so it stays flat. */
 .kiln-jump--overlay {
   position: fixed;
   inset: 0;
