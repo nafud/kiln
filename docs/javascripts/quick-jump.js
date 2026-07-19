@@ -276,30 +276,34 @@
       paintSelection();
     }
 
-    /* -h / --help renders the binding table as usage output: the
-       query is a flag, so the dropdown answers like a command would.
-       Rows are not options — results stays empty, so Arrow/Enter are
-       inert and the listbox stays collapsed for AT. */
+    /* -h / --help answers exactly like a coreutils command: a usage
+       line, a one-line description, then the option table as plain
+       aligned monospace text in a single pre. Not options — results
+       stays empty, so Arrow/Enter are inert and the listbox stays
+       collapsed for AT. */
     function paintHelp() {
       results = [];
       list.textContent = "";
-      KilnUtils.HELP_ROWS.forEach(function (row) {
-        const item = document.createElement("li");
-        item.className = "kiln-jump-help-row";
-        const keys = document.createElement("span");
-        keys.className = "kiln-jump-help-keys";
-        row[0].forEach(function (key) {
-          const kbd = document.createElement("kbd");
-          kbd.textContent = key;
-          keys.appendChild(kbd);
-        });
-        const label = document.createElement("span");
-        label.className = "kiln-jump-help-label";
-        label.textContent = row[1];
-        item.appendChild(keys);
-        item.appendChild(label);
-        list.appendChild(item);
+      const rows = KilnUtils.HELP_ROWS.map(function (row) {
+        return { keys: row[0].join(", "), label: row[1] };
       });
+      const width = rows.reduce(function (w, r) {
+        return Math.max(w, r.keys.length);
+      }, 0);
+      const lines = [
+        "Usage: kiln [PAGE]",
+        "Kiln is a personal knowledge base, type a name to jump.",
+        "",
+      ];
+      rows.forEach(function (r) {
+        lines.push("  " + r.keys + " ".repeat(width - r.keys.length + 3) + r.label);
+      });
+      const item = document.createElement("li");
+      item.className = "kiln-jump-help";
+      const pre = document.createElement("pre");
+      pre.textContent = lines.join("\n");
+      item.appendChild(pre);
+      list.appendChild(item);
       input.setAttribute("aria-expanded", "false");
       input.removeAttribute("aria-activedescendant");
       clampToViewport();

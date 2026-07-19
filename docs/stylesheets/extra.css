@@ -617,46 +617,31 @@ tt {
   }
 }
 
-/* -h / --help usage rows (quick-jump.js paints them into the results
-   dropdown when the query is a help flag). Non-interactive: no hover
-   surface, not selectable options. The doubled selectors outrank
-   Material's .md-typeset li typography on the inline variant, same
-   pattern as the result rows below. */
-.kiln-jump-help-row,
-.md-typeset .kiln-jump-results .kiln-jump-help-row {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  padding: 0.3rem 0.6rem;
+/* -h / --help usage output (quick-jump.js paints one pre of aligned
+   monospace text into the results dropdown, GNU --help style).
+   Non-interactive: no hover surface, not a selectable option. The
+   doubled selectors outrank Material's .md-typeset pre code-block
+   styling on the inline variant, same cascade pattern as the result
+   rows below; the pre must read as plain terminal output, not as a
+   code block surface. */
+.kiln-jump-help,
+.md-typeset .kiln-jump-results .kiln-jump-help {
+  padding: 0.55rem 0.8rem;
+}
+
+.kiln-jump-help pre,
+.md-typeset .kiln-jump-results .kiln-jump-help pre {
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   font-size: 0.7rem;
+  line-height: 1.65;
   color: var(--color-text-secondary);
-}
-
-/* Fixed-width, right-aligned keys column: one chip per key, so paired
-   bindings read as two keycaps and every description starts on the
-   same vertical line. The width is exactly two chips plus the gap —
-   any more turns into dead space before the widest row's first chip. */
-.kiln-jump-help-keys {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 0.25rem;
-  min-width: 3.05rem;
-  flex-shrink: 0;
-}
-
-.kiln-jump-help-keys kbd,
-.md-typeset .kiln-jump-help-keys kbd {
-  min-width: 1.4rem;
-  text-align: center;
-  padding: 0.15rem 0.3rem;
-  border: 1px solid var(--color-border);
-  border-radius: 3px;
-  background: var(--color-code-bg);
-  color: var(--color-text-primary);
-  font-size: 0.65rem;
-  font-weight: 700;
-  box-shadow: none; /* Material gives .md-typeset kbd a resting shadow */
+  white-space: pre;
+  overflow-x: auto;
 }
 
 /* The homepage card grid is the no-JS fallback for the jump bar:
