@@ -17,9 +17,9 @@
    navigation since Material never touches body). t cycles the color
    palette by advancing Material's __palette radio group (dark and
    light; the theme's own toggle button is hidden by extra.css).
-   There is no help binding: help is the palette's -h/--help usage
+   There is no help binding: help is the palette's :h/:help usage
    output (quick-jump.js, which also owns the binding table those
-   flags print — keep it in sync when bindings here change).
+   commands print — keep it in sync when bindings here change).
 
    Material's P / N (prev/next page) bindings stay usable alongside
    these. Its search UI is hidden entirely, and its search keys —

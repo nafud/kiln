@@ -7,14 +7,17 @@
    listener. Type to fuzzy-match every page by title and path,
    ArrowDown/ArrowUp to pick, Enter to go. The prompt rests as a bar
    with a █ terminal cursor (steady while unfocused, blinking while
-   focused) and a faint "type -h for help" placeholder; results only
-   exist while a query is typed. Typing -h or --help renders the
-   keyboard binding table (HELP_ROWS below) in the dropdown as usage
-   output, CLI style — that IS the site's help, and the flags are its
-   only trigger. Escape (or a click on the backdrop) closes. The
-   result rows are
-   real links and navigation happens by clicking them, which keeps
-   navigation.instant in charge (same rule as key-nav.js).
+   focused) and a faint "type :h for help" placeholder; results only
+   exist while a query is typed. A leading colon is vim command-line
+   mode, parsed exactly and never reaching page search: :h/:help
+   print the binding table (HELP_ROWS below), :version the deployed
+   build stamp (version.json; "local build" when absent), :intro the
+   vim-style welcome screen, and any unknown :name answers with
+   vim's E492. That IS the site's help — the commands are its only
+   trigger. Escape (or a click on the backdrop) closes. The result
+   rows are real links and navigation happens by clicking them,
+   which keeps navigation.instant in charge (same rule as
+   key-nav.js).
 
    The same component has an inline variant that always mounts on the
    homepage, under the ASCII logo with its input focused, so the
@@ -37,10 +40,10 @@
 
   const MAX_RESULTS = 8;
 
-  /* The keyboard bindings -h/--help prints, [keys, description] per
-     row, GNU --help style (keys comma-joined, descriptions
-     lowercase). The bindings themselves live in key-nav.js — keep
-     this table in sync when they change. */
+  /* The keyboard bindings and : commands the :h table prints, [keys,
+     description] per row (keys comma-joined, descriptions lowercase).
+     The key bindings themselves live in key-nav.js — keep this table
+     in sync when they change. */
   const HELP_ROWS = [
     [["gg", "G"], "jump to top / bottom"],
     [["k", "j"], "scroll up / down"],
@@ -50,7 +53,9 @@
     [["`"], "search"],
     [["s"], "toggle sidebars"],
     [["t"], "toggle theme"],
-    [["-h", "--help"], "display this help"],
+    [[":version"], "show build info"],
+    [[":intro"], "show intro screen"],
+    [[":h", ":help"], "display this help"],
   ];
 
   /* ---------- page data ---------- */
@@ -95,6 +100,25 @@
         });
     }
     return pagesPromise;
+  }
+
+  /* Fetches the build stamp deploy.yml writes next to the site
+     (version.json). null means the file is absent — every local
+     mkdocs serve — and :version reports a local build; caching the
+     null is fine, the answer cannot change within a page load. */
+  let versionPromise = null;
+  function loadVersion() {
+    if (!versionPromise) {
+      versionPromise = fetch(new URL("version.json", siteBase()))
+        .then(function (response) {
+          if (!response.ok) throw new Error("HTTP " + response.status);
+          return response.json();
+        })
+        .catch(function () {
+          return null;
+        });
+    }
+    return versionPromise;
   }
 
   /* ---------- fuzzy matching ---------- */
@@ -204,7 +228,7 @@
     input.type = "text";
     input.spellcheck = false;
     input.autocomplete = "off";
-    input.placeholder = "type -h for help";
+    input.placeholder = "type :h for help";
     input.setAttribute("role", "combobox");
     input.setAttribute("aria-label", "Jump to a page");
     input.setAttribute("aria-expanded", "false");
@@ -292,26 +316,27 @@
       paintSelection();
     }
 
-    /* -h / --help answers like a coreutils command: the option table
-       as plain aligned monospace text in a single pre. Not options —
-       results stays empty, so Arrow/Enter are inert and the listbox
-       stays collapsed for AT. */
-    function paintHelp() {
+    /* One pre of monospace text in the dropdown — the shared body of
+       every : command's output, so the command line answers in kind.
+       Not options: results stays empty, Arrow/Enter are inert and the
+       listbox stays collapsed for AT. A line is a string, or an array
+       of DOM nodes for the few dim spans the intro screen needs. */
+    function paintOutput(lines) {
       results = [];
       list.textContent = "";
-      const rows = HELP_ROWS.map(function (row) {
-        return { keys: row[0].join(", "), label: row[1] };
-      });
-      const width = rows.reduce(function (w, r) {
-        return Math.max(w, r.keys.length);
-      }, 0);
-      const lines = rows.map(function (r) {
-        return "  " + r.keys + " ".repeat(width - r.keys.length + 3) + r.label;
-      });
       const item = document.createElement("li");
       item.className = "kiln-jump-help";
       const pre = document.createElement("pre");
-      pre.textContent = lines.join("\n");
+      lines.forEach(function (line, i) {
+        if (i) pre.appendChild(document.createTextNode("\n"));
+        if (typeof line === "string") {
+          pre.appendChild(document.createTextNode(line));
+        } else {
+          line.forEach(function (node) {
+            pre.appendChild(node);
+          });
+        }
+      });
       item.appendChild(pre);
       list.appendChild(item);
       input.setAttribute("aria-expanded", "false");
@@ -319,23 +344,118 @@
       clampToViewport();
     }
 
+    function paintHelp() {
+      const rows = HELP_ROWS.map(function (row) {
+        return { keys: row[0].join(", "), label: row[1] };
+      });
+      const width = rows.reduce(function (w, r) {
+        return Math.max(w, r.keys.length);
+      }, 0);
+      paintOutput(
+        rows.map(function (r) {
+          return "  " + r.keys + " ".repeat(width - r.keys.length + 3) + r.label;
+        })
+      );
+    }
+
+    /* :intro — the vim welcome screen, Kiln edition. The page count
+       comes from the same lazily fetched index the search uses; the
+       screen still renders if the fetch fails, just without the
+       stats line. The dimmed <Enter> tokens mirror vim's. */
+    function paintIntro() {
+      const seq = renderSeq;
+      const paint = function (pageCount) {
+        const dim = function (t) {
+          const span = document.createElement("span");
+          span.className = "kiln-jump-dim";
+          span.textContent = t;
+          return span;
+        };
+        const text = function (t) {
+          return document.createTextNode(t);
+        };
+        const typeRows = [
+          [":help", "for help"],
+          [":version", "for build info"],
+        ];
+        const cmdWidth = typeRows.reduce(function (w, r) {
+          return Math.max(w, r[0].length);
+        }, 0);
+        const typeRow = function (cmd, desc) {
+          return [
+            text("type  " + cmd),
+            dim("<Enter>"),
+            text(" ".repeat(cmdWidth - cmd.length + 3) + desc),
+          ];
+        };
+        const lines = [
+          "      KILN - a personal knowledge base",
+          "",
+          "             by Ravan Huseynli",
+          "",
+        ]
+          .concat(
+            typeRows.map(function (r) {
+              return typeRow(r[0], r[1]);
+            })
+          );
+        if (pageCount) {
+          lines.push("");
+          lines.push("        " + pageCount + " pages across 6 sections");
+        }
+        paintOutput(lines);
+      };
+      loadPages().then(
+        function (pages) {
+          if (seq === renderSeq) paint(pages.length);
+        },
+        function () {
+          if (seq === renderSeq) paint(null);
+        }
+      );
+    }
+
+    function paintVersion() {
+      const seq = renderSeq;
+      loadVersion().then(function (version) {
+        if (seq !== renderSeq) return;
+        paintOutput(
+          version
+            ? ["KILN build " + version.commit + " (" + version.date + ")"]
+            : ["KILN local build"]
+        );
+      });
+    }
+
+    /* The : command line, vim dialect. Exact names only; anything
+       unknown gets vim's own error. A bare colon does nothing, as in
+       vim. Runs before page search, so a leading colon never reaches
+       the fuzzy matcher. */
+    function runCommand(name) {
+      if (name === "h" || name === "help") paintHelp();
+      else if (name === "intro") paintIntro();
+      else if (name === "version") paintVersion();
+      else paintOutput(["E492: Not an editor command: " + name]);
+    }
+
     /* The fetch resolves asynchronously; the sequence guard drops a
-       stale render finishing after a newer keystroke's. An empty query
-       clears the list synchronously (and skips the fetch, so the index
-       is not even loaded until the first real keystroke); a help flag
-       short-circuits the same way. */
+       stale render finishing after a newer keystroke's. An empty
+       query (or a bare colon) clears the list synchronously and
+       skips the fetch, so the index is not even loaded until the
+       first real keystroke; : input goes to the command line and
+       never reaches page search. */
     function render() {
       const seq = ++renderSeq;
       const query = input.value.trim();
-      if (!query) {
+      if (!query || query === ":") {
         results = [];
         list.textContent = "";
         input.setAttribute("aria-expanded", "false");
         input.removeAttribute("aria-activedescendant");
         return;
       }
-      if (query === "-h" || query === "--help") {
-        paintHelp();
+      if (query.charAt(0) === ":") {
+        runCommand(query.slice(1));
         return;
       }
       loadPages().then(
