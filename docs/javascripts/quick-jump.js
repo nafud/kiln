@@ -7,14 +7,21 @@
    listener. Type to fuzzy-match every page by title and path,
    ArrowDown/ArrowUp to pick, Enter to go. The prompt rests as a bar
    with a █ terminal cursor (steady while unfocused, blinking while
-   focused) and a faint "type -h for help" placeholder; results only
-   exist while a query is typed. Typing -h or --help renders the
-   keyboard binding table (HELP_ROWS below) in the dropdown as usage
-   output, CLI style — that IS the site's help, and the flags are its
-   only trigger. Escape (or a click on the backdrop) closes. The
-   result rows are
-   real links and navigation happens by clicking them, which keeps
-   navigation.instant in charge (same rule as key-nav.js).
+   focused) and a faint "type :h for help" placeholder; results only
+   exist while a query is typed. A leading colon is vim command-line
+   mode, parsed exactly and never reaching page search: :h/:help
+   print the binding table (HELP_ROWS below), :version the deployed
+   build stamp (version.json; "local build" when absent), :intro the
+   vim-style welcome screen, and any unknown :name answers with
+   vim's E492. That IS the site's help — the commands are its only
+   trigger. A leading slash is vim's buffer search over the notes:
+   /pattern greps section body text (the #fragment index entries the
+   page view drops) case-insensitively and returns page › section
+   rows with a hit excerpt, landing on the section anchor. Escape
+   (or a click on the backdrop) closes. The result
+   rows are real links and navigation happens by clicking them,
+   which keeps navigation.instant in charge (same rule as
+   key-nav.js).
 
    The same component has an inline variant that always mounts on the
    homepage, under the ASCII logo with its input focused, so the
@@ -37,10 +44,10 @@
 
   const MAX_RESULTS = 8;
 
-  /* The keyboard bindings -h/--help prints, [keys, description] per
-     row, GNU --help style (keys comma-joined, descriptions
-     lowercase). The bindings themselves live in key-nav.js — keep
-     this table in sync when they change. */
+  /* The keyboard bindings and : commands the :h table prints, [keys,
+     description] per row (keys comma-joined, descriptions lowercase).
+     The key bindings themselves live in key-nav.js — keep this table
+     in sync when they change. */
   const HELP_ROWS = [
     [["gg", "G"], "jump to top / bottom"],
     [["k", "j"], "scroll up / down"],
@@ -50,12 +57,13 @@
     [["`"], "search"],
     [["s"], "toggle sidebars"],
     [["t"], "toggle theme"],
-    [["-h", "--help"], "display this help"],
+    [["/pattern"], "search inside pages"],
+    [[":version"], "show build info"],
+    [[":intro"], "show intro screen"],
+    [[":h", ":help"], "display this help"],
   ];
 
   /* ---------- page data ---------- */
-
-  let pagesPromise = null;
 
   /* The header logo links to the site root on every page, at the right
      relative depth, so it doubles as the base for site-absolute URLs
@@ -65,36 +73,111 @@
     return new URL(logo ? logo.getAttribute("href") : ".", location.href);
   }
 
-  /* Fetches the search index and reduces it to pages: entries without a
-     #fragment. Cached for the lifetime of the full page load; a failed
-     fetch clears the cache so a later open retries. */
-  function loadPages() {
-    if (!pagesPromise) {
-      pagesPromise = fetch(new URL("search/search_index.json", siteBase()))
+  /* One fetch of the search plugin's index feeds both views below.
+     Cached for the lifetime of the full page load; a failed fetch
+     clears the cache so a later open retries. */
+  let indexPromise = null;
+  function loadIndex() {
+    if (!indexPromise) {
+      indexPromise = fetch(new URL("search/search_index.json", siteBase()))
         .then(function (response) {
           if (!response.ok) throw new Error("HTTP " + response.status);
           return response.json();
         })
-        .then(function (index) {
-          const base = siteBase();
-          return index.docs
-            .filter(function (doc) {
-              return doc.location.indexOf("#") === -1;
-            })
-            .map(function (doc) {
-              return {
-                title: doc.title,
-                path: doc.location.replace(/\/$/, ""),
-                url: new URL(doc.location, base),
-              };
-            });
-        })
         .catch(function (error) {
-          pagesPromise = null;
+          indexPromise = null;
           throw error;
         });
     }
-    return pagesPromise;
+    return indexPromise;
+  }
+
+  /* Pages: index entries without a #fragment — what typed queries
+     fuzzy-match. */
+  let pagesCache = null;
+  function loadPages() {
+    if (pagesCache) return Promise.resolve(pagesCache);
+    return loadIndex().then(function (index) {
+      const base = siteBase();
+      pagesCache = index.docs
+        .filter(function (doc) {
+          return doc.location.indexOf("#") === -1;
+        })
+        .map(function (doc) {
+          return {
+            title: doc.title,
+            path: doc.location.replace(/\/$/, ""),
+            url: new URL(doc.location, base),
+          };
+        });
+      return pagesCache;
+    });
+  }
+
+  /* Sections: the #fragment entries the pages view drops — heading
+     plus body text, what /pattern greps. The owning page's title is
+     resolved from the pages pass (page entries precede their
+     sections in the index). */
+  let sectionsCache = null;
+  function loadSections() {
+    if (sectionsCache) return Promise.resolve(sectionsCache);
+    return loadIndex().then(function (index) {
+      const base = siteBase();
+      const pageTitles = {};
+      index.docs.forEach(function (doc) {
+        if (doc.location.indexOf("#") === -1) {
+          pageTitles[doc.location] = doc.title;
+        }
+      });
+      sectionsCache = index.docs
+        .filter(function (doc) {
+          return doc.location.indexOf("#") !== -1;
+        })
+        .map(function (doc) {
+          const pageLocation = doc.location.split("#")[0];
+          /* The index's text field carries markup remnants (code
+             blocks arrive as literal <pre><code> runs and entities);
+             excerpts must read as prose, so both are dropped here,
+             once, at build. */
+          const text = (doc.text || "")
+            .replace(/<[^>]+>/g, " ")
+            .replace(/&amp;/g, "&")
+            .replace(/&lt;/g, "<")
+            .replace(/&gt;/g, ">")
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/\s+/g, " ")
+            .trim();
+          return {
+            title: doc.title,
+            titleLower: doc.title.toLowerCase(),
+            pageTitle: pageTitles[pageLocation] || pageLocation,
+            text: text,
+            textLower: text.toLowerCase(),
+            url: new URL(doc.location, base),
+          };
+        });
+      return sectionsCache;
+    });
+  }
+
+  /* Fetches the build stamp deploy.yml writes next to the site
+     (version.json). null means the file is absent — every local
+     mkdocs serve — and :version reports a local build; caching the
+     null is fine, the answer cannot change within a page load. */
+  let versionPromise = null;
+  function loadVersion() {
+    if (!versionPromise) {
+      versionPromise = fetch(new URL("version.json", siteBase()))
+        .then(function (response) {
+          if (!response.ok) throw new Error("HTTP " + response.status);
+          return response.json();
+        })
+        .catch(function () {
+          return null;
+        });
+    }
+    return versionPromise;
   }
 
   /* ---------- fuzzy matching ---------- */
@@ -166,6 +249,54 @@
     });
   }
 
+  /* /pattern content search, vim's buffer search over the notes:
+     case-insensitive literal substring (vim 'ignorecase') against
+     section headings and body text. Heading hits outrank body hits,
+     more and earlier hits rank higher. Results are shaped like page
+     rows, with an excerpt around the first hit in the path slot. */
+  function matchContent(pattern, sections) {
+    const needle = pattern.toLowerCase();
+    const scored = [];
+    sections.forEach(function (section) {
+      const inTitle = section.titleLower.indexOf(needle) !== -1;
+      const at = section.textLower.indexOf(needle);
+      if (!inTitle && at === -1) return;
+      let count = 0;
+      let from = at;
+      while (from !== -1 && count < 20) {
+        count++;
+        from = section.textLower.indexOf(needle, from + needle.length);
+      }
+      const score =
+        (inTitle ? 100 : 0) +
+        count * 5 -
+        (at === -1 ? 0 : Math.min(at, 500) * 0.01);
+      scored.push({ section: section, score: score, at: at });
+    });
+    scored.sort(function (a, b) {
+      return b.score - a.score;
+    });
+    return scored.slice(0, MAX_RESULTS).map(function (entry) {
+      const section = entry.section;
+      return {
+        title: section.pageTitle + " › " + section.title,
+        path: contentExcerpt(section, entry.at, needle),
+        url: section.url,
+      };
+    });
+  }
+
+  function contentExcerpt(section, at, needle) {
+    if (at === -1) return section.text.slice(0, 60);
+    const start = Math.max(0, at - 24);
+    const end = at + needle.length + 36;
+    return (
+      (start > 0 ? "…" : "") +
+      section.text.slice(start, end) +
+      (end < section.text.length ? "…" : "")
+    );
+  }
+
   /* ---------- palette component ---------- */
 
   /* Builds one palette instance ("overlay" or "inline" — same markup
@@ -204,7 +335,7 @@
     input.type = "text";
     input.spellcheck = false;
     input.autocomplete = "off";
-    input.placeholder = "type -h for help";
+    input.placeholder = "type :h for help";
     input.setAttribute("role", "combobox");
     input.setAttribute("aria-label", "Jump to a page");
     input.setAttribute("aria-expanded", "false");
@@ -292,26 +423,27 @@
       paintSelection();
     }
 
-    /* -h / --help answers like a coreutils command: the option table
-       as plain aligned monospace text in a single pre. Not options —
-       results stays empty, so Arrow/Enter are inert and the listbox
-       stays collapsed for AT. */
-    function paintHelp() {
+    /* One pre of monospace text in the dropdown — the shared body of
+       every : command's output, so the command line answers in kind.
+       Not options: results stays empty, Arrow/Enter are inert and the
+       listbox stays collapsed for AT. A line is a string, or an array
+       of DOM nodes for the few dim spans the intro screen needs. */
+    function paintOutput(lines) {
       results = [];
       list.textContent = "";
-      const rows = HELP_ROWS.map(function (row) {
-        return { keys: row[0].join(", "), label: row[1] };
-      });
-      const width = rows.reduce(function (w, r) {
-        return Math.max(w, r.keys.length);
-      }, 0);
-      const lines = rows.map(function (r) {
-        return "  " + r.keys + " ".repeat(width - r.keys.length + 3) + r.label;
-      });
       const item = document.createElement("li");
       item.className = "kiln-jump-help";
       const pre = document.createElement("pre");
-      pre.textContent = lines.join("\n");
+      lines.forEach(function (line, i) {
+        if (i) pre.appendChild(document.createTextNode("\n"));
+        if (typeof line === "string") {
+          pre.appendChild(document.createTextNode(line));
+        } else {
+          line.forEach(function (node) {
+            pre.appendChild(node);
+          });
+        }
+      });
       item.appendChild(pre);
       list.appendChild(item);
       input.setAttribute("aria-expanded", "false");
@@ -319,23 +451,146 @@
       clampToViewport();
     }
 
+    function paintHelp() {
+      const rows = HELP_ROWS.map(function (row) {
+        return { keys: row[0].join(", "), label: row[1] };
+      });
+      const width = rows.reduce(function (w, r) {
+        return Math.max(w, r.keys.length);
+      }, 0);
+      paintOutput(
+        rows.map(function (r) {
+          return "  " + r.keys + " ".repeat(width - r.keys.length + 3) + r.label;
+        })
+      );
+    }
+
+    /* :intro — the vim welcome screen, Kiln edition. The page count
+       comes from the same lazily fetched index the search uses; the
+       screen still renders if the fetch fails, just without the
+       stats line. The dimmed <Enter> tokens mirror vim's. */
+    function paintIntro() {
+      const seq = renderSeq;
+      const paint = function (pageCount) {
+        const dim = function (t) {
+          const span = document.createElement("span");
+          span.className = "kiln-jump-dim";
+          span.textContent = t;
+          return span;
+        };
+        const text = function (t) {
+          return document.createTextNode(t);
+        };
+        const typeRows = [
+          [":help", "for help"],
+          [":version", "for build info"],
+          ["/pattern", "to search the notes"],
+        ];
+        const cmdWidth = typeRows.reduce(function (w, r) {
+          return Math.max(w, r[0].length);
+        }, 0);
+        const typeRow = function (cmd, desc) {
+          return [
+            text("type  " + cmd),
+            dim("<Enter>"),
+            text(" ".repeat(cmdWidth - cmd.length + 3) + desc),
+          ];
+        };
+        const lines = [
+          "      KILN - a personal knowledge base",
+          "",
+          "             by Ravan Huseynli",
+          "",
+        ]
+          .concat(
+            typeRows.map(function (r) {
+              return typeRow(r[0], r[1]);
+            })
+          );
+        if (pageCount) {
+          lines.push("");
+          lines.push("        " + pageCount + " pages across 6 sections");
+        }
+        paintOutput(lines);
+      };
+      loadPages().then(
+        function (pages) {
+          if (seq === renderSeq) paint(pages.length);
+        },
+        function () {
+          if (seq === renderSeq) paint(null);
+        }
+      );
+    }
+
+    function paintVersion() {
+      const seq = renderSeq;
+      loadVersion().then(function (version) {
+        if (seq !== renderSeq) return;
+        paintOutput(
+          version
+            ? ["KILN build " + version.commit + " (" + version.date + ")"]
+            : ["KILN local build"]
+        );
+      });
+    }
+
+    /* The : command line, vim dialect. Exact names only; anything
+       unknown gets vim's own error. A bare colon does nothing, as in
+       vim. Runs before page search, so a leading colon never reaches
+       the fuzzy matcher. */
+    function runCommand(name) {
+      if (name === "h" || name === "help") paintHelp();
+      else if (name === "intro") paintIntro();
+      else if (name === "version") paintVersion();
+      else paintOutput(["E492: Not an editor command: " + name]);
+    }
+
     /* The fetch resolves asynchronously; the sequence guard drops a
-       stale render finishing after a newer keystroke's. An empty query
-       clears the list synchronously (and skips the fetch, so the index
-       is not even loaded until the first real keystroke); a help flag
-       short-circuits the same way. */
+       stale render finishing after a newer keystroke's. An empty
+       query (or a bare colon) clears the list synchronously and
+       skips the fetch, so the index is not even loaded until the
+       first real keystroke; : input goes to the command line and
+       never reaches page search. */
     function render() {
       const seq = ++renderSeq;
       const query = input.value.trim();
-      if (!query) {
+      if (!query || query === ":") {
         results = [];
         list.textContent = "";
         input.setAttribute("aria-expanded", "false");
         input.removeAttribute("aria-activedescendant");
         return;
       }
-      if (query === "-h" || query === "--help") {
-        paintHelp();
+      if (query.charAt(0) === ":") {
+        runCommand(query.slice(1));
+        return;
+      }
+      if (query.charAt(0) === "/") {
+        /* Content search from two typed characters on; a lone slash
+           (or one letter) stays a clean bar, like the empty query. */
+        const pattern = query.slice(1);
+        if (pattern.length < 2) {
+          results = [];
+          list.textContent = "";
+          input.setAttribute("aria-expanded", "false");
+          input.removeAttribute("aria-activedescendant");
+          return;
+        }
+        loadSections().then(
+          function (sections) {
+            if (seq !== renderSeq) return;
+            results = matchContent(pattern, sections);
+            selected = 0;
+            if (results.length) paintResults();
+            else showMessage("no matches");
+          },
+          function () {
+            if (seq !== renderSeq) return;
+            results = [];
+            showMessage("page index unavailable");
+          }
+        );
         return;
       }
       loadPages().then(

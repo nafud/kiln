@@ -42,6 +42,15 @@ jobs:
       - name: Build
         run: mkdocs build
 
+      # Build stamp for the palette's :version command (quick-jump.js
+      # fetches version.json; a local serve has none and reports a
+      # local build).
+      - name: Stamp build version
+        run: |
+          printf '{"commit":"%s","date":"%s"}' \
+            "$(git rev-parse --short HEAD)" \
+            "$(date -u '+%Y-%m-%d %H:%M UTC')" > site/version.json
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5
         with:

@@ -617,13 +617,13 @@ tt {
   }
 }
 
-/* -h / --help usage output (quick-jump.js paints one pre of aligned
-   monospace text into the results dropdown, GNU --help style).
-   Non-interactive: no hover surface, not a selectable option. The
-   doubled selectors outrank Material's .md-typeset pre code-block
-   styling on the inline variant, same cascade pattern as the result
-   rows below; the pre must read as plain terminal output, not as a
-   code block surface. */
+/* : command output (quick-jump.js paints one pre of aligned
+   monospace text into the results dropdown — :h's usage table,
+   :intro, :version, E492). Non-interactive: no hover surface, not a
+   selectable option. The doubled selectors outrank Material's
+   .md-typeset pre code-block styling on the inline variant, same
+   cascade pattern as the result rows below; the pre must read as
+   plain terminal output, not as a code block surface. */
 .kiln-jump-help,
 .md-typeset .kiln-jump-results .kiln-jump-help {
   padding: 0.55rem 0.8rem;
@@ -642,6 +642,11 @@ tt {
   color: var(--color-text-secondary);
   white-space: pre;
   overflow-x: auto;
+}
+
+/* The intro screen's <Enter> tokens, dimmed like vim's. */
+.kiln-jump-dim {
+  color: var(--color-text-faint);
 }
 
 /* The homepage card grid is the no-JS fallback for the jump bar:
