@@ -431,24 +431,17 @@
     /* One pre of monospace text in the dropdown — the shared body of
        every : command's output, so the command line answers in kind.
        Not options: results stays empty, Arrow/Enter are inert and the
-       listbox stays collapsed for AT. A line is a string, or an array
-       of DOM nodes for the few dim spans the intro screen needs. */
-    function paintOutput(lines) {
+       listbox stays collapsed for AT. opts.center block-centers the
+       pre (the intro screen; every other command is left-aligned
+       usage text). */
+    function paintOutput(lines, opts) {
       results = [];
       list.textContent = "";
       const item = document.createElement("li");
-      item.className = "kiln-jump-help";
+      item.className =
+        "kiln-jump-help" + (opts && opts.center ? " kiln-jump-help--center" : "");
       const pre = document.createElement("pre");
-      lines.forEach(function (line, i) {
-        if (i) pre.appendChild(document.createTextNode("\n"));
-        if (typeof line === "string") {
-          pre.appendChild(document.createTextNode(line));
-        } else {
-          line.forEach(function (node) {
-            pre.appendChild(node);
-          });
-        }
-      });
+      pre.textContent = lines.join("\n");
       item.appendChild(pre);
       list.appendChild(item);
       input.setAttribute("aria-expanded", "false");
@@ -470,53 +463,60 @@
       );
     }
 
-    /* :intro — the vim welcome screen, Kiln edition. The page count
-       comes from the same lazily fetched index the search uses; the
-       screen still renders if the fetch fails, just without the
-       stats line. The dimmed <Enter> tokens mirror vim's. */
+    /* :intro — the welcome screen: spaced KILN title, the attribution
+       line, then the six top-level sections as a hex-numbered grid
+       whose [0x0N] labels are the 1-6 keys that open them, and the
+       live page count. Every line is centered within the widest one
+       (leading spaces), and paintOutput block-centers the whole thing.
+       The section names and their order match key-nav.js's 1-6
+       bindings. The page count comes from the same lazily fetched
+       index the search uses; the screen still renders without it if
+       the fetch fails. */
     function paintIntro() {
       const seq = renderSeq;
+      const SECTIONS = ["Guides", "Links", "Books", "Bookmarks", "Courses", "Writeups"];
       const paint = function (pageCount) {
-        const dim = function (t) {
-          const span = document.createElement("span");
-          span.className = "kiln-jump-dim";
-          span.textContent = t;
-          return span;
+        /* [0x0N] Name for the nth section (1-based key). */
+        const cell = function (i) {
+          return "[0x0" + (i + 1) + "] " + SECTIONS[i];
         };
-        const text = function (t) {
-          return document.createTextNode(t);
-        };
-        const typeRows = [
-          [":help", "for help"],
-          [":version", "for build info"],
-          ["/pattern", "to search the notes"],
-        ];
-        const cmdWidth = typeRows.reduce(function (w, r) {
-          return Math.max(w, r[0].length);
-        }, 0);
-        const typeRow = function (cmd, desc) {
-          return [
-            text("type  " + cmd),
-            dim("<Enter>"),
-            text(" ".repeat(cmdWidth - cmd.length + 3) + desc),
-          ];
-        };
-        const lines = [
-          "      KILN - a personal knowledge base",
-          "",
-          "             by Ravan Huseynli",
-          "",
-        ]
-          .concat(
-            typeRows.map(function (r) {
-              return typeRow(r[0], r[1]);
+        /* Three columns, two rows, column-major so the labels read
+           down: 0x01/0x02, 0x03/0x04, 0x05/0x06. */
+        const colWidth = [0, 1, 2].map(function (c) {
+          return Math.max(cell(2 * c).length, cell(2 * c + 1).length);
+        });
+        const gridRow = function (r) {
+          return [0, 1, 2]
+            .map(function (c) {
+              const s = cell(2 * c + r);
+              return c === 2 ? s : s + " ".repeat(colWidth[c] - s.length);
             })
-          );
+            .join("  ");
+        };
+        const row0 = gridRow(0);
+        const row1 = gridRow(1);
+        const gridWidth = Math.max(row0.length, row1.length);
+        const lines = [
+          "KILN".split("").join(" "),
+          "A personal knowledge base and portfolio by Ravan Huseynli.",
+          "",
+          "",
+          row0 + " ".repeat(gridWidth - row0.length),
+          row1 + " ".repeat(gridWidth - row1.length),
+        ];
         if (pageCount) {
           lines.push("");
-          lines.push("        " + pageCount + " pages across 6 sections");
+          lines.push(pageCount + " pages across 6 sections");
         }
-        paintOutput(lines);
+        const width = lines.reduce(function (w, l) {
+          return Math.max(w, l.length);
+        }, 0);
+        paintOutput(
+          lines.map(function (l) {
+            return " ".repeat(Math.floor((width - l.length) / 2)) + l;
+          }),
+          { center: true }
+        );
       };
       loadPages().then(
         function (pages) {

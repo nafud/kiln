@@ -644,9 +644,15 @@ tt {
   overflow-x: auto;
 }
 
-/* The intro screen's <Enter> tokens, dimmed like vim's. */
-.kiln-jump-dim {
-  color: var(--color-text-faint);
+/* :intro is a centered composition (the lines are already centered
+   against the widest one with leading spaces; this centers the block
+   itself within the dropdown). fit-content caps at the available
+   width, so a narrow viewport still scrolls inside overflow-x. */
+.kiln-jump-help--center pre,
+.md-typeset .kiln-jump-results .kiln-jump-help--center pre {
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* The homepage card grid is the no-JS fallback for the jump bar:
