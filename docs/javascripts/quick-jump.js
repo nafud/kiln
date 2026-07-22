@@ -500,7 +500,6 @@
           "KILN".split("").join(" "),
           "A personal knowledge base and portfolio by Ravan Huseynli.",
           "",
-          "",
           row0 + " ".repeat(gridWidth - row0.length),
           row1 + " ".repeat(gridWidth - row1.length),
         ];
