@@ -262,6 +262,8 @@ and the serial is those two-digit groups joined, twice the username length. Work
 
 `test` maps to `4151423C`.
 
+<div class="kiln-widget" data-widget="cfb1-stepper"></div>
+
 ## 6. Keygen
 
 Complete script. Save as `keygen.py`. It assumes an ASCII username, matching the byte-wise reads in the routine.
@@ -292,6 +294,8 @@ crackme 4C3C5051484518
 $ python3 keygen.py test
 test 4151423C
 ```
+
+<div class="kiln-widget" data-widget="cfb1-keygen"></div>
 
 Type the username and its serial into the program for `ACCESS GRANTED`.
 
