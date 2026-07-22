@@ -966,70 +966,79 @@ body:has(.kiln-ascii) .md-header__button[for="__drawer"] {
 }
 
 /* Interactive content widgets (javascripts/widgets.js, experimental).
-   Same surface recipe as the cards and code blocks; monospace and
-   token colors so they belong and follow the theme. Scoped under
-   .md-typeset because they live in page content. */
+   The keygen renders as a live console block: the same surface as the
+   site's `console` code fences (code-bg, 1px border, 4px radius,
+   monospace), a shell prompt line whose username is editable in place,
+   and the program's output below. The block cursor and its focus-blink
+   reuse the jump bar's convention. Scoped under .md-typeset because
+   these live in page content. */
 .md-typeset .kiln-widget {
   margin: 1.2rem 0 1.5rem;
-  padding: 0.85rem 0.95rem;
+}
+
+.md-typeset .kiln-term {
   border: 1px solid var(--color-border);
   border-radius: 4px;
-  background: var(--color-surface);
-}
-
-.md-typeset .kiln-widget-caption {
-  color: var(--color-text-faint);
-  font-size: 0.65rem;
-  margin-bottom: 0.7rem;
-}
-
-.md-typeset .kiln-widget-field {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-right: 0.9rem;
-}
-
-.md-typeset .kiln-widget-label {
-  color: var(--color-text-muted);
-  font-size: 0.68rem;
-}
-
-.md-typeset .kiln-widget-input {
-  border: 1px solid var(--color-border);
-  border-radius: 3px;
   background: var(--color-code-bg);
-  color: var(--color-text-primary);
-  font-family: "JetBrains Mono", monospace;
+  padding: 0.7rem 0.8rem;
   font-size: 0.72rem;
-  padding: 0.25rem 0.45rem;
+  line-height: 1.6;
+  cursor: text;
+}
+
+.md-typeset .kiln-term-line {
+  white-space: pre;
+  color: var(--color-text-secondary);
+}
+
+.md-typeset .kiln-term-prompt {
+  color: var(--color-text-muted);
+  user-select: none;
+}
+
+/* Borderless inline input, sized to its content in ch (widgets.js) so
+   the block cursor sits flush after the typed username. The native
+   caret is suppressed; the block is the cursor. */
+.md-typeset .kiln-term-input {
+  border: none;
   outline: none;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+  padding: 0;
+  caret-color: transparent;
 }
 
-.md-typeset .kiln-widget-input:focus {
-  border-color: var(--color-accent);
+.md-typeset .kiln-term-cursor {
+  color: var(--color-text-primary);
+  user-select: none;
 }
 
-.md-typeset .kiln-widget-output {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  margin-top: 0.8rem;
-  font-size: 0.85rem;
-  letter-spacing: 0.04em;
+.md-typeset .kiln-term:focus-within .kiln-term-cursor {
+  animation: kiln-jump-cursor-blink 1.2s step-end infinite;
 }
 
-.md-typeset .kiln-widget-prompt {
-  color: var(--color-text-faint);
-  font-weight: 700;
+@media (prefers-reduced-motion: reduce) {
+  .md-typeset .kiln-term:focus-within .kiln-term-cursor {
+    animation: none;
+  }
 }
 
-.md-typeset .kiln-widget-serial {
-  color: var(--color-accent);
+.md-typeset .kiln-term-out {
+  margin-top: 0.1rem;
+  white-space: pre-wrap;
   word-break: break-all;
 }
 
-.md-typeset .kiln-widget-output--error .kiln-widget-serial {
+.md-typeset .kiln-term-echo {
+  color: var(--color-text-muted);
+}
+
+.md-typeset .kiln-term-serial {
+  color: var(--color-accent);
+}
+
+.md-typeset .kiln-term-err {
   color: var(--color-text-muted);
 }
 

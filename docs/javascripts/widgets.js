@@ -46,36 +46,53 @@
     return { serial: out };
   }
 
+  /* A live console block: `$ python3 keygen.py <username>` with the
+     username editable in place and the program's stdout below. */
   function mountKeygen(root) {
-    root.appendChild(el("div", "kiln-widget-caption", "// Live keygen"));
+    const term = el("div", "kiln-term");
 
-    const row = el("label", "kiln-widget-field");
-    row.appendChild(el("span", "kiln-widget-label", "username"));
-    const input = el("input", "kiln-widget-input");
+    const line = el("div", "kiln-term-line");
+    line.appendChild(el("span", "kiln-term-prompt", "$"));
+    line.appendChild(document.createTextNode(" python3 keygen.py "));
+    const input = el("input", "kiln-term-input");
     input.type = "text";
     input.spellcheck = false;
     input.autocomplete = "off";
+    input.setAttribute("aria-label", "username");
     input.value = "crackme";
-    row.appendChild(input);
-    root.appendChild(row);
+    line.appendChild(input);
+    const cursor = el("span", "kiln-term-cursor", "█");
+    cursor.setAttribute("aria-hidden", "true");
+    line.appendChild(cursor);
+    term.appendChild(line);
 
-    const out = el("div", "kiln-widget-output");
-    out.appendChild(el("span", "kiln-widget-prompt", "»"));
-    const serialEl = el("span", "kiln-widget-serial");
-    out.appendChild(serialEl);
-    root.appendChild(out);
+    const out = el("div", "kiln-term-out");
+    term.appendChild(out);
 
+    /* Monospace, so the input fits its text exactly at value.length ch
+       and the block cursor lands flush after it. */
+    function sizeInput() {
+      input.style.width = Math.max(1, input.value.length) + "ch";
+    }
     function render() {
+      sizeInput();
+      out.textContent = "";
       const result = cfb1Serial(input.value);
       if (result.error) {
-        serialEl.textContent = result.error;
-        out.classList.add("kiln-widget-output--error");
+        out.appendChild(el("span", "kiln-term-err", result.error));
       } else {
-        serialEl.textContent = result.serial;
-        out.classList.remove("kiln-widget-output--error");
+        out.appendChild(el("span", "kiln-term-echo", input.value.trim() + " "));
+        out.appendChild(el("span", "kiln-term-serial", result.serial));
       }
     }
     input.addEventListener("input", render);
+    /* Click anywhere in the terminal focuses the prompt, as a terminal
+       does. */
+    term.addEventListener("click", function (event) {
+      if (event.target !== input) input.focus();
+    });
+
+    root.appendChild(term);
     render();
   }
 
