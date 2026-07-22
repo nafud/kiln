@@ -10,7 +10,7 @@
    focused) and a faint "type :h for help" placeholder; results only
    exist while a query is typed. A leading colon is vim command-line
    mode, parsed exactly and never reaching page search: :h/:help
-   print the binding table (HELP_ROWS below), :version the deployed
+   print the binding table (HELP_SECTIONS below), :version the deployed
    build stamp (version.json; "local build" when absent), :intro the
    vim-style welcome screen, and any unknown :name answers with
    vim's E492. That IS the site's help — the commands are its only
@@ -44,23 +44,30 @@
 
   const MAX_RESULTS = 8;
 
-  /* The keyboard bindings and : commands the :h table prints, [keys,
-     description] per row (keys comma-joined, descriptions lowercase).
-     The key bindings themselves live in key-nav.js — keep this table
-     in sync when they change. */
-  const HELP_ROWS = [
-    [["gg", "G"], "jump to top / bottom"],
-    [["k", "j"], "scroll up / down"],
-    [["[", "]"], "navigate headings"],
-    [["<", ">"], "navigate pages"],
-    [["0"], "home"],
-    [["`"], "search"],
-    [["s"], "toggle sidebars"],
-    [["t"], "toggle theme"],
-    [["/pattern"], "search inside pages"],
-    [[":version"], "show build info"],
-    [[":intro"], "show intro screen"],
-    [[":h", ":help"], "display this help"],
+  /* The :h table, grouped into labelled sections. Each row is [keys,
+     description] (keys comma-joined). The key bindings themselves live
+     in key-nav.js — keep this in sync when they change. */
+  const HELP_SECTIONS = [
+    ["NAVIGATION", [
+      [["k", "j"], "Scroll up / down"],
+      [["gg", "G"], "Jump to top / bottom"],
+      [["[", "]"], "Navigate headings"],
+      [["<", ">"], "Navigate pages"],
+      [["0"], "Home"],
+    ]],
+    ["SEARCH", [
+      [["`"], "Search"],
+      [["/pattern"], "Grep page text"],
+    ]],
+    ["VIEW", [
+      [["s"], "Toggle sidebars"],
+      [["t"], "Toggle theme"],
+    ]],
+    ["COMMANDS", [
+      [[":intro"], "Show intro screen"],
+      [[":version"], "Show build info"],
+      [[":h", ":help"], "Display this help"],
+    ]],
   ];
 
   /* ---------- page data ---------- */
@@ -450,17 +457,24 @@
     }
 
     function paintHelp() {
-      const rows = HELP_ROWS.map(function (row) {
-        return { keys: row[0].join(", "), label: row[1] };
+      /* One key column width across every section, so descriptions
+         line up site-wide, not just within a section. */
+      let width = 0;
+      HELP_SECTIONS.forEach(function (section) {
+        section[1].forEach(function (row) {
+          width = Math.max(width, row[0].join(", ").length);
+        });
       });
-      const width = rows.reduce(function (w, r) {
-        return Math.max(w, r.keys.length);
-      }, 0);
-      paintOutput(
-        rows.map(function (r) {
-          return "  " + r.keys + " ".repeat(width - r.keys.length + 3) + r.label;
-        })
-      );
+      const lines = [];
+      HELP_SECTIONS.forEach(function (section, i) {
+        if (i) lines.push("");
+        lines.push("[ " + section[0] + " ]");
+        section[1].forEach(function (row) {
+          const keys = row[0].join(", ");
+          lines.push("  " + keys + " ".repeat(width - keys.length + 3) + row[1]);
+        });
+      });
+      paintOutput(lines);
     }
 
     /* :intro — the welcome screen: spaced KILN title, the attribution
