@@ -74,6 +74,11 @@
     function sizeInput() {
       input.style.width = Math.max(1, input.value.length) + "ch";
     }
+    /* Keep the caret end (and the block cursor after it) in view while
+       the prompt has focus. */
+    function scrollToCaret() {
+      line.scrollLeft = line.scrollWidth;
+    }
     function render() {
       sizeInput();
       out.textContent = "";
@@ -84,8 +89,21 @@
         out.appendChild(el("span", "kiln-term-echo", input.value.trim() + " "));
         out.appendChild(el("span", "kiln-term-serial", result.serial));
       }
+      if (document.activeElement === input) scrollToCaret();
     }
     input.addEventListener("input", render);
+    input.addEventListener("focus", scrollToCaret);
+    /* Blur: unfocus so the site keys work again, and rewind the line so
+       the command reads from the prompt. */
+    input.addEventListener("blur", function () {
+      line.scrollLeft = 0;
+    });
+    input.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") {
+        input.blur();
+        event.preventDefault();
+      }
+    });
     /* Click anywhere in the terminal focuses the prompt, as a terminal
        does. */
     term.addEventListener("click", function (event) {

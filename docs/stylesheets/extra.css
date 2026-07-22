@@ -986,9 +986,15 @@ body:has(.kiln-ascii) .md-header__button[for="__drawer"] {
   cursor: text;
 }
 
+/* The command scrolls horizontally rather than overflowing the box; a
+   long username keeps the block cursor in view (widgets.js scrolls to
+   the caret on input/focus, back to the prompt on blur). */
 .md-typeset .kiln-term-line {
   white-space: pre;
   color: var(--color-text-secondary);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding-right: 1px; /* keeps the block cursor off the clip edge */
 }
 
 .md-typeset .kiln-term-prompt {
