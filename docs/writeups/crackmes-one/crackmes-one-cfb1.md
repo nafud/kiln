@@ -260,10 +260,6 @@ and the serial is those two-digit groups joined, twice the username length. Work
 | 2 | `s` 0x73 | 0x5C | 0x2F | 0x42 | `42` |
 | 3 | `t` 0x74 | 0x5D | 0x29 | 0x3C | `3C` |
 
-`test` maps to `4151423C`.
-
-<div class="kiln-widget" data-widget="cfb1-stepper"></div>
-
 ## 6. Keygen
 
 Complete script. Save as `keygen.py`. It assumes an ASCII username, matching the byte-wise reads in the routine.
@@ -285,14 +281,6 @@ def keygen(username):
 if __name__ == "__main__":
     name = (sys.argv[1] if len(sys.argv) > 1 else "crackme").strip()
     print(name, keygen(name))
-```
-
-```console
-$ python3 keygen.py crackme
-crackme 4C3C5051484518
-
-$ python3 keygen.py test
-test 4151423C
 ```
 
 <div class="kiln-widget" data-widget="cfb1-keygen"></div>
