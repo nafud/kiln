@@ -718,6 +718,15 @@ body:has(.kiln-ascii) .md-header__button[for="__drawer"] {
   box-shadow: none;
 }
 
+/* While the inline dropdown is open the bar squares its bottom
+   corners so it fuses flush with the dropdown's squared top (the
+   pair then shares one straight divider and rounds only on the
+   outer four corners). */
+.kiln-jump--inline .kiln-jump-panel:has(.kiln-jump-results:not(:empty)) {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
 .kiln-jump-row {
   display: flex;
   align-items: center;
@@ -737,6 +746,15 @@ body:has(.kiln-ascii) .md-header__button[for="__drawer"] {
 
 .kiln-jump-panel:has(.kiln-jump-results:not(:empty)) .kiln-jump-row {
   border-bottom: 1px solid var(--color-border);
+}
+
+/* Inline exception: its results float in a separate box below (see
+   below), and that box's own top border is the divider — so the row
+   must not draw a second one, or the join shows a doubled line. */
+.kiln-jump--inline
+  .kiln-jump-panel:has(.kiln-jump-results:not(:empty))
+  .kiln-jump-row {
+  border-bottom: none;
 }
 
 .kiln-jump-prompt {
@@ -815,16 +833,22 @@ body:has(.kiln-ascii) .md-header__button[for="__drawer"] {
 /* Inline results float over the content below the bar instead of
    sitting in the flow, so matches never change the page height. As a
    floating layer the dropdown carries its own surface and shadow (the
-   panel's overflow:hidden no longer clips it). */
+   panel's overflow:hidden no longer clips it). It joins the bar
+   seamlessly, matching the overlay's single-box look: flush to the
+   bar's bottom (no gap), its top border pulled up a pixel to merge
+   with the bar's, and the two touching corners squared (the panel's
+   bottom corners are squared in the rule below) so the pair reads as
+   one rounded surface split by a divider. */
 .kiln-jump--inline .kiln-jump-results {
   position: absolute;
-  top: calc(100% + 0.4rem);
+  top: 100%;
+  margin-top: -1px;
   left: 0;
   right: 0;
   z-index: 20;
   max-height: 40vh;
   border: 1px solid var(--color-border);
-  border-radius: 4px;
+  border-radius: 0 0 4px 4px;
   background: var(--color-surface);
   box-shadow: 0 4px 12px var(--color-shadow);
 }

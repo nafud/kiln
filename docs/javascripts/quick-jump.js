@@ -280,7 +280,7 @@
       const section = entry.section;
       return {
         title: section.pageTitle + " › " + section.title,
-        path: contentExcerpt(section, entry.at, needle),
+        excerpt: contentExcerpt(section, entry.at, needle),
         url: section.url,
       };
     });
@@ -408,13 +408,18 @@
         const title = document.createElement("span");
         title.className = "kiln-jump-result-title";
         title.textContent = page.title;
-
-        const path = document.createElement("span");
-        path.className = "kiln-jump-result-path";
-        path.textContent = page.path || "/";
-
         link.appendChild(title);
-        link.appendChild(path);
+
+        /* Only /pattern rows carry a right-hand column, and it holds
+           the content excerpt. Page-search rows show the title alone —
+           the path was redundant with it (and with the URL). */
+        if (page.excerpt) {
+          const excerpt = document.createElement("span");
+          excerpt.className = "kiln-jump-result-path";
+          excerpt.textContent = page.excerpt;
+          link.appendChild(excerpt);
+        }
+
         item.appendChild(link);
         list.appendChild(item);
       });
