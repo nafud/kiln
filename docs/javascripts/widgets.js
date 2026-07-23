@@ -91,8 +91,34 @@
       }
       if (document.activeElement === input) scrollToCaret();
     }
+    /* Type-only prompt: the caret is pinned to the end so the block
+       cursor is always where the next character lands. pinCaret snaps
+       any stray selection back (guarded, so setSelectionRange doesn't
+       loop through the select event it fires), and the caret-moving
+       keys are blocked outright. */
+    function pinCaret() {
+      const len = input.value.length;
+      if (input.selectionStart !== len || input.selectionEnd !== len) {
+        input.setSelectionRange(len, len);
+      }
+    }
+    const CARET_KEYS = {
+      ArrowLeft: 1,
+      ArrowRight: 1,
+      ArrowUp: 1,
+      ArrowDown: 1,
+      Home: 1,
+      End: 1,
+    };
+
     input.addEventListener("input", render);
-    input.addEventListener("focus", scrollToCaret);
+    input.addEventListener("focus", function () {
+      pinCaret();
+      scrollToCaret();
+    });
+    ["click", "mouseup", "select"].forEach(function (ev) {
+      input.addEventListener(ev, pinCaret);
+    });
     /* Blur: unfocus so the site keys work again, and rewind the line so
        the command reads from the prompt. */
     input.addEventListener("blur", function () {
@@ -101,6 +127,8 @@
     input.addEventListener("keydown", function (event) {
       if (event.key === "Escape") {
         input.blur();
+        event.preventDefault();
+      } else if (CARET_KEYS[event.key]) {
         event.preventDefault();
       }
     });
