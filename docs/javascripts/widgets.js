@@ -79,6 +79,15 @@
     function scrollToCaret() {
       line.scrollLeft = line.scrollWidth;
     }
+    /* Puts the caret at the end (collapsed), unless it is already
+       there. Guarded so it never disturbs a real selection it is not
+       meant to touch. */
+    function pinCaret() {
+      const len = input.value.length;
+      if (input.selectionStart !== len || input.selectionEnd !== len) {
+        input.setSelectionRange(len, len);
+      }
+    }
     function render() {
       sizeInput();
       out.textContent = "";
@@ -89,19 +98,18 @@
         out.appendChild(el("span", "kiln-term-echo", input.value.trim() + " "));
         out.appendChild(el("span", "kiln-term-serial", result.serial));
       }
-      if (document.activeElement === input) scrollToCaret();
-    }
-    /* Type-only prompt: the caret is pinned to the end so the block
-       cursor is always where the next character lands. pinCaret snaps
-       any stray selection back (guarded, so setSelectionRange doesn't
-       loop through the select event it fires), and the caret-moving
-       keys are blocked outright. */
-    function pinCaret() {
-      const len = input.value.length;
-      if (input.selectionStart !== len || input.selectionEnd !== len) {
-        input.setSelectionRange(len, len);
+      /* Any content change (type, paste, cut, delete) returns the
+         caret to the end, so the block cursor stays the insertion
+         point and the next character appends. */
+      if (document.activeElement === input) {
+        pinCaret();
+        scrollToCaret();
       }
     }
+    /* Type-only prompt: caret navigation is blocked so the caret can't
+       leave the end, but clipboard shortcuts (Ctrl/Cmd+A/C/X/V) pass
+       through — selection is left alone for copy/cut, and a paste is
+       re-pinned to the end by render above. */
     const CARET_KEYS = {
       ArrowLeft: 1,
       ArrowRight: 1,
@@ -116,8 +124,10 @@
       pinCaret();
       scrollToCaret();
     });
-    ["click", "mouseup", "select"].forEach(function (ev) {
-      input.addEventListener(ev, pinCaret);
+    /* A plain click (collapsed caret) snaps to the end; a drag that
+       leaves a selection is preserved so it can be copied. */
+    input.addEventListener("click", function () {
+      if (input.selectionStart === input.selectionEnd) pinCaret();
     });
     /* Blur: unfocus so the site keys work again, and rewind the line so
        the command reads from the prompt. */
