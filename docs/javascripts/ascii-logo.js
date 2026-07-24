@@ -37,14 +37,16 @@
        silhouette stops reading. */
     charRamp: "$@B%8&WM#*oa+=~-:. ",
     /* Density ramp for animated frames only: the long alphabet the
-       shimmer scrambles through. The pointer-driven glitch reads as
-       terminal noise because a displaced cell can land on many
-       distinct glyphs per swing — on the short static ramp the same
-       fractional swing collapses to a couple of steps and most frames
-       change nothing, which reads as slow and dull. Cells the wave has
-       not displaced keep their exact static glyph (see buildFrame), so
-       the effect settles seamlessly back into the crisp frame. */
-    glitchRamp: "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^`'. ",
+       shimmer scrambles through — close to the full printable-ASCII
+       set, ordered darkest ink to background. The pointer-driven
+       glitch reads as terminal noise because a displaced cell can
+       land on many distinct glyphs per swing — on the short static
+       ramp the same fractional swing collapses to a couple of steps
+       and most frames change nothing, which reads as slow and dull.
+       Cells the wave has not displaced keep their exact static glyph
+       (see buildFrame), so the effect settles seamlessly back into
+       the crisp frame. */
+    glitchRamp: "$@B%8&WM#NHKDGERSAPVFT*oahkbdpqwmZO0QLCJUYXzcvunxrjfteysg9654327/\\|()1{}[]?=-_+~<>i!lI;:,\"^`'. ",
     referenceFontPx: 200,        /* offscreen measuring/drawing font size */
     supersample: 3,              /* canvas pixels sampled per cell axis */
     inkFill: 0.94,               /* fraction of the grid the glyphs fill */
