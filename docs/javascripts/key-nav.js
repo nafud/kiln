@@ -31,8 +31,8 @@
 
    Keys are ignored while typing (inputs, textareas, contenteditable)
    and in chords with Ctrl/Alt/Meta. Scrolling is smooth unless the
-   user prefers reduced motion. The help panel lives on document.body,
-   so it survives navigation.instant page changes. */
+   user prefers reduced motion. Listeners attach once at load; nothing
+   here needs re-initialization across navigation.instant changes. */
 
 (function () {
   "use strict";
@@ -166,6 +166,10 @@
   window.addEventListener("keydown", function (event) {
     if (event.ctrlKey || event.altKey || event.metaKey) return;
     if (KilnUtils.isTypingTarget(event.target)) return;
+
+    /* Any key other than g cancels a pending gg chord, as in vim —
+       g j g must not read as gg. */
+    if (event.key !== "g") lastGAt = 0;
 
     /* The scroll motions are the vim keys, case-accurate: gg (a
        two-tap chord) and G jump, lowercase j/k step — their

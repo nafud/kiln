@@ -911,7 +911,12 @@ body:has(.kiln-ascii) .md-header__button[for="__drawer"] {
 }
 
 
-/* Sticky sidebar title — transparent so it matches sidebar background */
+/* Sticky sidebar title — opaque so scrolled content passes under it,
+   with a gradient fade hanging below it. The fade is a ::after on the
+   title itself (not an injected element), so it needs no JS, tracks
+   the title's height automatically, and is correct even though the
+   sidebars are display:none at load (the old JS measured a hidden
+   title as 0px and pinned the fade over the title text). */
 
 .md-sidebar--primary .md-nav--primary > .md-nav__title,
 .md-sidebar--secondary .md-nav__title {
@@ -921,13 +926,16 @@ body:has(.kiln-ascii) .md-header__button[for="__drawer"] {
   background: var(--color-bg) !important;
 }
 
-.sidebar-title-fade {
-  position: sticky;
+.md-sidebar--primary .md-nav--primary > .md-nav__title::after,
+.md-sidebar--secondary .md-nav__title::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
   height: 20px;
-  margin-bottom: -20px;
   background: linear-gradient(to bottom, var(--color-bg), transparent);
   pointer-events: none;
-  z-index: 9;
 }
 
 /* Register cards */

@@ -4,12 +4,16 @@
    read `KilnUtils` from the shared global script scope. */
 
 const KilnUtils = {
-  /* Debounce, e.g. for resize handlers, to avoid layout thrashing. */
+  /* Debounce, e.g. for resize handlers, to avoid layout thrashing.
+     The last call's arguments are forwarded to fn when it fires. */
   debounce: function (fn, delay) {
     let timer;
     return function () {
+      const args = arguments;
       clearTimeout(timer);
-      timer = setTimeout(fn, delay);
+      timer = setTimeout(function () {
+        fn.apply(null, args);
+      }, delay);
     };
   },
 
