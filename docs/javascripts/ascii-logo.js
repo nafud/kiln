@@ -6,10 +6,15 @@
    from the measured character cell and the available container width plus a
    viewport-height budget, so the logo always fits without scrollbars.
 
-   Until generation succeeds the pre shows its plain-text fallback, styled
-   as a title by extra.css; CONFIG.generatedClass switches it to grid
-   sizing. The webfont stylesheet is injected from here rather than
-   @imported in extra.css so only pages that render the logo pay for it.
+   The grid is generated exclusively from the real CONFIG.fontFamily
+   webfont — never from a fallback font, whose different metrics and
+   shapes would produce a wrong-looking logo that then sticks. Until the
+   font is verifiably loaded (see ensureLogoFont) the pre keeps its
+   plain-text fallback, styled as a title by extra.css;
+   CONFIG.generatedClass switches it to grid sizing. Failed loads retry
+   with backoff, and a late success still builds. The webfont stylesheet
+   is injected from here rather than @imported in extra.css so only
+   pages that render the logo pay for it.
 
    The logo is static by itself; pointer movement drives a shimmer animation
    whose intensity envelope eases in and out. Idempotent and safe to re-run
@@ -26,10 +31,20 @@
       "https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&display=swap",
     fontStylesheetId: "kiln-logo-font",
     generatedClass: "kiln-ascii--generated",
-    /* Density ramp: darkest ink first, background (space) last. Kept
-       short on purpose — a long ramp turns anti-aliased edge cells
-       into mid-density glyph mush and the silhouette stops reading. */
+    /* Density ramp for the static frame: darkest ink first, background
+       (space) last. Kept short on purpose — a long ramp turns
+       anti-aliased edge cells into mid-density glyph mush and the
+       silhouette stops reading. */
     charRamp: "$@B%8&WM#*oa+=~-:. ",
+    /* Density ramp for animated frames only: the long alphabet the
+       shimmer scrambles through. The pointer-driven glitch reads as
+       terminal noise because a displaced cell can land on many
+       distinct glyphs per swing — on the short static ramp the same
+       fractional swing collapses to a couple of steps and most frames
+       change nothing, which reads as slow and dull. Cells the wave has
+       not displaced keep their exact static glyph (see buildFrame), so
+       the effect settles seamlessly back into the crisp frame. */
+    glitchRamp: "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^`'. ",
     referenceFontPx: 200,        /* offscreen measuring/drawing font size */
     supersample: 3,              /* canvas pixels sampled per cell axis */
     inkFill: 0.94,               /* fraction of the grid the glyphs fill */
@@ -52,6 +67,11 @@
     releaseMs: 500,              /* shimmer fade-out time after stopping */
     resizeDebounceMs: 150,
     probeColumns: 40,            /* sample size for character cell measuring */
+    /* Webfont retry schedule: fontRetryDelayMs doubles per attempt
+       (250, 500, 1000, 2000ms), riding out a slow CDN or a stylesheet
+       that had not parsed when the first check ran. */
+    fontLoadRetries: 4,
+    fontRetryDelayMs: 250,
   };
 
   const state = {
@@ -59,6 +79,7 @@
     cols: 0,
     rows: 0,
     baseIndices: null,  /* Int16Array: jittered static ramp index per cell */
+    glitchBase: null,   /* Int16Array: the same density on the glitch ramp */
     phases: null,       /* Float32Array: per-cell animation phase */
     ink: null,          /* Uint8Array: 1 where the cell contains glyph ink */
     staticFrame: "",
@@ -75,6 +96,10 @@
 
   function clampIndex(index) {
     return Math.min(CONFIG.charRamp.length - 1, Math.max(0, index));
+  }
+
+  function clampGlitchIndex(index) {
+    return Math.min(CONFIG.glitchRamp.length - 1, Math.max(0, index));
   }
 
   /* Perceptual easing for the envelope: the raw phase ramps linearly, and
@@ -96,44 +121,91 @@
   }
 
   /* Injects the logo webfont's stylesheet on demand (memoized), so pages
-     without the logo never fetch it. Resolves on error too — the serif
-     fallback still produces a legible logo. */
-  let fontStylesheetLoaded = null;
-  function ensureFontStylesheet() {
-    if (
-      !fontStylesheetLoaded ||
-      !document.getElementById(CONFIG.fontStylesheetId)
-    ) {
-      fontStylesheetLoaded = new Promise(function (resolve) {
+     without the logo never fetch it. Resolves true on load, false on
+     error; a failed link is removed and the memo cleared, so the retry
+     schedule below can re-inject a fresh one. */
+  let stylesheetPromise = null;
+  function loadStylesheet() {
+    if (!stylesheetPromise) {
+      stylesheetPromise = new Promise(function (resolve) {
         const link = document.createElement("link");
         link.id = CONFIG.fontStylesheetId;
         link.rel = "stylesheet";
         link.href = CONFIG.fontStylesheetUrl;
-        link.onload = resolve;
-        link.onerror = resolve;
+        link.onload = function () {
+          resolve(true);
+        };
+        link.onerror = function () {
+          link.remove();
+          stylesheetPromise = null;
+          resolve(false);
+        };
         document.head.appendChild(link);
       });
     }
-    return fontStylesheetLoaded;
+    return stylesheetPromise;
   }
 
-  /* Resolves once the logo webfont AND the page's own fonts are usable.
-     Waiting for document.fonts.ready matters because measureCharCell
-     depends on the pre's rendered font (JetBrains Mono): building against
-     fallback metrics would produce a grid that clips or under-fills once
-     the real font swaps in. */
-  function loadFonts() {
+  /* True only when the logo font itself is registered and fully loaded.
+     fonts.load() resolves with the faces that matched the request: an
+     empty list means the @font-face was not registered at all (the
+     stylesheet failed, or its CSS had not parsed yet when this ran) —
+     the very race that used to slip a fallback-font render through.
+     fonts.check() has the same blind spot (an unregistered family
+     counts as "available"), so the matched faces are inspected. */
+  function logoFontUsable() {
     if (!document.fonts || !document.fonts.load) {
-      return Promise.resolve();
+      return Promise.resolve(false);
     }
-    return ensureFontStylesheet()
-      .then(function () {
-        return Promise.all([
-          document.fonts.load(cssFont(CONFIG.referenceFontPx), CONFIG.text),
-          document.fonts.ready,
-        ]);
+    return document.fonts
+      .load(cssFont(CONFIG.referenceFontPx), CONFIG.text)
+      .then(function (faces) {
+        return (
+          faces.length > 0 &&
+          faces.every(function (face) {
+            return face.status === "loaded";
+          })
+        );
       })
-      .catch(function () { /* keep the fallback font */ });
+      .catch(function () {
+        return false;
+      });
+  }
+
+  function delay(ms) {
+    return new Promise(function (resolve) {
+      setTimeout(resolve, ms);
+    });
+  }
+
+  function attemptFontLoad(attempt) {
+    return loadStylesheet()
+      .then(logoFontUsable)
+      .then(function (usable) {
+        if (usable || attempt >= CONFIG.fontLoadRetries) return usable;
+        return delay(CONFIG.fontRetryDelayMs << attempt).then(function () {
+          return attemptFontLoad(attempt + 1);
+        });
+      });
+  }
+
+  /* Resolves true once the logo webfont is verifiably usable, running
+     the retry schedule at most once at a time. Success is remembered;
+     failure clears the attempt so any later trigger (a page revisit,
+     a fonts "loadingdone" event) starts a fresh round rather than
+     being stuck with a cached no. */
+  let fontReady = false;
+  let fontAttempt = null;
+  function ensureLogoFont() {
+    if (fontReady) return Promise.resolve(true);
+    if (!fontAttempt) {
+      fontAttempt = attemptFontLoad(0).then(function (usable) {
+        fontReady = usable;
+        fontAttempt = null;
+        return usable;
+      });
+    }
+    return fontAttempt;
   }
 
   /* Measures the rendered size of one monospace character cell inside the
@@ -261,9 +333,11 @@
   function buildCells(grid, coverage) {
     const count = grid.cols * grid.rows;
     const maxIndex = CONFIG.charRamp.length - 1;
+    const glitchMax = CONFIG.glitchRamp.length - 1;
     state.cols = grid.cols;
     state.rows = grid.rows;
     state.baseIndices = new Int16Array(count);
+    state.glitchBase = new Int16Array(count);
     state.phases = new Float32Array(count);
     state.ink = new Uint8Array(count);
 
@@ -279,11 +353,20 @@
           Math.max(0, (coverage[i] - CONFIG.coverageFloor) / band)
         );
         const isInk = density > 0;
-        const jitter = isInk
-          ? (hash - 0.5) * CONFIG.staticJitter * maxIndex
-          : 0;
+        /* The same jittered density lands on both ramps: the short one
+           renders the static frame, the long one is where the shimmer
+           swings (buildFrame). */
         state.baseIndices[i] = clampIndex(
-          Math.round((1 - density) * maxIndex + jitter)
+          Math.round(
+            (1 - density) * maxIndex +
+              (isInk ? (hash - 0.5) * CONFIG.staticJitter * maxIndex : 0)
+          )
+        );
+        state.glitchBase[i] = clampGlitchIndex(
+          Math.round(
+            (1 - density) * glitchMax +
+              (isInk ? (hash - 0.5) * CONFIG.staticJitter * glitchMax : 0)
+          )
         );
         state.phases[i] = hash * Math.PI * 2;
         state.ink[i] = isInk ? 1 : 0;
@@ -291,28 +374,38 @@
     }
   }
 
-  /* Builds one text frame. Pass null for the static frame; pass a timestamp
-     to shimmer the ink cells around their static ramp index. Two detuned
-     sine waves per cell give an organic ripple, and the swing is scaled by
-     the current envelope so the shimmer eases in and out. */
+  /* Builds one text frame. Pass null for the static frame; pass a
+     timestamp to shimmer the ink cells. Two detuned sine waves per cell
+     give an organic ripple, and the swing is scaled by the current
+     envelope so the shimmer eases in and out. Animated displacement
+     happens on the long glitch ramp, whose alphabet is what makes the
+     effect read as terminal noise; a cell the wave displaces by less
+     than one step keeps its exact static glyph, so the frame converges
+     on the static one as the envelope dies and the handoff is
+     seamless. */
   function buildFrame(nowMs) {
-    const maxIndex = CONFIG.charRamp.length - 1;
+    const glitchMax = CONFIG.glitchRamp.length - 1;
     const swing =
-      CONFIG.animAmplitude * maxIndex * smoothstep(state.envelope);
+      CONFIG.animAmplitude * glitchMax * smoothstep(state.envelope);
+    const angle = nowMs === null ? 0 : nowMs * CONFIG.animSpeedRadPerMs;
     const lines = [];
     for (let y = 0; y < state.rows; y++) {
       let line = "";
       for (let x = 0; x < state.cols; x++) {
         const i = y * state.cols + x;
-        let index = state.baseIndices[i];
         if (nowMs !== null && state.ink[i]) {
-          const angle = nowMs * CONFIG.animSpeedRadPerMs;
           const wave =
             0.7 * Math.sin(angle + state.phases[i]) +
             0.3 * Math.sin(angle * CONFIG.waveDetune + state.phases[i] * 2);
-          index = clampIndex(Math.round(index + wave * swing));
+          const displacement = wave * swing;
+          if (Math.abs(displacement) >= 0.5) {
+            line += CONFIG.glitchRamp[
+              clampGlitchIndex(state.glitchBase[i] + Math.round(displacement))
+            ];
+            continue;
+          }
         }
-        line += CONFIG.charRamp[index];
+        line += CONFIG.charRamp[state.baseIndices[i]];
       }
       lines.push(line);
     }
@@ -325,6 +418,10 @@
   function rebuild() {
     const pre = state.pre;
     if (!pre || !pre.isConnected) return;
+    /* The single font gate: no path (init, resize, container resize,
+       late font loads) may generate from a fallback font — the text
+       fallback stays up until the real font has been verified. */
+    if (!fontReady) return;
 
     /* Grid sizing must be measured at the generated font size, not the
        larger text-fallback size, so the class flips before probing. */
@@ -432,9 +529,16 @@
     if (containerObserver && pre.parentElement) {
       containerObserver.observe(pre.parentElement);
     }
-    loadFonts().then(function () {
-      if (state.pre === pre && pre.isConnected) rebuild();
-    });
+    /* Generate only once the logo webfont is verifiably usable AND the
+       page's own fonts have settled — measureCharCell depends on the
+       pre's rendered font (JetBrains Mono), and building against
+       fallback metrics would produce a grid that clips or under-fills
+       once the real font swaps in. On failure the text fallback simply
+       stays; the loadingdone listener below retries later. */
+    Promise.all([ensureLogoFont(), document.fonts && document.fonts.ready])
+      .then(function (results) {
+        if (results[0] && state.pre === pre && pre.isConnected) rebuild();
+      });
   }
 
   window.addEventListener("pointermove", onPointerMove);
@@ -461,10 +565,16 @@
 
   /* Fonts that finish after the first build (e.g. a slow @import of the
      page font) change cell metrics; rebuilding self-heals, and the
-     signature guard makes it free when nothing changed. */
+     signature guard makes it free when nothing changed. The same event
+     re-arms a failed logo-font attempt: ensureLogoFont retries from
+     scratch when its last round gave up, so a font that recovers late
+     still replaces the text fallback with the generated grid. */
   if (document.fonts && document.fonts.addEventListener) {
     document.fonts.addEventListener("loadingdone", function () {
-      if (state.pre && state.pre.isConnected) rebuild();
+      if (!state.pre || !state.pre.isConnected) return;
+      ensureLogoFont().then(function (usable) {
+        if (usable && state.pre && state.pre.isConnected) rebuild();
+      });
     });
   }
 
