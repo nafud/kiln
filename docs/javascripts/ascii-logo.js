@@ -66,7 +66,11 @@
        eases out after the cursor stops, rather than snapping on/off. */
     idleDelayMs: 150,            /* movement gap treated as "cursor stopped" */
     attackMs: 120,               /* shimmer fade-in time */
-    releaseMs: 500,              /* shimmer fade-out time after stopping */
+    /* Fade-out after the cursor stops. Deliberately much longer than
+       the attack: the smoothstepped envelope then thins the noise out
+       cell by cell over a full second-plus, instead of the abrupt
+       cut a short release reads as. */
+    releaseMs: 1400,
     resizeDebounceMs: 150,
     probeColumns: 40,            /* sample size for character cell measuring */
     /* Webfont retry schedule: fontRetryDelayMs doubles per attempt
@@ -174,6 +178,38 @@
       });
   }
 
+  /* Second, belt-and-braces verification: the canvas must actually
+     shape CONFIG.text differently with the logo font than with the
+     bare fallback. Some privacy modes (canvas-fingerprint protection)
+     report a webfont as loaded in document.fonts yet draw canvas text
+     with a standardized font — the one failure the FontFaceSet check
+     above cannot see, and exactly what puts a generic-font grid on
+     screen. Genuinely different faces differ in width or bounds by
+     whole pixels at the reference size; the epsilon only absorbs
+     measurement noise, so a browser that refuses to shape the real
+     font fails this and the text fallback stays. */
+  function logoFontRendered() {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return false;
+    const metrics = function (font) {
+      ctx.font = font;
+      const m = ctx.measureText(CONFIG.text);
+      return [
+        m.width,
+        m.actualBoundingBoxAscent || 0,
+        m.actualBoundingBoxDescent || 0,
+      ];
+    };
+    const logo = metrics(cssFont(CONFIG.referenceFontPx));
+    const fallback = metrics(
+      CONFIG.referenceFontPx + "px " + CONFIG.fontFallback
+    );
+    return logo.some(function (value, i) {
+      return Math.abs(value - fallback[i]) > 0.5;
+    });
+  }
+
   function delay(ms) {
     return new Promise(function (resolve) {
       setTimeout(resolve, ms);
@@ -184,6 +220,7 @@
     return loadStylesheet()
       .then(logoFontUsable)
       .then(function (usable) {
+        usable = usable && logoFontRendered();
         if (usable || attempt >= CONFIG.fontLoadRetries) return usable;
         return delay(CONFIG.fontRetryDelayMs << attempt).then(function () {
           return attemptFontLoad(attempt + 1);
