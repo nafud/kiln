@@ -55,20 +55,10 @@
        few antialiased pixels must not speckle the field with dots),
        above the ceiling is solid ink; the ramp spans only the band
        between, so edges get a short gradient and interiors stay
-       dense. The ceiling sits low because UnifrakturMaguntia is a
-       hairline blackletter: its strokes rarely fill a whole cell, and
-       a high ceiling renders the entire word in faint mid-ramp
-       glyphs. */
-    coverageFloor: 0.05,
-    coverageCeil: 0.4,
-    /* UnifrakturMaguntia is a hairline blackletter; at ASCII-grid
-       resolution its thin strokes cover too little of a cell and the
-       word fragments. Stroking the outline on top of the fill (width
-       as a fraction of referenceFontPx) thickens every stroke
-       uniformly — a synthetic semi-bold — so strokes stay continuous
-       cells. */
-    inkBoost: 0.035,
-    staticJitter: 0.08,          /* per-cell ramp offset, as a ramp fraction */
+       dense. */
+    coverageFloor: 0.1,
+    coverageCeil: 0.82,
+    staticJitter: 0.14,          /* per-cell ramp offset, as a ramp fraction */
     animAmplitude: 0.2,          /* shimmer swing, as a ramp fraction */
     animSpeedRadPerMs: 0.006,
     waveDetune: 1.7,             /* frequency ratio of the secondary wave */
@@ -387,13 +377,6 @@
     const originY = (canvas.height - inkBox.height * scaleY) / 2 + inkBox.ascent * scaleY;
     ctx.setTransform(scaleX, 0, 0, scaleY, originX, originY);
     ctx.fillText(CONFIG.text, 0, 0);
-    /* Synthetic semi-bold (see CONFIG.inkBoost): outline the glyphs on
-       top of the fill so hairline strokes still saturate their cells. */
-    if (CONFIG.inkBoost > 0) {
-      ctx.strokeStyle = "#000";
-      ctx.lineWidth = CONFIG.referenceFontPx * CONFIG.inkBoost;
-      ctx.strokeText(CONFIG.text, 0, 0);
-    }
 
     const alpha = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
     const coverage = new Float32Array(grid.cols * grid.rows);
