@@ -55,10 +55,20 @@
        few antialiased pixels must not speckle the field with dots),
        above the ceiling is solid ink; the ramp spans only the band
        between, so edges get a short gradient and interiors stay
-       dense. */
-    coverageFloor: 0.1,
-    coverageCeil: 0.82,
-    staticJitter: 0.14,          /* per-cell ramp offset, as a ramp fraction */
+       dense. The ceiling sits low because UnifrakturMaguntia is a
+       hairline blackletter: its strokes rarely fill a whole cell, and
+       a high ceiling renders the entire word in faint mid-ramp
+       glyphs. */
+    coverageFloor: 0.05,
+    coverageCeil: 0.4,
+    /* UnifrakturMaguntia is a hairline blackletter; at ASCII-grid
+       resolution its thin strokes cover too little of a cell and the
+       word fragments. Stroking the outline on top of the fill (width
+       as a fraction of referenceFontPx) thickens every stroke
+       uniformly — a synthetic semi-bold — so strokes stay continuous
+       cells. */
+    inkBoost: 0.035,
+    staticJitter: 0.08,          /* per-cell ramp offset, as a ramp fraction */
     animAmplitude: 0.2,          /* shimmer swing, as a ramp fraction */
     animSpeedRadPerMs: 0.006,
     waveDetune: 1.7,             /* frequency ratio of the secondary wave */
@@ -129,9 +139,16 @@
   /* Injects the logo webfont's stylesheet on demand (memoized), so pages
      without the logo never fetch it. Resolves true on load, false on
      error; a failed link is removed and the memo cleared, so the retry
-     schedule below can re-inject a fresh one. */
+     schedule below can re-inject a fresh one. The memo is also bypassed
+     whenever the link element is gone: navigation.instant reconciles
+     <head> against the target page's HTML, so leaving the homepage
+     strips the injected link — and with the stylesheet go its
+     CSS-connected font faces. */
   let stylesheetPromise = null;
   function loadStylesheet() {
+    if (!document.getElementById(CONFIG.fontStylesheetId)) {
+      stylesheetPromise = null;
+    }
     if (!stylesheetPromise) {
       stylesheetPromise = new Promise(function (resolve) {
         const link = document.createElement("link");
@@ -228,14 +245,36 @@
       });
   }
 
+  /* True while the logo font's face is actually present and loaded in
+     document.fonts right now. A past verification is no proof of the
+     present: when navigation.instant strips the injected stylesheet
+     (see loadStylesheet), the browser evicts its font faces, and a
+     canvas draw after that silently falls back — the serif-logo bug
+     on returning to the homepage. */
+  function logoFontPresent() {
+    if (!document.fonts || !document.fonts.forEach) return false;
+    let present = false;
+    document.fonts.forEach(function (face) {
+      if (
+        face.family.replace(/["']/g, "") === CONFIG.fontFamily &&
+        face.status === "loaded"
+      ) {
+        present = true;
+      }
+    });
+    return present;
+  }
+
   /* Resolves true once the logo webfont is verifiably usable, running
-     the retry schedule at most once at a time. Success is remembered;
+     the retry schedule at most once at a time. Success is remembered
+     only while the face is still present (see logoFontPresent);
      failure clears the attempt so any later trigger (a page revisit,
      a fonts "loadingdone" event) starts a fresh round rather than
      being stuck with a cached no. */
   let fontReady = false;
   let fontAttempt = null;
   function ensureLogoFont() {
+    if (fontReady && !logoFontPresent()) fontReady = false;
     if (fontReady) return Promise.resolve(true);
     if (!fontAttempt) {
       fontAttempt = attemptFontLoad(0).then(function (usable) {
@@ -348,6 +387,13 @@
     const originY = (canvas.height - inkBox.height * scaleY) / 2 + inkBox.ascent * scaleY;
     ctx.setTransform(scaleX, 0, 0, scaleY, originX, originY);
     ctx.fillText(CONFIG.text, 0, 0);
+    /* Synthetic semi-bold (see CONFIG.inkBoost): outline the glyphs on
+       top of the fill so hairline strokes still saturate their cells. */
+    if (CONFIG.inkBoost > 0) {
+      ctx.strokeStyle = "#000";
+      ctx.lineWidth = CONFIG.referenceFontPx * CONFIG.inkBoost;
+      ctx.strokeText(CONFIG.text, 0, 0);
+    }
 
     const alpha = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
     const coverage = new Float32Array(grid.cols * grid.rows);
@@ -459,8 +505,10 @@
     if (!pre || !pre.isConnected) return;
     /* The single font gate: no path (init, resize, container resize,
        late font loads) may generate from a fallback font — the text
-       fallback stays up until the real font has been verified. */
-    if (!fontReady) return;
+       fallback stays up until the real font has been verified, and a
+       past verification only counts while the face is still present
+       (instant navigation can evict it, see logoFontPresent). */
+    if (!fontReady || !logoFontPresent()) return;
 
     /* Grid sizing must be measured at the generated font size, not the
        larger text-fallback size, so the class flips before probing. */
