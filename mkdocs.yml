@@ -5,14 +5,17 @@ repo_url: https://github.com/nafud/kiln
 repo_name: nafud/kiln
 
 # Escalate link problems to warnings so `mkdocs build --strict` (run in CI
-# on secondary) fails on them. The homepage is intentionally not in nav,
-# so omitted_files stays at info.
+# on secondary) fails on them. anchors covers the #fragment of cross-page
+# links (the RE4B <-> challenges.re pairs), so a renamed heading fails CI
+# instead of silently landing readers at the top of the page. The homepage
+# is intentionally not in nav, so omitted_files stays at info.
 validation:
   nav:
     omitted_files: info
     not_found: warn
   links:
     not_found: warn
+    anchors: warn
     absolute_links: warn
     unrecognized_links: warn
 
@@ -83,9 +86,9 @@ extra_javascript:
   - javascripts/key-nav.js
   - javascripts/widgets.js
 
-# Material's search UI is hidden by extra.css (S opens the jump palette
-# instead), but the plugin must stay: quick-jump.js builds its page list
-# from the search_index.json this plugin emits.
+# Material's search UI is hidden by extra.css (backtick opens the jump
+# palette instead), but the plugin must stay: quick-jump.js searches the
+# search_index.json this plugin emits.
 plugins:
   - search
 
