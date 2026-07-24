@@ -68,15 +68,19 @@ theme:
 extra_css:
   - stylesheets/extra.css
 
+# page-utils.js must stay first (the shared KilnUtils global), and
+# quick-jump.js must precede ascii-logo.js: their page-change hooks run
+# in this order, so the homepage jump bar is in the DOM before the logo
+# sizes itself against the article's remaining free height.
 extra_javascript:
   - javascripts/page-utils.js
   - javascripts/external-links.js
   - javascripts/page-chrome.js
+  - javascripts/quick-jump.js
   - javascripts/ascii-logo.js
   - javascripts/code-copy.js
   - javascripts/heading-shimmer.js
   - javascripts/key-nav.js
-  - javascripts/quick-jump.js
   - javascripts/widgets.js
 
 # Material's search UI is hidden by extra.css (S opens the jump palette

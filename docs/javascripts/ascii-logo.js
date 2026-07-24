@@ -26,13 +26,21 @@
       "https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&display=swap",
     fontStylesheetId: "kiln-logo-font",
     generatedClass: "kiln-ascii--generated",
-    /* Density ramp: darkest ink first, background (space) last. */
-    charRamp: "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^`'. ",
+    /* Density ramp: darkest ink first, background (space) last. Kept
+       short on purpose — a long ramp turns anti-aliased edge cells
+       into mid-density glyph mush and the silhouette stops reading. */
+    charRamp: "$@B%8&WM#*oa+=~-:. ",
     referenceFontPx: 200,        /* offscreen measuring/drawing font size */
     supersample: 3,              /* canvas pixels sampled per cell axis */
     inkFill: 0.94,               /* fraction of the grid the glyphs fill */
     maxViewportHeightRatio: 0.42,/* height budget so the page never scrolls */
-    inkThreshold: 0.04,          /* min coverage for a cell to count as ink */
+    /* Contrast curve: coverage below the floor is background (a bare
+       few antialiased pixels must not speckle the field with dots),
+       above the ceiling is solid ink; the ramp spans only the band
+       between, so edges get a short gradient and interiors stay
+       dense. */
+    coverageFloor: 0.1,
+    coverageCeil: 0.82,
     staticJitter: 0.14,          /* per-cell ramp offset, as a ramp fraction */
     animAmplitude: 0.2,          /* shimmer swing, as a ramp fraction */
     animSpeedRadPerMs: 0.006,
@@ -167,13 +175,31 @@
     );
   }
 
+  /* The logo's height budget: the viewport-ratio cap, tightened by the
+     article's actual free height, or a short window grows a scrollbar
+     the ratio cap alone would have allowed. The free height comes from
+     the homepage's own layout mechanics (extra.css): the column is
+     flex-stretched to the viewport bottom and the attribution's
+     margin-top:auto absorbs exactly the unused column height, so the
+     pre may grow into that slack 1:1 — its current height plus the
+     auto margin's used value is the true capacity. Without the pinned
+     attribution to read the slack from, the ratio cap stands alone. */
+  function heightBudget(pre, container) {
+    const ratioCap = window.innerHeight * CONFIG.maxViewportHeightRatio;
+    const pinned = container.querySelector(".home-attribution");
+    if (!pinned) return ratioCap;
+    const slack = parseFloat(getComputedStyle(pinned).marginTop) || 0;
+    const free = pre.getBoundingClientRect().height + slack;
+    return Math.min(ratioCap, free);
+  }
+
   /* Grid dimensions that preserve the glyph aspect ratio while fitting both
-     the container width and the viewport-height budget. */
+     the container width and the height budget. */
   function computeGrid(pre, cell, inkBox) {
     const container = pre.parentElement;
     if (!container) return null;
 
-    const maxHeight = window.innerHeight * CONFIG.maxViewportHeightRatio;
+    const maxHeight = heightBudget(pre, container);
     const cellAspect = cell.height / cell.width;
     const inkAspect = inkBox.height / inkBox.width;
     const rowsForCols = function (cols) {
@@ -241,16 +267,23 @@
     state.phases = new Float32Array(count);
     state.ink = new Uint8Array(count);
 
+    const band = CONFIG.coverageCeil - CONFIG.coverageFloor;
     for (let y = 0; y < grid.rows; y++) {
       for (let x = 0; x < grid.cols; x++) {
         const i = y * grid.cols + x;
         const hash = cellHash(x, y);
-        const isInk = coverage[i] > CONFIG.inkThreshold;
+        /* Contrast curve (see CONFIG): 0 below the floor, 1 above the
+           ceiling, linear across the band between. */
+        const density = Math.min(
+          1,
+          Math.max(0, (coverage[i] - CONFIG.coverageFloor) / band)
+        );
+        const isInk = density > 0;
         const jitter = isInk
           ? (hash - 0.5) * CONFIG.staticJitter * maxIndex
           : 0;
         state.baseIndices[i] = clampIndex(
-          Math.round((1 - coverage[i]) * maxIndex + jitter)
+          Math.round((1 - density) * maxIndex + jitter)
         );
         state.phases[i] = hash * Math.PI * 2;
         state.ink[i] = isInk ? 1 : 0;
@@ -308,8 +341,12 @@
 
     if (!grid) {
       /* Cannot generate (no 2D context, degenerate metrics, tiny layout):
-         restore the readable title-sized text fallback. */
+         restore the readable title-sized text fallback, and drop any
+         stale frame so the shimmer loop cannot paint it over the
+         fallback text. */
       pre.classList.remove(CONFIG.generatedClass);
+      state.staticFrame = "";
+      state.buildSignature = "";
       return;
     }
 
@@ -383,6 +420,10 @@
   function init() {
     const pre = document.querySelector("pre.kiln-ascii");
     state.pre = pre;
+    /* A fresh pre from an instant navigation shows its text fallback;
+       the previous visit's frame no longer matches it and must not be
+       animated into it before rebuild() replaces it. */
+    state.staticFrame = "";
     if (containerObserver) containerObserver.disconnect();
     if (!pre) {
       stopAnimation();
