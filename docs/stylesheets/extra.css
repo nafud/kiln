@@ -230,8 +230,9 @@ body {
   opacity: 0.75;
 }
 
-/* Curated external links (Toolkit → Links, Readings → Bookmarks). Applied
-   via attr_list, e.g. [text](url){ target=_blank rel=noopener .external-link }.
+/* External links out of the site. Applied via attr_list, e.g.
+   [text](url){ .external-link } — the class is only the icon; new-tab
+   behavior comes from external-links.js, never per-link attributes.
    A trailing chain-link icon marks the link as leaving the site — an SVG
    mask tinted with currentColor, so it matches the link's accent color
    (and its hover) and scales with the text. */

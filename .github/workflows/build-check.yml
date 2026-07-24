@@ -36,7 +36,7 @@ jobs:
       #   data-md-component="dialog"  extra.css hides the copy toast
       #   md-sidebar--primary,
       #   md-nav--primary,
-      #   md-nav__title               page-chrome.js sidebar fade + extra.css
+      #   md-nav__title               extra.css sidebar styling + title fade
       #   md-main__inner              extra.css :has() homepage flex stretch
       #   md-content__inner           extra.css :has() homepage h1 hiding
       #   md-typeset, md-header       extra.css styling roots
@@ -63,7 +63,7 @@ jobs:
             'md-typeset' \
             'md-header'; do
             grep -qF -- "$hook" site/index.html || {
-              echo "::error::Material internal '$hook' is gone from the built HTML — a theme update likely renamed it. Update the overrides in docs/stylesheets/extra.css / docs/javascripts/page-chrome.js."
+              echo "::error::Material internal '$hook' is gone from the built HTML — a theme update likely renamed it. Update the overrides in docs/stylesheets/extra.css and the page scripts that hook it."
               exit 1
             }
           done
