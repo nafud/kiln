@@ -4,7 +4,10 @@
    homepage's inline bar when it is mounted, an overlay everywhere
    else. Material's own search UI is hidden by extra.css, and its
    s/S/F// search bindings are neutralized by key-nav.js's swallow
-   listener. Type to fuzzy-match every page by title and path,
+   listener. A typed query searches everything: pages fuzzy-matched
+   by title and path rank first, then section content fills the
+   remaining rows (as page › section rows with a hit excerpt landing
+   on the anchor), so a term living only in body text still surfaces.
    ArrowDown/ArrowUp to pick, Enter to go. The prompt rests as a bar
    with a █ terminal cursor (steady while unfocused, blinking while
    focused) and a faint "type :h for help" placeholder; results only
@@ -15,9 +18,10 @@
    vim-style welcome screen, and any unknown :name answers with
    vim's E492. That IS the site's help — the commands are its only
    trigger. A leading slash is vim's buffer search over the notes:
-   /pattern greps section body text (the #fragment index entries the
-   page view drops) case-insensitively and returns page › section
-   rows with a hit excerpt, landing on the section anchor. Escape
+   /pattern greps section headings and body text case-insensitively —
+   including each page's pre-heading text (intros, TL;DRs, metadata),
+   which the index stores on the page-level entry and older revisions
+   of this script never searched. Escape
    (or a click on the backdrop) closes. The result
    rows are real links and navigation happens by clicking them,
    which keeps navigation.instant in charge (same rule as
@@ -43,6 +47,7 @@
   "use strict";
 
   const MAX_RESULTS = 8;
+  const MAX_SECTIONS_PER_PAGE = 2; /* content rows one page may occupy */
 
   /* The :h table, grouped into labelled sections. Each row is [keys,
      description] (keys comma-joined). The key bindings themselves live
@@ -99,35 +104,31 @@
     return indexPromise;
   }
 
-  /* Pages: index entries without a #fragment — what typed queries
-     fuzzy-match. */
-  let pagesCache = null;
-  function loadPages() {
-    if (pagesCache) return Promise.resolve(pagesCache);
-    return loadIndex().then(function (index) {
-      const base = siteBase();
-      pagesCache = index.docs
-        .filter(function (doc) {
-          return doc.location.indexOf("#") === -1;
-        })
-        .map(function (doc) {
-          return {
-            title: doc.title,
-            path: doc.location.replace(/\/$/, ""),
-            url: new URL(doc.location, base),
-          };
-        });
-      return pagesCache;
-    });
+  /* The index's text fields carry markup remnants (code blocks arrive
+     as literal <pre><code> runs and entities); excerpts must read as
+     prose, so both are dropped once, at build. */
+  function stripMarkup(html) {
+    return html
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
-  /* Sections: the #fragment entries the pages view drops — heading
-     plus body text, what /pattern greps. The owning page's title is
-     resolved from the pages pass (page entries precede their
-     sections in the index). */
-  let sectionsCache = null;
-  function loadSections() {
-    if (sectionsCache) return Promise.resolve(sectionsCache);
+  /* The search plugin splits every page into one page-level doc (no
+     #fragment in its location; its text is everything before the first
+     heading — intro paragraphs, TL;DR admonitions, metadata blocks)
+     plus one doc per heading section. Both are kept: the page docs
+     feed the title search, and each page doc's text also joins the
+     section list as an "intro" section (landing on the page itself),
+     so pre-heading content is never invisible to search. */
+  let dataCache = null;
+  function loadData() {
+    if (dataCache) return Promise.resolve(dataCache);
     return loadIndex().then(function (index) {
       const base = siteBase();
       const pageTitles = {};
@@ -136,35 +137,34 @@
           pageTitles[doc.location] = doc.title;
         }
       });
-      sectionsCache = index.docs
-        .filter(function (doc) {
-          return doc.location.indexOf("#") !== -1;
-        })
-        .map(function (doc) {
-          const pageLocation = doc.location.split("#")[0];
-          /* The index's text field carries markup remnants (code
-             blocks arrive as literal <pre><code> runs and entities);
-             excerpts must read as prose, so both are dropped here,
-             once, at build. */
-          const text = (doc.text || "")
-            .replace(/<[^>]+>/g, " ")
-            .replace(/&amp;/g, "&")
-            .replace(/&lt;/g, "<")
-            .replace(/&gt;/g, ">")
-            .replace(/&quot;/g, '"')
-            .replace(/&#39;/g, "'")
-            .replace(/\s+/g, " ")
-            .trim();
-          return {
+      const pages = [];
+      const sections = [];
+      index.docs.forEach(function (doc) {
+        const isPage = doc.location.indexOf("#") === -1;
+        const pageTitle = pageTitles[doc.location.split("#")[0]] || doc.title;
+        const text = stripMarkup(doc.text || "");
+        if (isPage) {
+          pages.push({
             title: doc.title,
             titleLower: doc.title.toLowerCase(),
-            pageTitle: pageTitles[pageLocation] || pageLocation,
-            text: text,
-            textLower: text.toLowerCase(),
+            path: doc.location.replace(/\/$/, ""),
             url: new URL(doc.location, base),
-          };
+          });
+          if (!text) return; /* nothing before the first heading */
+        }
+        sections.push({
+          title: doc.title,
+          titleLower: doc.title.toLowerCase(),
+          pageTitle: pageTitle,
+          pageTitleLower: pageTitle.toLowerCase(),
+          isIntro: isPage,
+          text: text,
+          textLower: text.toLowerCase(),
+          url: new URL(doc.location, base),
         });
-      return sectionsCache;
+      });
+      dataCache = { pages: pages, sections: sections };
+      return dataCache;
     });
   }
 
@@ -221,46 +221,128 @@
     return score;
   }
 
-  /* Whitespace-separated terms must all match, each against title and
-     path together, so "csapp 3" finds the chapter even though "csapp"
-     only appears in the path. */
-  function pageScore(query, page) {
-    const haystack = (page.title + " " + page.path).toLowerCase();
-    const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+  /* Whitespace-separated query terms; every one of them must match. */
+  function queryTerms(query) {
+    return query.toLowerCase().split(/\s+/).filter(Boolean);
+  }
+
+  /* Every term must match the page's title and path together, so
+     "csapp 3" finds the chapter even though "csapp" only appears in
+     the path; a term sitting in the title itself scores a little
+     extra, so title hits surface above path-only ones. */
+  function pageScore(terms, page) {
+    const haystack = page.titleLower + " " + page.path.toLowerCase();
     let total = 0;
     for (let i = 0; i < terms.length; i++) {
       const score = termScore(terms[i], haystack);
       if (score === -Infinity) return -Infinity;
       total += score;
+      if (page.titleLower.indexOf(terms[i]) !== -1) total += 2;
     }
     return total;
   }
 
-  /* The page currently open is never offered. An empty query matches
-     nothing — the prompt stays a clean bar until typed into (render()
-     short-circuits it before this is called). */
-  function matchPages(query, pages) {
-    const candidates = pages.filter(function (page) {
-      return page.url.pathname !== location.pathname;
+  /* A section matches a plain query when every term appears literally
+     (no subsequence scatter — body text is too big for it to mean
+     anything) in its heading, its body text, or its page's title.
+     Heading hits rank highest; body hits rank by count and earliness.
+     Returns null for no match, else a score plus the earliest body
+     hit and its term for the excerpt. */
+  function sectionScore(terms, section) {
+    let total = 0;
+    let firstAt = -1;
+    let firstTerm = "";
+    for (let i = 0; i < terms.length; i++) {
+      const term = terms[i];
+      const inTitle = section.titleLower.indexOf(term) !== -1;
+      const at = section.textLower.indexOf(term);
+      if (!inTitle && at === -1) {
+        if (section.pageTitleLower.indexOf(term) === -1) return null;
+        total += 1; /* carried by the page title alone: weakest hit */
+        continue;
+      }
+      if (inTitle) total += 30 + term.length;
+      if (at !== -1) {
+        total += term.length * 2 - Math.min(at, 500) * 0.01;
+        if (firstAt === -1 || at < firstAt) {
+          firstAt = at;
+          firstTerm = term;
+        }
+      }
+    }
+    return { score: total, at: firstAt, needle: firstTerm };
+  }
+
+  /* Result row for a section hit: "page › section" (the page title
+     alone for intro sections — their heading is the page's), with an
+     excerpt around the first body hit in the path slot. */
+  function sectionRow(section, at, needle) {
+    return {
+      title: section.isIntro
+        ? section.pageTitle
+        : section.pageTitle + " › " + section.title,
+      excerpt: contentExcerpt(section, at, needle),
+      url: section.url,
+    };
+  }
+
+  function byScoreDesc(a, b) {
+    return b.score - a.score;
+  }
+
+  /* Plain-query search over everything: pages by title/path first,
+     then section content to fill the remaining rows, so a term that
+     only lives in body text (a function name, a constant) still
+     surfaces without the /grep prefix. Content rows are deduped
+     against the page rows (an intro section duplicates its page row)
+     and capped per page so one long page cannot flood the list. The
+     page currently open is never offered as a page row; its sections
+     still are — they land on anchors. An empty query matches nothing
+     (render() short-circuits it before this is called). */
+  function matchAll(query, data) {
+    const terms = queryTerms(query);
+    if (!terms.length) return [];
+
+    const scoredPages = [];
+    data.pages.forEach(function (page) {
+      if (page.url.pathname === location.pathname) return;
+      const score = pageScore(terms, page);
+      if (score !== -Infinity) scoredPages.push({ page: page, score: score });
     });
-    const scored = [];
-    candidates.forEach(function (page) {
-      const score = pageScore(query, page);
-      if (score !== -Infinity) scored.push({ page: page, score: score });
+    scoredPages.sort(byScoreDesc);
+
+    const rows = [];
+    const perPage = {};
+    scoredPages.slice(0, MAX_RESULTS).forEach(function (entry) {
+      rows.push({ title: entry.page.title, url: entry.page.url });
+      perPage[entry.page.url.pathname] = MAX_SECTIONS_PER_PAGE;
     });
-    scored.sort(function (a, b) {
-      return b.score - a.score;
+    if (rows.length >= MAX_RESULTS) return rows;
+
+    const scoredSections = [];
+    data.sections.forEach(function (section) {
+      const hit = sectionScore(terms, section);
+      if (hit) scoredSections.push({ section: section, hit: hit, score: hit.score });
     });
-    return scored.slice(0, MAX_RESULTS).map(function (entry) {
-      return entry.page;
-    });
+    scoredSections.sort(byScoreDesc);
+    for (let i = 0; i < scoredSections.length && rows.length < MAX_RESULTS; i++) {
+      const section = scoredSections[i].section;
+      const pagePath = section.url.pathname;
+      const used = perPage[pagePath] || 0;
+      if (used >= MAX_SECTIONS_PER_PAGE) continue;
+      if (section.isIntro && used > 0) continue; /* duplicates the page row */
+      perPage[pagePath] = used + 1;
+      const hit = scoredSections[i].hit;
+      rows.push(sectionRow(section, hit.at, hit.needle));
+    }
+    return rows;
   }
 
   /* /pattern content search, vim's buffer search over the notes:
      case-insensitive literal substring (vim 'ignorecase') against
-     section headings and body text. Heading hits outrank body hits,
-     more and earlier hits rank higher. Results are shaped like page
-     rows, with an excerpt around the first hit in the path slot. */
+     section headings and body text — intro sections included, so
+     pre-heading content (TL;DRs, metadata blocks) greps too. Heading
+     hits outrank body hits, more and earlier hits rank higher. */
   function matchContent(pattern, sections) {
     const needle = pattern.toLowerCase();
     const scored = [];
@@ -280,16 +362,9 @@
         (at === -1 ? 0 : Math.min(at, 500) * 0.01);
       scored.push({ section: section, score: score, at: at });
     });
-    scored.sort(function (a, b) {
-      return b.score - a.score;
-    });
+    scored.sort(byScoreDesc);
     return scored.slice(0, MAX_RESULTS).map(function (entry) {
-      const section = entry.section;
-      return {
-        title: section.pageTitle + " › " + section.title,
-        excerpt: contentExcerpt(section, entry.at, needle),
-        url: section.url,
-      };
+      return sectionRow(entry.section, entry.at, needle);
     });
   }
 
@@ -391,14 +466,17 @@
     /* The inline dropdown floats over the page, but an absolutely
        positioned box still extends the document's scroll extent when it
        reaches past the bottom — clamping it to the viewport keeps the
-       homepage from growing a scrollbar. Re-measured per paint; the
-       overlay variant scrolls inside its CSS max-height instead. */
+       homepage from growing a scrollbar. The floor only guards against
+       degenerate measurements; it must stay below any real remaining
+       space, or the clamp itself pokes past the viewport and brings
+       the scrollbar back. Re-measured per paint; the overlay variant
+       scrolls inside its CSS max-height instead. */
     function clampToViewport() {
       if (variant !== "inline") return;
       list.style.maxHeight = "";
       const top = list.getBoundingClientRect().top;
       list.style.maxHeight =
-        Math.max(120, window.innerHeight - top - 16) + "px";
+        Math.max(48, window.innerHeight - top - 16) + "px";
     }
 
     function paintResults() {
@@ -531,9 +609,9 @@
           { center: true }
         );
       };
-      loadPages().then(
-        function (pages) {
-          if (seq === renderSeq) paint(pages.length);
+      loadData().then(
+        function (data) {
+          if (seq === renderSeq) paint(data.pages.length);
         },
         function () {
           if (seq === renderSeq) paint(null);
@@ -570,14 +648,18 @@
        skips the fetch, so the index is not even loaded until the
        first real keystroke; : input goes to the command line and
        never reaches page search. */
+    function clearResults() {
+      results = [];
+      list.textContent = "";
+      input.setAttribute("aria-expanded", "false");
+      input.removeAttribute("aria-activedescendant");
+    }
+
     function render() {
       const seq = ++renderSeq;
       const query = input.value.trim();
       if (!query || query === ":") {
-        results = [];
-        list.textContent = "";
-        input.setAttribute("aria-expanded", "false");
-        input.removeAttribute("aria-activedescendant");
+        clearResults();
         return;
       }
       if (query.charAt(0) === ":") {
@@ -589,32 +671,26 @@
            (or one letter) stays a clean bar, like the empty query. */
         const pattern = query.slice(1);
         if (pattern.length < 2) {
-          results = [];
-          list.textContent = "";
-          input.setAttribute("aria-expanded", "false");
-          input.removeAttribute("aria-activedescendant");
+          clearResults();
           return;
         }
-        loadSections().then(
-          function (sections) {
-            if (seq !== renderSeq) return;
-            results = matchContent(pattern, sections);
-            selected = 0;
-            if (results.length) paintResults();
-            else showMessage("no matches");
-          },
-          function () {
-            if (seq !== renderSeq) return;
-            results = [];
-            showMessage("page index unavailable");
-          }
-        );
+        search(seq, function (data) {
+          return matchContent(pattern, data.sections);
+        });
         return;
       }
-      loadPages().then(
-        function (pages) {
+      search(seq, function (data) {
+        return matchAll(query, data);
+      });
+    }
+
+    /* Shared async tail of both search modes: resolve the index, drop
+       the render if a newer keystroke superseded it, paint. */
+    function search(seq, match) {
+      loadData().then(
+        function (data) {
           if (seq !== renderSeq) return;
-          results = matchPages(input.value, pages);
+          results = match(data);
           selected = 0;
           if (results.length) paintResults();
           else showMessage("no matches");
