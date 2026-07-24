@@ -31,7 +31,10 @@
     animSpeedRadPerMs: 0.006,
     waveDetune: 1.7,             /* frequency ratio of the secondary wave */
     attackMs: 200,               /* shimmer fade-in time on hover */
-    releaseMs: 500,              /* shimmer fade-out time after leaving */
+    /* Fade-out after the pointer leaves, matching the logo's long
+       release (ascii-logo.js): the envelope thins the scramble out
+       character by character instead of cutting off abruptly. */
+    releaseMs: 1400,
   };
 
   const maxIndex = CONFIG.charRamp.length - 1;
