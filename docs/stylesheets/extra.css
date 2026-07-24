@@ -896,19 +896,15 @@ body:has(.kiln-ascii) .md-header__button[for="__drawer"] {
   color: var(--color-accent);
 }
 
-.kiln-jump-result-path {
+/* Mirrors a result row's metrics exactly, so "no matches" occupies the
+   same height a single result would. The scoped twin outranks
+   Material's `.md-typeset li` font-size on the inline variant (the
+   same cascade note as the result rules above). */
+.kiln-jump-empty,
+.md-typeset .kiln-jump-results .kiln-jump-empty {
+  padding: 0.45rem 0.6rem;
   color: var(--color-text-muted);
-  font-size: 0.65rem;
-  max-width: 42%; /* the title is the primary label; give it the row */
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.kiln-jump-empty {
-  padding: 0.5rem 0.6rem;
-  color: var(--color-text-muted);
-  font-size: 0.7rem;
+  font-size: 0.72rem;
 }
 
 

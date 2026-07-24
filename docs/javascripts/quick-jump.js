@@ -6,8 +6,8 @@
    s/S/F// search bindings are neutralized by key-nav.js's swallow
    listener. A typed query searches everything: pages fuzzy-matched
    by title and path rank first, then section content fills the
-   remaining rows (as page › section rows with a hit excerpt landing
-   on the anchor), so a term living only in body text still surfaces.
+   remaining rows (as page › section rows landing on the anchor), so
+   a term living only in body text still surfaces.
    ArrowDown/ArrowUp to pick, Enter to go. The prompt rests as a bar
    with a █ terminal cursor (steady while unfocused, blinking while
    focused) and a faint "type :h for help" placeholder; results only
@@ -105,8 +105,8 @@
   }
 
   /* The index's text fields carry markup remnants (code blocks arrive
-     as literal <pre><code> runs and entities); excerpts must read as
-     prose, so both are dropped once, at build. */
+     as literal <pre><code> runs and entities); matching must see the
+     real text, so both are dropped once, at build. */
   function stripMarkup(html) {
     return html
       .replace(/<[^>]+>/g, " ")
@@ -245,13 +245,10 @@
   /* A section matches a plain query when every term appears literally
      (no subsequence scatter — body text is too big for it to mean
      anything) in its heading, its body text, or its page's title.
-     Heading hits rank highest; body hits rank by count and earliness.
-     Returns null for no match, else a score plus the earliest body
-     hit and its term for the excerpt. */
+     Heading hits rank highest; body hits rank by length and earliness.
+     Returns the score, or null for no match. */
   function sectionScore(terms, section) {
     let total = 0;
-    let firstAt = -1;
-    let firstTerm = "";
     for (let i = 0; i < terms.length; i++) {
       const term = terms[i];
       const inTitle = section.titleLower.indexOf(term) !== -1;
@@ -264,24 +261,18 @@
       if (inTitle) total += 30 + term.length;
       if (at !== -1) {
         total += term.length * 2 - Math.min(at, 500) * 0.01;
-        if (firstAt === -1 || at < firstAt) {
-          firstAt = at;
-          firstTerm = term;
-        }
       }
     }
-    return { score: total, at: firstAt, needle: firstTerm };
+    return total;
   }
 
   /* Result row for a section hit: "page › section" (the page title
-     alone for intro sections — their heading is the page's), with an
-     excerpt around the first body hit in the path slot. */
-  function sectionRow(section, at, needle) {
+     alone for intro sections — their heading is the page's). */
+  function sectionRow(section) {
     return {
       title: section.isIntro
         ? section.pageTitle
         : section.pageTitle + " › " + section.title,
-      excerpt: contentExcerpt(section, at, needle),
       url: section.url,
     };
   }
@@ -321,8 +312,8 @@
 
     const scoredSections = [];
     data.sections.forEach(function (section) {
-      const hit = sectionScore(terms, section);
-      if (hit) scoredSections.push({ section: section, hit: hit, score: hit.score });
+      const score = sectionScore(terms, section);
+      if (score !== null) scoredSections.push({ section: section, score: score });
     });
     scoredSections.sort(byScoreDesc);
     for (let i = 0; i < scoredSections.length && rows.length < MAX_RESULTS; i++) {
@@ -332,8 +323,7 @@
       if (used >= MAX_SECTIONS_PER_PAGE) continue;
       if (section.isIntro && used > 0) continue; /* duplicates the page row */
       perPage[pagePath] = used + 1;
-      const hit = scoredSections[i].hit;
-      rows.push(sectionRow(section, hit.at, hit.needle));
+      rows.push(sectionRow(section));
     }
     return rows;
   }
@@ -360,23 +350,12 @@
         (inTitle ? 100 : 0) +
         count * 5 -
         (at === -1 ? 0 : Math.min(at, 500) * 0.01);
-      scored.push({ section: section, score: score, at: at });
+      scored.push({ section: section, score: score });
     });
     scored.sort(byScoreDesc);
     return scored.slice(0, MAX_RESULTS).map(function (entry) {
-      return sectionRow(entry.section, entry.at, needle);
+      return sectionRow(entry.section);
     });
-  }
-
-  function contentExcerpt(section, at, needle) {
-    if (at === -1) return section.text.slice(0, 60);
-    const start = Math.max(0, at - 24);
-    const end = at + needle.length + 36;
-    return (
-      (start > 0 ? "…" : "") +
-      section.text.slice(start, end) +
-      (end < section.text.length ? "…" : "")
-    );
   }
 
   /* ---------- palette component ---------- */
@@ -490,20 +469,14 @@
         const link = document.createElement("a");
         link.href = page.url.href;
 
+        /* The title is the row's whole content: "Page" for page rows,
+           "Page › Section" for content rows. No right-hand column — an
+           excerpt proved more noise than signal, and the path was
+           redundant with the title. */
         const title = document.createElement("span");
         title.className = "kiln-jump-result-title";
         title.textContent = page.title;
         link.appendChild(title);
-
-        /* Only /pattern rows carry a right-hand column, and it holds
-           the content excerpt. Page-search rows show the title alone —
-           the path was redundant with it (and with the URL). */
-        if (page.excerpt) {
-          const excerpt = document.createElement("span");
-          excerpt.className = "kiln-jump-result-path";
-          excerpt.textContent = page.excerpt;
-          link.appendChild(excerpt);
-        }
 
         item.appendChild(link);
         list.appendChild(item);
