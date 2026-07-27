@@ -1156,6 +1156,24 @@ body:has(.kiln-ascii) .md-header__button[for="__drawer"] {
   color: var(--color-text-muted);
 }
 
+/* The -wN width flag in the twos-complement widget's command line — a
+   real button styled as command text: muted at rest, accent on
+   hover/focus, cycling 8→16→32→64 (widgets.js). */
+.md-typeset .kiln-term-flag {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.md-typeset .kiln-term-flag:hover,
+.md-typeset .kiln-term-flag:focus-visible {
+  color: var(--color-accent);
+}
+
 /* Top-level nav items — grey uppercase section labels (collapsed state) */
 
 .md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link {

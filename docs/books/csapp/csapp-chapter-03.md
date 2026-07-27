@@ -307,6 +307,8 @@ The shift amount comes first, as an immediate or the single-byte register `%cl`,
 
 Most operations serve both unsigned and two's-complement arithmetic because their bit-level behavior is identical for the two encodings. Only right shifting distinguishes signed (`sar`) from unsigned (`shr`) data. This shared behavior is one reason two's complement is the preferred signed representation. Compilers freely reuse a single register for multiple program values and move values among registers.
 
+<div class="kiln-widget" data-widget="twos-complement"></div>
+
 ### 3.5.5 Special Arithmetic Operations
 
 Intel calls a 16-byte quantity an oct word. x86-64 supports full 128-bit products and 128/64 division.
