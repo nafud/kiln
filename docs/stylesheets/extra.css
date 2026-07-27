@@ -695,8 +695,13 @@ tt {
   border-radius: 0;
   background: transparent;
   box-shadow: none;
-  font-size: 0.7rem;
-  line-height: 1.65;
+  /* Exactly the result-row text metrics, forced: the generic
+     `.md-typeset pre` code-block sizing (an !important rule above)
+     otherwise wins in the inline variant while the overlay (outside
+     .md-typeset) falls to something else entirely — command output
+     must render at one size, the rows', in both variants. */
+  font-size: 0.72rem !important;
+  line-height: 1.7 !important;
   color: var(--color-text-secondary);
   white-space: pre;
   overflow-x: auto;
