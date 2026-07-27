@@ -21,12 +21,16 @@
    output (quick-jump.js, which also owns the binding table those
    commands print — keep it in sync when bindings here change).
 
-   Material's P / N (prev/next page) bindings stay usable alongside
-   these. Its search UI is hidden entirely, and its search keys —
+   Material's search UI is hidden entirely, and its search keys —
    s/S, F and / — are neutralized by a capture-phase listener below
    so nothing can summon the hidden search form: lowercase s performs
    the sidebar toggle from there, the rest are dead keys, and the
-   jump palette is backtick's alone (quick-jump.js). All of them
+   jump palette is backtick's alone (quick-jump.js). Material's p/n
+   page keys are neutralized the same way: < and > are the page
+   motions here, n/N belong to the palette's /search as vim's
+   search-repeat motions (quick-jump.js owns them and registers
+   earlier, so it wins the capture race while a search is armed), and
+   p/P are plain dead keys (vim means paste by them). All of them
    still type normally in inputs.
 
    Keys are ignored while typing (inputs, textareas, contenteditable)
@@ -130,15 +134,19 @@
     document.body.classList.toggle("kiln-sidebars-shown");
   }
 
-  /* Material also focuses its (hidden) search on S, F and /. This
-     capture-phase listener runs before Material's own handler and
-     neutralizes all of them outside typing contexts (inside an input
-     the guard lets them through, so they still type). Lowercase s
-     carries the sidebar toggle and must act from here: Material's
-     bubble-phase handler registered first, so a bubble-phase binding
-     of ours would lose the race — the palette stays backtick's alone
-     (quick-jump.js). Uppercase S, F and / are plain dead keys. The
-     browser default is left alone. */
+  /* Material also binds keys of its own: S, F and / focus its
+     (hidden) search, p and n switch pages. This capture-phase
+     listener runs before Material's own handler and neutralizes all
+     of them outside typing contexts (inside an input the guard lets
+     them through, so they still type). Lowercase s carries the
+     sidebar toggle and must act from here: Material's bubble-phase
+     handler registered first, so a bubble-phase binding of ours would
+     lose the race — the palette stays backtick's alone
+     (quick-jump.js). n/N reach this swallow only while no /search is
+     armed: quick-jump.js's capture listener registered earlier and
+     claims them (search-repeat motions) with stopImmediatePropagation
+     when one is. The rest are plain dead keys, and the browser
+     default is left alone. */
   window.addEventListener(
     "keydown",
     function (event) {
@@ -152,7 +160,11 @@
         event.key === "S" ||
         event.key === "/" ||
         event.key === "f" ||
-        event.key === "F"
+        event.key === "F" ||
+        event.key === "n" ||
+        event.key === "N" ||
+        event.key === "p" ||
+        event.key === "P"
       ) {
         event.stopImmediatePropagation();
       }

@@ -63,6 +63,8 @@
     ["SEARCH", [
       [["`"], "Search"],
       [["/pattern"], "Grep page text"],
+      [["n", "N"], "Next / prev match"],
+      [["Esc"], "Clear search highlights"],
     ]],
     ["VIEW", [
       [["s"], "Toggle sidebars"],
@@ -367,6 +369,139 @@
     scored.sort(byScoreDesc);
     return scored.slice(0, MAX_RESULTS).map(function (entry) {
       return sectionRow(entry.section);
+    });
+  }
+
+  /* ---------- search highlights (hlsearch + n/N) ---------- */
+
+  /* Opening a /pattern result arms vim's hlsearch on the landing
+     page: every literal match in the content tints via the CSS Custom
+     Highlight API (no DOM mutation, so heading-shimmer and instant
+     navigation never collide with it; a browser without the API keeps
+     the n/N motions and just loses the tint), n/N cycle through the
+     matches, and Escape clears the search. The armed pattern rides to
+     the landing page in sessionStorage, not module state: a result
+     click is a full page load whenever navigation.instant does not
+     engage (it only intercepts links matching the page's configured
+     base, so a static serve of the built site navigates cold), and a
+     module variable would die with the document. The ranges are
+     rebuilt per page and dropped when it changes. */
+  const searchState = { pattern: null, ranges: [], index: -1 };
+
+  const PENDING_SEARCH_KEY = "kiln-search-pending";
+
+  /* sessionStorage can throw (privacy modes); an unarmed landing is
+     the graceful outcome. */
+  function setPendingSearch(pattern) {
+    try {
+      sessionStorage.setItem(PENDING_SEARCH_KEY, pattern);
+    } catch (_) {}
+  }
+
+  function takePendingSearch() {
+    try {
+      const pattern = sessionStorage.getItem(PENDING_SEARCH_KEY);
+      if (pattern !== null) sessionStorage.removeItem(PENDING_SEARCH_KEY);
+      return pattern;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+  const MAX_MATCH_RANGES = 500;
+
+  function highlightsSupported() {
+    return !!(window.CSS && CSS.highlights && typeof Highlight === "function");
+  }
+
+  function clearSearch() {
+    searchState.pattern = null;
+    searchState.ranges = [];
+    searchState.index = -1;
+    if (highlightsSupported()) {
+      CSS.highlights.delete("kiln-search");
+      CSS.highlights.delete("kiln-search-current");
+    }
+  }
+
+  /* Case-insensitive literal ranges over the content's text nodes —
+     the same dialect matchContent greps with, so what the palette
+     found is what lights up. */
+  function buildRanges(pattern) {
+    const content = document.querySelector(".md-content");
+    if (!content) return [];
+    const needle = pattern.toLowerCase();
+    const ranges = [];
+    const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
+    let node;
+    while ((node = walker.nextNode()) && ranges.length < MAX_MATCH_RANGES) {
+      const hay = node.data.toLowerCase();
+      let at = hay.indexOf(needle);
+      while (at !== -1 && ranges.length < MAX_MATCH_RANGES) {
+        const range = new Range();
+        range.setStart(node, at);
+        range.setEnd(node, at + needle.length);
+        ranges.push(range);
+        at = hay.indexOf(needle, at + needle.length);
+      }
+    }
+    return ranges;
+  }
+
+  function paintSearchHighlights() {
+    if (!highlightsSupported()) return;
+    CSS.highlights.set(
+      "kiln-search",
+      new Highlight(...searchState.ranges)
+    );
+    const current = searchState.ranges[searchState.index];
+    if (current) {
+      CSS.highlights.set("kiln-search-current", new Highlight(current));
+    } else {
+      CSS.highlights.delete("kiln-search-current");
+    }
+  }
+
+  function activateSearch(pattern) {
+    searchState.pattern = pattern;
+    searchState.ranges = buildRanges(pattern);
+    searchState.index = -1;
+    paintSearchHighlights();
+  }
+
+  /* The first n seeks the first match below the header anchor line
+     (N the last above it) so the motion continues from where the
+     reader is looking; after that they step from the current match
+     and wrap around, as in vim. */
+  function cycleSearch(direction) {
+    const ranges = searchState.ranges;
+    if (!ranges.length) return;
+    let index;
+    if (searchState.index === -1) {
+      const header = document.querySelector(".md-header");
+      const anchor = (header ? header.offsetHeight : 0) + 16;
+      index = direction > 0 ? 0 : ranges.length - 1;
+      for (let i = 0; i < ranges.length; i++) {
+        const top = ranges[i].getBoundingClientRect().top;
+        if (direction > 0) {
+          if (top > anchor + 4) {
+            index = i;
+            break;
+          }
+        } else if (top < anchor - 4) {
+          index = i; /* keep the last one above the anchor */
+        }
+      }
+    } else {
+      index = (searchState.index + direction + ranges.length) % ranges.length;
+    }
+    searchState.index = index;
+    paintSearchHighlights();
+    window.scrollBy({
+      top: ranges[index].getBoundingClientRect().top - window.innerHeight / 2,
+      behavior: reducedMotion.matches ? "auto" : "smooth",
     });
   }
 
@@ -868,15 +1003,36 @@
     function openSelected() {
       const item = list.children[selected];
       const link = item && item.querySelector("a");
-      if (!link) return;
-      const samePage = link.pathname === location.pathname && !!link.hash;
-      link.click();
-      /* A same-page anchor (a :toc row, a section hit on the open
-         page) fires no page change, and the page change is what
-         normally closes the overlay — dismiss explicitly so the
-         reader lands looking at the section, not at the prompt. */
-      if (samePage) onDismiss();
+      if (link) link.click();
     }
+
+    /* Every way of opening a row — Enter (openSelected clicks the
+       link) and a direct mouse click alike — funnels through this
+       delegated listener. Two jobs: a /pattern query arms hlsearch
+       for the landing page (immediately when the row is a same-page
+       anchor, pending the page change otherwise), and a same-page
+       anchor row (a :toc row, a section hit on the open page)
+       dismisses the prompt, since no page change will fire for a
+       hash jump and the page change is what normally closes it. */
+    list.addEventListener("click", function (event) {
+      const target = event.target;
+      const link = target instanceof Element ? target.closest("a") : null;
+      if (!link) return;
+      /* A modified click (new tab, download) navigates elsewhere or
+         not at all — arming this tab's search for it would light up a
+         later unrelated navigation. */
+      if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) {
+        return;
+      }
+      const query = input.value.trim();
+      const samePage = link.pathname === location.pathname;
+      if (query.charAt(0) === "/" && query.length >= 3) {
+        const pattern = query.slice(1);
+        if (samePage) activateSearch(pattern);
+        else setPendingSearch(pattern);
+      }
+      if (samePage && link.hash) onDismiss();
+    });
 
     input.addEventListener("input", render);
 
@@ -968,6 +1124,30 @@
       }
       if (event.ctrlKey || event.altKey || event.metaKey) return;
 
+      if (event.key === "n" || event.key === "N") {
+        /* vim's search-repeat motions, owned here because the pattern
+           and ranges live here. This capture listener registers
+           before key-nav.js's swallow listener (script load order),
+           which turns n/N — and Material's p/P page keys — into dead
+           keys: with no armed search these fall through to the
+           swallow and do nothing; with one armed, this handler wins
+           the race and cycles. */
+        if (KilnUtils.isTypingTarget(event.target) || inPalette) return;
+        if (!searchState.pattern || !searchState.ranges.length) return;
+        cycleSearch(event.key === "n" ? 1 : -1);
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return;
+      }
+      if (event.key === "Escape" && !inPalette) {
+        /* Clears the armed search — pattern, ranges, and tint in one
+           go (vim splits this between :noh and a new search; one key
+           is simpler and predictable). The palette's own Escape lives
+           on its input and is untouched. */
+        if (searchState.pattern) clearSearch();
+        return;
+      }
+
       if (event.key === "`") {
         /* Toggle from anywhere except foreign typing contexts (the
            palette's own input still closes/blurs on backtick, so the key
@@ -1003,6 +1183,14 @@
   KilnUtils.onPageChange(function () {
     closeOverlay();
     syncHomepage();
+    /* A /search pattern armed from the palette activates on the page
+       it lands on — instant navigation and full load alike, which is
+       why it rides in sessionStorage. Otherwise whatever highlights
+       the previous page had are stale (their ranges point into
+       replaced DOM) and drop. */
+    const pattern = takePendingSearch();
+    if (pattern) activateSearch(pattern);
+    else clearSearch();
   });
 
   /* Warm the search index while the browser is idle, so the first

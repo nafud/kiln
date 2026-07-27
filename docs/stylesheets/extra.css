@@ -744,6 +744,20 @@ body:has(.kiln-ascii) .md-header__button[for="__drawer"] {
   margin: 0 auto;
 }
 
+/* vim hlsearch (quick-jump.js: /search plus the n/N motions): every
+   match on the landed page tints via the CSS Custom Highlight API —
+   no DOM mutation, so heading-shimmer and instant navigation never
+   collide with it; a browser without the API keeps the motions and
+   just loses the tint. The current match inverts to solid accent. */
+::highlight(kiln-search) {
+  background-color: var(--color-accent-transparent);
+}
+
+::highlight(kiln-search-current) {
+  background-color: var(--color-accent);
+  color: var(--color-bg);
+}
+
 /* Visually hidden live region announcing the palette's result count
    to screen readers (the rows are traversed via aria-activedescendant,
    so nothing else speaks when the list repaints). */
