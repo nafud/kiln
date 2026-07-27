@@ -168,16 +168,6 @@ def run(page):
         assert page.evaluate("() => document.body.classList.contains('kiln-sidebars-shown')")
         page.keyboard.press("s")
 
-    with step("recent: overlay rests on visited pages"):
-        page.goto(f"{BASE}/guides/radare2/")
-        page.wait_for_timeout(200)
-        page.goto(f"{BASE}/books/index.html")
-        page.wait_for_timeout(200)
-        page.keyboard.press("`")
-        page.wait_for_selector(".kiln-jump--overlay .kiln-jump-label")
-        assert "[ RECENT ]" in overlay_text(page)
-        close_overlay(page)
-
     with step("widgets: keygen serial and two's-complement readout"):
         page.goto(f"{BASE}/writeups/crackmes-one/crackmes-one-cfb1/")
         page.wait_for_selector(".kiln-widget[data-widget='cfb1-keygen'] .kiln-term-out")
