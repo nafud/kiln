@@ -1,0 +1,40 @@
+name: Link Check
+
+# External links only, monthly plus manual runs. The curated Links and
+# Bookmarks pages rot silently otherwise; internal links are already
+# validated by the strict build on every push to secondary. Deliberately
+# not per-push — other people's servers being down must never block a
+# promotion. A failed run is the signal (red in the Actions tab and
+# GitHub's scheduled-failure email); no issues are opened.
+on:
+  schedule:
+    - cron: "0 6 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  links:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # --scheme limits the run to remote links (relative .md links are
+      # the strict build's job). 403/429 are accepted: the malware
+      # sample sources and several blogs sit behind bot protection, and
+      # a challenge page is not a dead link.
+      - name: Check external links
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: >-
+            --no-progress
+            --scheme https
+            --scheme http
+            --accept '200..=299, 403, 429'
+            --timeout 20
+            --max-retries 3
+            'docs/**/*.md'
+          fail: true
