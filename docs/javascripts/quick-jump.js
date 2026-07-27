@@ -69,6 +69,7 @@
       [["t"], "Toggle theme"],
     ]],
     ["COMMANDS", [
+      [[":x expr"], "Int calculator (hex/dec/bin)"],
       [[":intro"], "Show intro screen"],
       [[":version"], "Show build info"],
       [[":h", ":help"], "Display this help"],
@@ -358,6 +359,107 @@
     });
   }
 
+  /* ---------- :x expression evaluator ---------- */
+
+  /* Arbitrary-precision integer expressions for the :x command — a
+     recursive-descent parser over BigInt, no eval anywhere near it.
+     The dialect is what an RE desk flips between: 0x/0b/decimal
+     literals and the C integer operators at C precedence (| ^ &
+     << >> + - * / % and unary - ~, parentheses). Anything the
+     grammar rejects throws, and :x reports it as vim's E15. */
+  function evalIntExpr(source) {
+    let pos = 0;
+
+    function fail() {
+      throw new Error("invalid expression");
+    }
+
+    function skipSpace() {
+      while (source[pos] === " ") pos++;
+    }
+
+    function literal() {
+      const match = /^(?:0[xX][0-9a-fA-F]+|0[bB][01]+|[0-9]+)/.exec(
+        source.slice(pos)
+      );
+      if (!match) fail();
+      pos += match[0].length;
+      return BigInt(match[0]);
+    }
+
+    function primary() {
+      skipSpace();
+      if (source[pos] === "(") {
+        pos++;
+        const value = expr();
+        skipSpace();
+        if (source[pos] !== ")") fail();
+        pos++;
+        return value;
+      }
+      if (source[pos] === "-") {
+        pos++;
+        return -primary();
+      }
+      if (source[pos] === "~") {
+        pos++;
+        return ~primary();
+      }
+      return literal();
+    }
+
+    function apply(op, a, b) {
+      switch (op) {
+        case "|": return a | b;
+        case "^": return a ^ b;
+        case "&": return a & b;
+        /* An absurd shift amount would let BigInt allocate gigabytes;
+           512 bits covers anything a binary note works with. */
+        case "<<": if (b < 0n || b > 512n) fail(); return a << b;
+        case ">>": if (b < 0n || b > 512n) fail(); return a >> b;
+        case "+": return a + b;
+        case "-": return a - b;
+        case "*": return a * b;
+        case "/": if (b === 0n) fail(); return a / b;
+        case "%": if (b === 0n) fail(); return a % b;
+      }
+    }
+
+    /* One precedence level: parse the tighter level once, then fold
+       this level's operators left to right. Levels chain below in C
+       order, loosest (|) outermost. */
+    function level(ops, next) {
+      return function () {
+        let value = next();
+        for (;;) {
+          skipSpace();
+          let op = null;
+          for (let i = 0; i < ops.length; i++) {
+            if (source.startsWith(ops[i], pos)) {
+              op = ops[i];
+              break;
+            }
+          }
+          if (!op) return value;
+          pos += op.length;
+          value = apply(op, value, next());
+        }
+      };
+    }
+
+    const mul = level(["*", "/", "%"], primary);
+    const add = level(["+", "-"], mul);
+    const shift = level(["<<", ">>"], add);
+    const and = level(["&"], shift);
+    const xor = level(["^"], and);
+    const expr = level(["|"], xor);
+
+    const value = expr();
+    skipSpace();
+    if (pos !== source.length) fail();
+    return value;
+  }
+
   /* ---------- palette component ---------- */
 
   /* Builds one palette instance ("overlay" or "inline" — same markup
@@ -617,12 +719,45 @@
       });
     }
 
-    /* The : command line, vim dialect. Exact names only; anything
-       unknown gets vim's own error. A bare colon does nothing, as in
-       vim. Runs before page search, so a leading colon never reaches
-       the fuzzy matcher. */
-    function runCommand(name) {
-      if (name === "h" || name === "help") paintHelp();
+    /* :x — the integer calculator, answering in the three bases an RE
+       note flips between. Live like the rest of the palette: it
+       re-evaluates per keystroke, so half-typed input paints E15
+       until the expression closes. The errors are vim's own — E471
+       for a bare :x, E15 for anything evalIntExpr rejects. */
+    function paintCalc(args) {
+      if (!args) {
+        paintOutput(["E471: Argument required"]);
+        return;
+      }
+      let value;
+      try {
+        value = evalIntExpr(args);
+      } catch (_) {
+        paintOutput(["E15: Invalid expression: " + args]);
+        return;
+      }
+      const sign = value < 0n ? "-" : "";
+      const abs = value < 0n ? -value : value;
+      paintOutput([
+        "hex  " + sign + "0x" + abs.toString(16),
+        "dec  " + value.toString(10),
+        "bin  " + sign + "0b" + abs.toString(2),
+      ]);
+    }
+
+    /* The : command line, vim dialect. The first word is the command
+       name, the rest its argument — only :x takes one, and a trailing
+       argument on any other command falls through to E492 exactly as
+       an unknown name does. A bare colon does nothing, as in vim.
+       Runs before page search, so a leading colon never reaches the
+       fuzzy matcher. */
+    function runCommand(raw) {
+      const space = raw.indexOf(" ");
+      const name = space === -1 ? raw : raw.slice(0, space);
+      const args = space === -1 ? "" : raw.slice(space + 1).trim();
+      if (name === "x") paintCalc(args);
+      else if (args) paintOutput(["E492: Not an editor command: " + raw]);
+      else if (name === "h" || name === "help") paintHelp();
       else if (name === "intro") paintIntro();
       else if (name === "version") paintVersion();
       else paintOutput(["E492: Not an editor command: " + name]);
