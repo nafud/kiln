@@ -104,6 +104,13 @@ jobs:
             exit 1
           }
 
+          # The fonts are self-hosted; a Google Fonts reference creeping
+          # back in would reintroduce the third-party fetch on every page.
+          if grep -rqF -- 'fonts.googleapis' site/index.html site/stylesheets/; then
+            echo "::error::A Google Fonts reference is back in the built site — fonts are self-hosted under assets/fonts (see extra.css)."
+            exit 1
+          fi
+
           # The code-copy checkmark (extra.css + code-copy.js) hooks the
           # copy button, which Material injects at runtime, so it is not in
           # the page HTML — guard the tokens in the theme's CSS bundle instead.
@@ -114,3 +121,16 @@ jobs:
               exit 1
             }
           done
+
+      - name: Install smoke-test dependencies
+        run: |
+          pip install -r requirements-dev.txt
+          playwright install --with-deps chromium
+
+      # The canary above proves the hooks still exist; this proves they
+      # still behave — palette search/grep/commands, key bindings,
+      # hlsearch motions, the ASCII logo, the widgets, the self-hosted
+      # fonts, and the no-JS fallbacks, all in headless Chromium against
+      # the freshly built site.
+      - name: Browser smoke test
+        run: python tests/smoke.py
