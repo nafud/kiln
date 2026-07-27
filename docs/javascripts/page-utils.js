@@ -44,4 +44,29 @@ const KilnUtils = {
       document.addEventListener("DOMContentLoaded", fn);
     }
   },
+
+  /* Two's-complement readout shared by the CSAPP widget (widgets.js)
+     and the palette's :x -wN mode (quick-jump.js): one BigInt value
+     read at a width as its raw bit pattern, hex, and both integer
+     interpretations, or {error} when it fits the width as neither.
+     Written without BigInt literals on purpose — a parser that
+     rejects them would take this whole file (and every script's
+     KilnUtils) down with it, instead of failing only where BigInt is
+     actually exercised. */
+  twosReadout: function (value, width) {
+    const one = BigInt(1);
+    const size = one << BigInt(width);
+    const half = size >> one;
+    if (value >= size || value < -half) {
+      return { error: "does not fit in " + width + " bits" };
+    }
+    const raw = ((value % size) + size) % size;
+    const signed = raw >= half ? raw - size : raw;
+    return {
+      bits: raw.toString(2).padStart(width, "0").replace(/(.{4})(?=.)/g, "$1 "),
+      hex: "0x" + raw.toString(16).padStart(width / 4, "0"),
+      unsigned: raw.toString(10),
+      signed: signed.toString(10),
+    };
+  },
 };

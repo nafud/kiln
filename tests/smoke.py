@@ -113,6 +113,11 @@ def run(page):
         for query, expected in [
             (":h", "[ COMMANDS ]"),
             (":x 0x10+2", "hex  0x12"),
+            (":x 0d16+2", "hex  0x12"),
+            (":x -w16 -5", "s16   -5"),
+            (":x -w16 -5", "hex   0xfffb"),
+            (":x -w8 300", "does not fit in 8 bits"),
+            (":x -w7 1", "E475: Invalid argument: -w7"),
             (":x 1 <<< 2", "E15: Invalid expression"),
             (":version", "local build"),
             (":nosuch", "E492: Not an editor command: nosuch"),
@@ -120,6 +125,20 @@ def run(page):
             open_overlay(page, query)
             assert expected in overlay_text(page), f"{query} missing {expected!r}"
             close_overlay(page)
+        # Errors are message rows: E492 must render through the same
+        # row-metric element as "no matches", never the output pre.
+        open_overlay(page, ":nosuch")
+        err_fs = page.eval_on_selector(
+            ".kiln-jump--overlay .kiln-jump-empty", "el => getComputedStyle(el).fontSize"
+        )
+        close_overlay(page)
+        open_overlay(page, "csapp")
+        page.wait_for_selector(".kiln-jump--overlay .kiln-jump-result-title")
+        row_fs = page.eval_on_selector(
+            ".kiln-jump--overlay .kiln-jump-result-title", "el => getComputedStyle(el).fontSize"
+        )
+        assert err_fs == row_fs, f"error row {err_fs} != result row {row_fs}"
+        close_overlay(page)
         open_overlay(page, ":toc")
         page.wait_for_selector(".kiln-jump--overlay .kiln-jump-result")
         assert "3.5.4 Discussion" in overlay_text(page)

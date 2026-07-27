@@ -188,29 +188,19 @@
 
   const BIT_WIDTHS = [8, 16, 32, 64];
 
-  /* One integer literal (dec, 0x, 0b, optional leading -) read at a
-     given width: the raw bit pattern plus its unsigned and signed
-     interpretations. BigInt throughout, so -w64 stays exact; the sign
-     is split off before BigInt() because BigInt("-0x10") throws. */
-  function twosReadout(text, width) {
-    const match = /^(-?)(0[xX][0-9a-fA-F]+|0[bB][01]+|[0-9]+)$/.exec(
+  /* One integer literal (dec, 0x, 0b, 0d, optional leading -) as a
+     BigInt, or null when the text is not one. The sign is split off
+     before BigInt() because BigInt("-0x10") throws, and the 0d prefix
+     is stripped because BigInt does not know it. The readout itself
+     is KilnUtils.twosReadout, shared with the palette's :x -wN mode. */
+  function parseIntLiteral(text) {
+    const match = /^(-?)(0[xX][0-9a-fA-F]+|0[bB][01]+|0[dD][0-9]+|[0-9]+)$/.exec(
       text.trim()
     );
-    if (!match) return { error: "not an integer literal (dec, 0x, 0b)" };
-    const magnitude = BigInt(match[2]);
-    const value = match[1] ? -magnitude : magnitude;
-    const size = 1n << BigInt(width);
-    if (value >= size || value < -(size >> 1n)) {
-      return { error: "does not fit in " + width + " bits" };
-    }
-    const raw = ((value % size) + size) % size;
-    const signed = raw >= size >> 1n ? raw - size : raw;
-    return {
-      bits: raw.toString(2).padStart(width, "0").replace(/(.{4})(?=.)/g, "$1 "),
-      hex: "0x" + raw.toString(16).padStart(width / 4, "0"),
-      unsigned: raw.toString(10),
-      signed: signed.toString(10),
-    };
+    if (!match) return null;
+    const digits = /^0[dD]/.test(match[2]) ? match[2].slice(2) : match[2];
+    const magnitude = BigInt(digits);
+    return match[1] ? -magnitude : magnitude;
   }
 
   /* `$ bits -wN <value>`: the -wN flag is a real button cycling the
@@ -233,8 +223,12 @@
       ["bits ", flag, " "],
       "-16",
       "integer value",
-      function (out, value) {
-        const readout = twosReadout(value, width);
+      function (out, text) {
+        const value = parseIntLiteral(text);
+        const readout =
+          value === null
+            ? { error: "not an integer literal (dec, 0x, 0b, 0d)" }
+            : KilnUtils.twosReadout(value, width);
         if (readout.error) {
           out.appendChild(el("span", "kiln-term-err", readout.error));
           return;

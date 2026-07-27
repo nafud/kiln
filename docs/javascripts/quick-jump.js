@@ -73,6 +73,7 @@
     ["COMMANDS", [
       [[":toc"], "List page headings"],
       [[":x expr"], "Int calculator (hex/dec/bin)"],
+      [[":x -wN expr"], "Two's complement at N bits"],
       [[":intro"], "Show intro screen"],
       [[":version"], "Show build info"],
       [[":h", ":help"], "Display this help"],
@@ -509,7 +510,7 @@
 
   /* Arbitrary-precision integer expressions for the :x command — a
      recursive-descent parser over BigInt, no eval anywhere near it.
-     The dialect is what an RE desk flips between: 0x/0b/decimal
+     The dialect is what an RE desk flips between: 0x/0b/0d/decimal
      literals and the C integer operators at C precedence (| ^ &
      << >> + - * / % and unary - ~, parentheses). Anything the
      grammar rejects throws, and :x reports it as vim's E15. */
@@ -524,13 +525,16 @@
       while (source[pos] === " ") pos++;
     }
 
+    /* The explicit-decimal 0d prefix is stripped before BigInt, which
+       knows 0x and 0b but not it. Its branch sits before the bare
+       [0-9]+ one, or "0d16" would lex as 0 with a dangling d. */
     function literal() {
-      const match = /^(?:0[xX][0-9a-fA-F]+|0[bB][01]+|[0-9]+)/.exec(
+      const match = /^(?:0[xX][0-9a-fA-F]+|0[bB][01]+|0[dD][0-9]+|[0-9]+)/.exec(
         source.slice(pos)
       );
       if (!match) fail();
       pos += match[0].length;
-      return BigInt(match[0]);
+      return BigInt(/^0[dD]/.test(match[0]) ? match[0].slice(2) : match[0]);
     }
 
     function primary() {
@@ -676,7 +680,15 @@
     let selected = 0;
     let renderSeq = 0;
 
+    /* One non-selectable message row in the result-row style — "no
+       matches", "page index unavailable", and the command line's
+       errors alike (vim shows errors in the message line, not as
+       buffer output; the .kiln-jump-empty row mirrors result-row
+       metrics exactly, so an error can never render at a different
+       size than the rows around it). Clearing results keeps the
+       Arrow/Enter invariant: a message is never a selection. */
     function showMessage(text) {
+      results = [];
       list.textContent = "";
       const item = document.createElement("li");
       item.className = "kiln-jump-empty";
@@ -896,18 +908,45 @@
     /* :x — the integer calculator, answering in the three bases an RE
        note flips between. Live like the rest of the palette: it
        re-evaluates per keystroke, so half-typed input paints E15
-       until the expression closes. The errors are vim's own — E471
-       for a bare :x, E15 for anything evalIntExpr rejects. */
+       until the expression closes. A leading -wN flag (8/16/32/64,
+       the widths the twos-complement widget offers) switches to the
+       two's-complement readout instead: the value's raw bits at that
+       width plus its unsigned and signed readings, via the shared
+       KilnUtils.twosReadout. The errors are vim's own — E471 for a
+       missing expression, E475 for a width outside the set, E15 for
+       anything evalIntExpr rejects — and render as message rows, not
+       output. */
     function paintCalc(args) {
-      if (!args) {
-        paintOutput(["E471: Argument required"]);
+      const flag = /^-w(\d+)(?:\s+(.*))?$/.exec(args);
+      const width = flag ? Number(flag[1]) : null;
+      const source = flag ? (flag[2] || "").trim() : args;
+      if (flag && [8, 16, 32, 64].indexOf(width) === -1) {
+        showMessage("E475: Invalid argument: -w" + flag[1]);
+        return;
+      }
+      if (!source) {
+        showMessage("E471: Argument required");
         return;
       }
       let value;
       try {
-        value = evalIntExpr(args);
+        value = evalIntExpr(source);
       } catch (_) {
-        paintOutput(["E15: Invalid expression: " + args]);
+        showMessage("E15: Invalid expression: " + source);
+        return;
+      }
+      if (flag) {
+        const readout = KilnUtils.twosReadout(value, width);
+        if (readout.error) {
+          showMessage(readout.error);
+          return;
+        }
+        paintOutput([
+          "bits".padEnd(6) + readout.bits,
+          "hex".padEnd(6) + readout.hex,
+          ("u" + width).padEnd(6) + readout.unsigned,
+          ("s" + width).padEnd(6) + readout.signed,
+        ]);
         return;
       }
       const sign = value < 0n ? "-" : "";
@@ -930,12 +969,12 @@
       const name = space === -1 ? raw : raw.slice(0, space);
       const args = space === -1 ? "" : raw.slice(space + 1).trim();
       if (name === "x") paintCalc(args);
-      else if (args) paintOutput(["E492: Not an editor command: " + raw]);
+      else if (args) showMessage("E492: Not an editor command: " + raw);
       else if (name === "toc") paintToc();
       else if (name === "h" || name === "help") paintHelp();
       else if (name === "intro") paintIntro();
       else if (name === "version") paintVersion();
-      else paintOutput(["E492: Not an editor command: " + name]);
+      else showMessage("E492: Not an editor command: " + name);
     }
 
     /* The fetch resolves asynchronously; the sequence guard drops a
