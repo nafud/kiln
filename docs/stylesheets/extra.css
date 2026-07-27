@@ -1,6 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-/* The UnifrakturMaguntia logo font is injected by ascii-logo.js only on
-   pages that render the logo, so other pages don't pay for it. */
+/* The UnifrakturMaguntia logo font is embedded in ascii-logo.js as a
+   data: URI subset (glyphs for "Kiln" only) — nothing to load here. */
 
 :root {
   --md-text-font: "JetBrains Mono";

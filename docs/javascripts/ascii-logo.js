@@ -8,17 +8,20 @@
 
    The grid is generated exclusively from the real CONFIG.fontFamily
    webfont — never from a fallback font, whose different metrics and
-   shapes would produce a wrong-looking logo that then sticks. Until the
-   font is verifiably loaded (see ensureLogoFont) the pre keeps its
-   plain-text fallback, styled as a title by extra.css;
-   CONFIG.generatedClass switches it to grid sizing. Failed loads retry
-   with backoff, and a late success still builds. The webfont stylesheet
-   is injected from here rather than @imported in extra.css so only
-   pages that render the logo pay for it.
+   shapes would produce a wrong-looking logo that then sticks. The font
+   ships embedded in this file as a data: URI (CONFIG.fontDataUrl, a
+   tiny subset holding only CONFIG.text's glyphs) and is registered
+   through the FontFace API, so no network fetch stands between first
+   paint and the build. Until verification succeeds (see ensureLogoFont)
+   the pre keeps its plain-text fallback, styled as a title by
+   extra.css; CONFIG.generatedClass switches it to grid sizing.
 
    The logo is static by itself; pointer movement drives a shimmer animation
-   whose intensity envelope eases in and out. Idempotent and safe to re-run
-   on navigation.instant page changes, same as page-chrome.js. */
+   whose intensity envelope eases in and out. A page's first generated
+   frame enters through the same machinery, starting at full envelope and
+   decaying, so the logo materializes out of glitch noise instead of
+   snapping from the text fallback (see rebuild). Idempotent and safe to
+   re-run on navigation.instant page changes, same as page-chrome.js. */
 
 (function () {
   "use strict";
@@ -27,9 +30,17 @@
     text: "Kiln",
     fontFamily: "UnifrakturMaguntia",
     fontFallback: "serif",
-    fontStylesheetUrl:
-      "https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&display=swap",
-    fontStylesheetId: "kiln-logo-font",
+    /* UnifrakturMaguntia subset to CONFIG.text's glyphs (K i l n),
+       a ~1.8 KB woff2 embedded so the face loads with zero network
+       round trips — the render happens within frames of first paint
+       instead of after a two-hop CDN fetch. SIL OFL; the copyright and
+       license name records are retained inside the file. Regenerate
+       whenever CONFIG.text gains a new character or the font changes:
+         pyftsubset UnifrakturMaguntia.ttf --text="Kiln" --flavor=woff2 \
+           --name-IDs="0,1,2,3,4,5,6,7,13,14" --output-file=kiln.woff2
+         base64 -w0 kiln.woff2 */
+    fontDataUrl:
+      "data:font/woff2;base64,d09GMgABAAAAAAc4ABEAAAAADTQAAAbeB9oAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGhwbIBxcBmAATAgeCYJzERAKihCIWgE2AiQDGAsOAAQgBYVCByAMgRYbSAtRVHJKE/w4yMlQe4mFZmhLi7OuRMn15cpk8klr5Tke/tvvf/vMzL1PEI2uuvpvaBJvJiHh8VdIVGg0Vv8V3vzz2/z7wG7+2R5GNlhF+Gw+EaUe2BoXjS4So1k/XUQRvyL63wC3sNXvpzabok1VLKCsqvCV6v33Q1dEEIZQaHYBkgVAGSEL40lYU9/2U9gdOz4hxRzG1d8eQKA3IISKIJCuRtsQa0Br1jWTgIcCHQBPNUkhbEXIBZqIa+VXaAqRpQXRM65cZNOAB7BYURKasQMpKygqSQ4fslzGQbt6qp5WOQDEWCt4m6yE1KvOVU4votxEFiNsgkpNRPX6f/9B0hLuhcr66jpGcEVCxmBYgfLvWgBoa0qSzbgERB2gHTtfTDA70NsPJ9lnjgoD0ccPTP9/Xe/yh3o98I0pm1GtHQdOB3T/IBr/72DN0BUt+fixNFRMgWECt9YaQ1NRaQoqJuFvF8pTYKI1xxE7u2MQ2DTCtJFhGkGEOTSGtcQlocIO03QwA7bafYB7a7/nAN66AsENdWEiSHEaqsgFFNbEXCrMEwrgCYH+rc6opjS53eX49u6Obuu1Wpx1RS2Cw+NhgrV7LMHanTLxCMKOrxULNHeEG6EdjcR6Uohpilm7knVFKHHw9m1YEIO3XktlONNo5D4XqjtGGiCoMhkl3DzHEdAw7KixGmwUzrNPlhMQ3GvD2jRUa0oTO4FQC1n0zzQAZE1Jf1CHDGrQGzVxFogewBTAK4QkhDixc4J3akuP3nwozEFxOEg2G9luIww1JM3MpZidY05u73rlaPoW1fkx+eNPWRWWpQSn89zhM8oHb5D3h5snYJA+rLeRMH0klrTPEPrAngqo04uJiDG4tM16y9EE6oAxbCmxdDz4+y1nzaGkG3by5HiI5TrAXCtayTg0G7FgS52Jdzj0Y6TjtnyTY+0xp/7AfNLsi7T9Y+FOJ3nyiJfJBjSGUPJkjXk20UYaT37poBw4GD59CxowOti2hv2GEBtpnymsaDU27g/CGotXM8fncMvOjENJoXby/v3hz4YkL9ImJ2YQktMA6jWGeUFTrBlC2gfslNzeOZ91pKwW7gt5zvsv15+xb8BYKuHszYm82dq2vPY87CfLSZsuZXw3IjWPPU9mbqLIq7KN87lbTm3dQubkVtEyzhhUj/nqIV6fT9Rg4bMtP3yU3KCWYvcPknhshpH3PXmJWZ67FcN3RX2j33L3wfwpNNznnznn64HU3/tN6UkrFKdQ03mv6Cf4X2/aH2QZYV7M20q8qEz+t+ajb8c3bBgoVz9IWI/r7X/dvPLzcJrlK7eY4F4VVvPjowkXCELCTzV72pobkusIxyckRdMsysq1Pbc/fy9nYCnlGpLco/cMhcSePLJOkBkbJ61I6yz1wRKin2zF8/2hhuC6YvoLnRY7FBJJV0nNIPgU/EVd4hZ06QeIoyiQnFP4sev7g370sGwxFIFju8omfXZwwPH7jEA6UhMyqEHUj0cdrO4KYlRGnGhmUS6ftpz//Enu4LV/rtvT8Bov6melUM5snDVdJTUwA4PdbumUrR4/Kcn9K7il89RF8P+aLyAMiTB9gd3OcG/FEio0LvnP4RtmvdEtTaPVm1Qzy7M7DAATOu/Vja7LVP+z+N11B8i5o8Rx3QvKO2/kRwWA2bAFcbVeAkncZHOZXOUNPGWLfEcSitCg53oUBUn9C2jvZGZ9hXBAHCE4IKkABS0ZDlUGLQEoCPxpZ/oKAOoeFP4ehWdZAwoBOVTFRS3VFgkgNKIROdGt3VAVQL0JUgDR+E3Po/ToQf8lvzbXegD4PphFT/lP9X8BzUsNGaApgaBe/+9/mr9Zof+OzCG8OKurns7zRiWmjLOznOJhWSkEOSDX+q85jHL71dok6ZYk0HQOVpQW0QUgTRgTGk3SjOea7Fi8n1i4msq4hJlYl9+urzkpEdQQk9CS4WLjUIAloksCy5YpSyYYTzpYAiEa+h0JzdWU5BSASUBhH9aJSY5JRmWJ4VVEYiLDVjRCTCIXFFwsMuJzSOkVLWjYvIW4aXHpvDTKMhVVt2NS9GaIqJ6YOZtJILRz2x4cXHJF1AXAqlKjkSkzMUlAiY5JlMRViLpiGT1kChwu8v4GzWBtJJhEt8nNQkiNpjiSO86tgmVJfx/9XmRWE/t4fh9Oo2SrFPcB6UsAK95XU4OnbHnSZMmS9pOHVmoqD+Rn54J/gnMFiWIZMsjRfw5JEkNR6SJ85006v3iGNkTNsF58fGOyVaGSJkMDYbXAtQstkC5WOD80J4NrwlYVssQIHXN/TfLLB1f1Kg2q7KMnQckRiy50LQqoAs1j4ITzsy7BqoaiMRnlnwgA",
     generatedClass: "kiln-ascii--generated",
     /* Density ramp for the static frame: darkest ink first, background
        (space) last. Kept short on purpose — a long ramp turns
@@ -73,11 +84,6 @@
     releaseMs: 1400,
     resizeDebounceMs: 150,
     probeColumns: 40,            /* sample size for character cell measuring */
-    /* Webfont retry schedule: fontRetryDelayMs doubles per attempt
-       (250, 500, 1000, 2000ms), riding out a slow CDN or a stylesheet
-       that had not parsed when the first check ran. */
-    fontLoadRetries: 4,
-    fontRetryDelayMs: 250,
   };
 
   const state = {
@@ -126,63 +132,31 @@
     return px + 'px "' + CONFIG.fontFamily + '", ' + CONFIG.fontFallback;
   }
 
-  /* Injects the logo webfont's stylesheet on demand (memoized), so pages
-     without the logo never fetch it. Resolves true on load, false on
-     error; a failed link is removed and the memo cleared, so the retry
-     schedule below can re-inject a fresh one. The memo is also bypassed
-     whenever the link element is gone: navigation.instant reconciles
-     <head> against the target page's HTML, so leaving the homepage
-     strips the injected link — and with the stylesheet go its
-     CSS-connected font faces. */
-  let stylesheetPromise = null;
-  function loadStylesheet() {
-    if (!document.getElementById(CONFIG.fontStylesheetId)) {
-      stylesheetPromise = null;
+  /* Loads and registers the embedded logo font (memoized). The face is
+     added to document.fonts through the FontFace API, so there is no
+     <link> for navigation.instant's head reconciliation to strip —
+     once added, the face stays for the life of the document, and the
+     stylesheet-eviction serif-logo bug this replaced cannot recur. A
+     data: URI cannot fail transiently, so a failure here (no FontFace
+     API, malformed data) is deterministic and memoizing it is safe;
+     the text fallback then simply stays. */
+  let fontFacePromise = null;
+  function loadFontFace() {
+    if (!fontFacePromise) {
+      fontFacePromise =
+        typeof FontFace === "undefined" || !document.fonts
+          ? Promise.resolve(false)
+          : new FontFace(CONFIG.fontFamily, 'url("' + CONFIG.fontDataUrl + '")')
+              .load()
+              .then(function (face) {
+                document.fonts.add(face);
+                return true;
+              })
+              .catch(function () {
+                return false;
+              });
     }
-    if (!stylesheetPromise) {
-      stylesheetPromise = new Promise(function (resolve) {
-        const link = document.createElement("link");
-        link.id = CONFIG.fontStylesheetId;
-        link.rel = "stylesheet";
-        link.href = CONFIG.fontStylesheetUrl;
-        link.onload = function () {
-          resolve(true);
-        };
-        link.onerror = function () {
-          link.remove();
-          stylesheetPromise = null;
-          resolve(false);
-        };
-        document.head.appendChild(link);
-      });
-    }
-    return stylesheetPromise;
-  }
-
-  /* True only when the logo font itself is registered and fully loaded.
-     fonts.load() resolves with the faces that matched the request: an
-     empty list means the @font-face was not registered at all (the
-     stylesheet failed, or its CSS had not parsed yet when this ran) —
-     the very race that used to slip a fallback-font render through.
-     fonts.check() has the same blind spot (an unregistered family
-     counts as "available"), so the matched faces are inspected. */
-  function logoFontUsable() {
-    if (!document.fonts || !document.fonts.load) {
-      return Promise.resolve(false);
-    }
-    return document.fonts
-      .load(cssFont(CONFIG.referenceFontPx), CONFIG.text)
-      .then(function (faces) {
-        return (
-          faces.length > 0 &&
-          faces.every(function (face) {
-            return face.status === "loaded";
-          })
-        );
-      })
-      .catch(function () {
-        return false;
-      });
+    return fontFacePromise;
   }
 
   /* Second, belt-and-braces verification: the canvas must actually
@@ -217,63 +191,18 @@
     });
   }
 
-  function delay(ms) {
-    return new Promise(function (resolve) {
-      setTimeout(resolve, ms);
-    });
-  }
-
-  function attemptFontLoad(attempt) {
-    return loadStylesheet()
-      .then(logoFontUsable)
-      .then(function (usable) {
-        usable = usable && logoFontRendered();
-        if (usable || attempt >= CONFIG.fontLoadRetries) return usable;
-        return delay(CONFIG.fontRetryDelayMs << attempt).then(function () {
-          return attemptFontLoad(attempt + 1);
-        });
-      });
-  }
-
-  /* True while the logo font's face is actually present and loaded in
-     document.fonts right now. A past verification is no proof of the
-     present: when navigation.instant strips the injected stylesheet
-     (see loadStylesheet), the browser evicts its font faces, and a
-     canvas draw after that silently falls back — the serif-logo bug
-     on returning to the homepage. */
-  function logoFontPresent() {
-    if (!document.fonts || !document.fonts.forEach) return false;
-    let present = false;
-    document.fonts.forEach(function (face) {
-      if (
-        face.family.replace(/["']/g, "") === CONFIG.fontFamily &&
-        face.status === "loaded"
-      ) {
-        present = true;
-      }
-    });
-    return present;
-  }
-
-  /* Resolves true once the logo webfont is verifiably usable, running
-     the retry schedule at most once at a time. Success is remembered
-     only while the face is still present (see logoFontPresent);
-     failure clears the attempt so any later trigger (a page revisit,
-     a fonts "loadingdone" event) starts a fresh round rather than
-     being stuck with a cached no. */
+  /* Resolves true once the logo font is verifiably usable: the
+     embedded face is loaded AND the canvas really shapes text with it
+     (logoFontRendered). Success is remembered; a failed render check
+     is re-run on any later trigger (a page revisit, a fonts
+     "loadingdone" event), which costs only a canvas measurement. */
   let fontReady = false;
-  let fontAttempt = null;
   function ensureLogoFont() {
-    if (fontReady && !logoFontPresent()) fontReady = false;
     if (fontReady) return Promise.resolve(true);
-    if (!fontAttempt) {
-      fontAttempt = attemptFontLoad(0).then(function (usable) {
-        fontReady = usable;
-        fontAttempt = null;
-        return usable;
-      });
-    }
-    return fontAttempt;
+    return loadFontFace().then(function (loaded) {
+      fontReady = loaded && logoFontRendered();
+      return fontReady;
+    });
   }
 
   /* Measures the rendered size of one monospace character cell inside the
@@ -488,10 +417,15 @@
     if (!pre || !pre.isConnected) return;
     /* The single font gate: no path (init, resize, container resize,
        late font loads) may generate from a fallback font — the text
-       fallback stays up until the real font has been verified, and a
-       past verification only counts while the face is still present
-       (instant navigation can evict it, see logoFontPresent). */
-    if (!fontReady || !logoFontPresent()) return;
+       fallback stays up until the real font has been verified. The
+       JS-registered face persists for the document's life (see
+       loadFontFace), so a past verification stays valid. */
+    if (!fontReady) return;
+
+    /* A pre still in fallback dress has never shown a generated frame;
+       its first frame below settles in from glitch noise. Captured
+       before the class flip, which is what marks the pre generated. */
+    const firstBuild = !pre.classList.contains(CONFIG.generatedClass);
 
     /* Grid sizing must be measured at the generated font size, not the
        larger text-fallback size, so the class flips before probing. */
@@ -537,7 +471,21 @@
 
     buildCells(grid, sampleCoverage(canvas, ctx, grid, inkBox));
     state.staticFrame = buildFrame(null);
-    pre.textContent = state.staticFrame;
+
+    /* A page's first generated frame materializes instead of snapping
+       in: it starts at full shimmer envelope and animationTick's
+       release path decays it into the static frame, so the fallback →
+       grid handoff reads as terminal noise resolving rather than a
+       font swap. Resize and self-heal rebuilds repaint statically. */
+    if (firstBuild && !reducedMotion.matches) {
+      state.envelope = 1;
+      state.lastMoveAt = 0;
+      state.lastTickAt = 0;
+      pre.textContent = buildFrame(performance.now());
+      if (!state.rafId) state.rafId = requestAnimationFrame(animationTick);
+    } else {
+      pre.textContent = state.staticFrame;
+    }
   }
 
   function stopAnimation() {
@@ -636,9 +584,10 @@
   /* Fonts that finish after the first build (e.g. a slow @import of the
      page font) change cell metrics; rebuilding self-heals, and the
      signature guard makes it free when nothing changed. The same event
-     re-arms a failed logo-font attempt: ensureLogoFont retries from
-     scratch when its last round gave up, so a font that recovers late
-     still replaces the text fallback with the generated grid. */
+     re-runs a failed verification: ensureLogoFont re-checks the canvas
+     render when its last round said no, so an environment that starts
+     shaping the font late still replaces the text fallback with the
+     generated grid. */
   if (document.fonts && document.fonts.addEventListener) {
     document.fonts.addEventListener("loadingdone", function () {
       if (!state.pre || !state.pre.isConnected) return;
