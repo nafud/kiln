@@ -201,6 +201,48 @@ def run(page):
         )
         assert "1111 1111 1111 0000" in out and "s16   -16" in out, f"readout changed: {out!r}"
 
+    with step("palette typography is context-independent"):
+        # The palette mounts inside .md-typeset (homepage bar) and on
+        # document.body (overlay); every element must compute identical
+        # type metrics in both, or context-dependent sizing bugs (the
+        # E492 class) creep back.
+        probe = """(scope) => {
+          const sel = [".kiln-jump-prompt", ".kiln-jump-cursor",
+                       ".kiln-jump-input", ".kiln-jump-result-title",
+                       ".kiln-jump-empty", ".kiln-jump-help pre"];
+          const out = {};
+          for (const s of sel) {
+            const el = document.querySelector(scope + " " + s);
+            if (!el) continue;
+            const c = getComputedStyle(el);
+            out[s] = c.fontSize + "/" + c.lineHeight + "/" + c.fontFamily;
+          }
+          return out;
+        }"""
+
+        def sample(scope, fill):
+            metrics = {}
+            for query in fill:
+                page.locator(scope + " .kiln-jump-input").fill(query)
+                page.wait_for_timeout(150)
+                metrics.update(page.evaluate(probe, scope))
+            return metrics
+
+        states = ["csapp", ":nosuch", ":h"]
+        page.goto(f"{BASE}/books/index.html")
+        page.keyboard.press("`")
+        page.wait_for_selector(".kiln-jump--overlay.kiln-jump--open")
+        overlay = sample(".kiln-jump--overlay", states)
+        close_overlay(page)
+        page.goto(BASE + "/")
+        page.wait_for_selector(".kiln-jump--inline .kiln-jump-input")
+        inline = sample(".kiln-jump--inline", states)
+        for key in sorted(set(overlay) & set(inline)):
+            assert overlay[key] == inline[key], (
+                f"{key}: overlay {overlay[key]} != inline {inline[key]}"
+            )
+        assert len(set(overlay) & set(inline)) >= 5, "probe lost elements"
+
     with step("no console errors anywhere above"):
         assert not page_errors, page_errors
 

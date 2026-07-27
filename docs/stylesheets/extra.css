@@ -808,6 +808,19 @@ body:has(.kiln-ascii) .md-header__button[for="__drawer"] {
   background: var(--color-surface);
   box-shadow: 0 4px 12px var(--color-shadow);
   overflow: hidden;
+  /* The palette's own typography root. It mounts in two contexts —
+     the homepage bar inside .md-typeset, the overlay on document.body
+     — and any metric it does not set resolves per context (body's
+     base is 10px, .md-typeset's is not; this is how the E492 message
+     and the »/█ glyphs each rendered at context-dependent sizes).
+     Descendants inherit these; the deliberate deviations (result rows
+     and messages at 0.72rem, the pinned :-output pre) set their own.
+     The smoke test asserts computed equality across both contexts —
+     keep new palette elements under this root or give them explicit
+     metrics. */
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.78rem;
+  line-height: 1.7;
 }
 
 .kiln-jump--inline .kiln-jump-panel {
@@ -898,7 +911,7 @@ body:has(.kiln-ascii) .md-header__button[for="__drawer"] {
   outline: none;
   background: transparent;
   color: var(--color-text-primary);
-  font-size: 0.78rem;
+  font: inherit; /* inputs do not inherit font by default; take the panel root's */
   padding: 0;
 }
 
