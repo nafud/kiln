@@ -962,6 +962,13 @@ body:has(.kiln-ascii) .md-header__button[for="__drawer"] {
   text-overflow: ellipsis;
 }
 
+/* :toc rows for h3 headings sit one indent step under their h2s, so
+   the dropdown reads as an outline. */
+.kiln-jump-result--sub a,
+.md-typeset .kiln-jump-results .kiln-jump-result--sub a {
+  padding-left: 1.9rem;
+}
+
 .kiln-jump-result--active .kiln-jump-result-title {
   color: var(--color-accent);
 }

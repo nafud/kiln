@@ -69,6 +69,7 @@
       [["t"], "Toggle theme"],
     ]],
     ["COMMANDS", [
+      [[":toc"], "List page headings"],
       [[":x expr"], "Int calculator (hex/dec/bin)"],
       [[":intro"], "Show intro screen"],
       [[":version"], "Show build info"],
@@ -280,6 +281,16 @@
 
   function byScoreDesc(a, b) {
     return b.score - a.score;
+  }
+
+  /* A heading's own text, without Material's ¶ permalink anchor. */
+  function headingText(heading) {
+    let text = "";
+    heading.childNodes.forEach(function (node) {
+      if (node.nodeType === 1 && node.classList.contains("headerlink")) return;
+      text += node.textContent;
+    });
+    return text.trim();
   }
 
   /* Plain-query search over everything: pages by title/path first,
@@ -576,6 +587,7 @@
       results.forEach(function (page, i) {
         const item = document.createElement("li");
         item.className = "kiln-jump-result";
+        if (page.sub) item.classList.add("kiln-jump-result--sub");
         item.id = listId + "-" + i;
         item.setAttribute("role", "option");
 
@@ -719,6 +731,33 @@
       });
     }
 
+    /* :toc — the current page's headings as jumpable rows, h2 and h3
+       (the [ ] keys only step h2s, and the sidebars rest hidden, so
+       this is the prompt's own way to get oriented mid-page). Painted
+       through the normal result machinery, so Arrow/Enter work; the
+       landing is a same-page anchor click, and openSelected dismisses
+       the prompt afterwards since no page change will. */
+    function paintToc() {
+      const headings = document.querySelectorAll(
+        ".md-content h2[id], .md-content h3[id]"
+      );
+      const rows = [];
+      headings.forEach(function (heading) {
+        rows.push({
+          title: headingText(heading),
+          url: new URL("#" + heading.id, location.href),
+          sub: heading.tagName === "H3",
+        });
+      });
+      if (!rows.length) {
+        showMessage("no headings on this page");
+        return;
+      }
+      results = rows;
+      selected = 0;
+      paintResults();
+    }
+
     /* :x — the integer calculator, answering in the three bases an RE
        note flips between. Live like the rest of the palette: it
        re-evaluates per keystroke, so half-typed input paints E15
@@ -757,6 +796,7 @@
       const args = space === -1 ? "" : raw.slice(space + 1).trim();
       if (name === "x") paintCalc(args);
       else if (args) paintOutput(["E492: Not an editor command: " + raw]);
+      else if (name === "toc") paintToc();
       else if (name === "h" || name === "help") paintHelp();
       else if (name === "intro") paintIntro();
       else if (name === "version") paintVersion();
@@ -828,7 +868,14 @@
     function openSelected() {
       const item = list.children[selected];
       const link = item && item.querySelector("a");
-      if (link) link.click();
+      if (!link) return;
+      const samePage = link.pathname === location.pathname && !!link.hash;
+      link.click();
+      /* A same-page anchor (a :toc row, a section hit on the open
+         page) fires no page change, and the page change is what
+         normally closes the overlay — dismiss explicitly so the
+         reader lands looking at the section, not at the prompt. */
+      if (samePage) onDismiss();
     }
 
     input.addEventListener("input", render);
