@@ -1,9 +1,43 @@
-/* No font loading here. JetBrains Mono comes from the <link> in
-   overrides/main.html — a direct link the preload scanner sees in the
-   HTML, where an @import buried in this file cost an extra serialized
-   round trip (this file, then the imported CSS, then the woff2s). The
+/* JetBrains Mono is self-hosted (docs/assets/fonts, OFL — license
+   file alongside): the four normal weights the former Google Fonts
+   link served, now same-origin with no third-party fetch. Italic
+   faces were never loaded; browsers synthesize oblique where content
+   asks for it. font-display: swap matches the former loading
+   behavior, and overrides/main.html preloads the Regular weight. The
    UnifrakturMaguntia logo font is embedded in ascii-logo.js as a
    data: URI subset (glyphs for "Kiln" only). */
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/JetBrainsMono-Regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../assets/fonts/JetBrainsMono-Medium.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../assets/fonts/JetBrainsMono-SemiBold.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../assets/fonts/JetBrainsMono-Bold.woff2") format("woff2");
+}
 
 :root {
   --md-text-font: "JetBrains Mono";

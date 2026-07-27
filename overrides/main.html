@@ -7,20 +7,19 @@
   never sees them flash before the bar mounts, and with JS off the
   class is never set and the cards render as always.
 
-  Loads JetBrains Mono, with preconnects for both Google Fonts origins
-  (stylesheet from googleapis, woff2 from gstatic). A direct <link>
-  here is discovered by the browser's preload scanner in the HTML; the
-  @import it replaced sat inside extra.css and cost an extra serialized
-  round trip. The logo font loads nothing — it is embedded in
-  ascii-logo.js as a data: URI.
+  Preloads the JetBrains Mono Regular weight — the self-hosted face
+  (docs/assets/fonts, declared in extra.css) that nearly all text
+  renders in — so its fetch starts from the HTML instead of after
+  extra.css parses. The other weights load on demand; the logo font
+  loads nothing, embedded in ascii-logo.js as a data: URI. crossorigin
+  is required on font preloads even same-origin, or the preloaded
+  response goes unused and the font is fetched twice.
 -#}
 {% extends "base.html" %}
 
 {% block extrahead %}
   {{ super() }}
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="{{ 'assets/fonts/JetBrainsMono-Regular.woff2' | url }}">
   <script>
     document.documentElement.classList.add("kiln-js");
   </script>
