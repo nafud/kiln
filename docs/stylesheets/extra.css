@@ -744,6 +744,19 @@ body:has(.kiln-ascii) .md-header__button[for="__drawer"] {
   margin: 0 auto;
 }
 
+/* Visually hidden live region announcing the palette's result count
+   to screen readers (the rows are traversed via aria-activedescendant,
+   so nothing else speaks when the list repaints). */
+.kiln-jump-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* Jump-to-page palette (quick-jump.js; ` or Ctrl+K opens the overlay,
    and in jump-bar mode the inline variant sits under the homepage
    logo). The overlay panel floats over content, so it carries a

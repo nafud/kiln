@@ -401,17 +401,27 @@
     input.setAttribute("aria-label", "Jump to a page");
     input.setAttribute("aria-expanded", "false");
     input.setAttribute("aria-controls", listId);
+    input.setAttribute("aria-autocomplete", "list");
 
     const list = document.createElement("ul");
     list.className = "kiln-jump-results";
     list.id = listId;
     list.setAttribute("role", "listbox");
 
+    /* Screen readers hear the result count from this visually hidden
+       live region; the rows themselves are traversed via
+       aria-activedescendant without ever moving DOM focus. */
+    const status = document.createElement("div");
+    status.className = "kiln-jump-status";
+    status.setAttribute("role", "status");
+    status.setAttribute("aria-live", "polite");
+
     row.appendChild(prompt);
     row.appendChild(cursor);
     row.appendChild(input);
     panel.appendChild(row);
     panel.appendChild(list);
+    panel.appendChild(status);
     root.appendChild(panel);
 
     let results = [];
@@ -426,6 +436,7 @@
       list.appendChild(item);
       input.setAttribute("aria-expanded", "false");
       input.removeAttribute("aria-activedescendant");
+      status.textContent = text;
       clampToViewport();
     }
 
@@ -482,6 +493,8 @@
         list.appendChild(item);
       });
       input.setAttribute("aria-expanded", results.length ? "true" : "false");
+      status.textContent =
+        results.length + (results.length === 1 ? " result" : " results");
       clampToViewport();
       paintSelection();
     }
@@ -626,6 +639,7 @@
       list.textContent = "";
       input.setAttribute("aria-expanded", "false");
       input.removeAttribute("aria-activedescendant");
+      status.textContent = "";
     }
 
     function render() {
@@ -808,4 +822,19 @@
     closeOverlay();
     syncHomepage();
   });
+
+  /* Warm the search index while the browser is idle, so the first
+     keystroke never waits on the fetch. Purely an optimization: the
+     on-demand path in render() still loads it when this has not run
+     (or failed — loadIndex clears its cache on error, so the demand
+     path retries a failed prefetch). Once per full page load, like
+     the cache it fills. */
+  function prefetchIndex() {
+    loadData().catch(function () {});
+  }
+  if (typeof requestIdleCallback === "function") {
+    requestIdleCallback(prefetchIndex, { timeout: 4000 });
+  } else {
+    setTimeout(prefetchIndex, 2000);
+  }
 })();
