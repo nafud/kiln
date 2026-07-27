@@ -13,8 +13,11 @@
    tiny subset holding only CONFIG.text's glyphs) and is registered
    through the FontFace API, so no network fetch stands between first
    paint and the build. Until verification succeeds (see ensureLogoFont)
-   the pre keeps its plain-text fallback, styled as a title by
-   extra.css; CONFIG.generatedClass switches it to grid sizing.
+   the pre keeps its plain-text fallback, styled as a title by extra.css
+   but kept invisible for JS visitors (the kiln-js rule there) so the
+   title never paints before the grid; a pure-CSS delayed reveal shows
+   it anyway if generation never comes, with no JS failure path needed.
+   CONFIG.generatedClass switches the pre to grid sizing.
 
    The logo is static by itself; pointer movement drives a shimmer animation
    whose intensity envelope eases in and out. A page's first generated

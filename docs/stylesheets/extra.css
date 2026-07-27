@@ -1,6 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-/* The UnifrakturMaguntia logo font is embedded in ascii-logo.js as a
-   data: URI subset (glyphs for "Kiln" only) — nothing to load here. */
+/* No font loading here. JetBrains Mono comes from the <link> in
+   overrides/main.html — a direct link the preload scanner sees in the
+   HTML, where an @import buried in this file cost an extra serialized
+   round trip (this file, then the imported CSS, then the woff2s). The
+   UnifrakturMaguntia logo font is embedded in ascii-logo.js as a
+   data: URI subset (glyphs for "Kiln" only). */
 
 :root {
   --md-text-font: "JetBrains Mono";
@@ -271,6 +274,26 @@ body {
 
 .md-typeset pre.kiln-ascii.kiln-ascii--generated {
   font-size: var(--kiln-logo-font-size) !important;
+}
+
+/* JS visitors never see the fallback title flash: under the pre-paint
+   kiln-js class the not-yet-generated pre is invisible (space still
+   reserved), and the grid materializes into the blank — the same
+   no-flash pattern as the homepage cards. The reveal is pure CSS, a
+   delayed fade-in, so if ascii-logo.js never builds (script blocked,
+   canvas privacy mode, degenerate layout) the styled title still
+   appears on its own; when generation wins the race, the --generated
+   class stops this rule matching before the delay elapses. With JS
+   off, kiln-js is never set and the title renders immediately. */
+.kiln-js .md-typeset pre.kiln-ascii:not(.kiln-ascii--generated) {
+  opacity: 0;
+  animation: kiln-ascii-reveal 0.4s ease 2s forwards;
+}
+
+@keyframes kiln-ascii-reveal {
+  to {
+    opacity: 1;
+  }
 }
 
 /* The homepage has no title heading — the ASCII logo is the title */

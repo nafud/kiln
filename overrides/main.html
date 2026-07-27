@@ -7,10 +7,12 @@
   never sees them flash before the bar mounts, and with JS off the
   class is never set and the cards render as always.
 
-  Preconnects the two Google Fonts origins so the JetBrains Mono
-  @import chain in extra.css (stylesheet from googleapis, woff2 from
-  gstatic) starts its handshakes early. The logo font needs no
-  preconnect — it is embedded in ascii-logo.js as a data: URI.
+  Loads JetBrains Mono, with preconnects for both Google Fonts origins
+  (stylesheet from googleapis, woff2 from gstatic). A direct <link>
+  here is discovered by the browser's preload scanner in the HTML; the
+  @import it replaced sat inside extra.css and cost an extra serialized
+  round trip. The logo font loads nothing — it is embedded in
+  ascii-logo.js as a data: URI.
 -#}
 {% extends "base.html" %}
 
@@ -18,6 +20,7 @@
   {{ super() }}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap">
   <script>
     document.documentElement.classList.add("kiln-js");
   </script>
