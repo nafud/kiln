@@ -976,6 +976,18 @@ body:has(.kiln-ascii) .md-header__button[for="__drawer"] {
   text-overflow: ellipsis;
 }
 
+/* The overlay's resting-state header over the recent rows — the
+   shared label recipe, inset to line up with the rows below. */
+.kiln-jump-label,
+.md-typeset .kiln-jump-results .kiln-jump-label {
+  padding: 0.5rem 0.8rem 0.15rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--color-text-faint);
+  user-select: none;
+}
+
 /* :toc rows for h3 headings sit one indent step under their h2s, so
    the dropdown reads as an outline. */
 .kiln-jump-result--sub a,

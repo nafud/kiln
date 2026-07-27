@@ -372,6 +372,85 @@
     });
   }
 
+  /* ---------- recent pages (overlay resting state) ---------- */
+
+  /* Visit history for the overlay's empty prompt: summoning ` on a
+     page offers the most recently and frequently visited pages, a
+     "back to what I was reading" gesture. localStorage {path: {n, t}},
+     capped; the homepage never records (it is the prompt, not a
+     destination), and rows resolve against the search index, so pages
+     deleted from the site drop out on their own. The homepage's
+     inline bar deliberately keeps its clean resting state — recent
+     rows are the overlay's alone. */
+  const RECENT_KEY = "kiln-recent";
+  const RECENT_MAX_STORED = 40;
+  const RECENT_ROWS = 5;
+  const RECENT_HALF_LIFE_MS = 7 * 24 * 60 * 60 * 1000;
+
+  /* A directory URL and its explicit index.html are the same page —
+     normalize before comparing or storing, or a homepage reached as
+     /index.html slips past the homepage guard and a page visited both
+     ways splits its count. */
+  function normalizedPath(pathname) {
+    return pathname.replace(/index\.html$/, "");
+  }
+
+  /* localStorage can be absent or throwing (privacy modes); an empty
+     history is the graceful outcome everywhere below. */
+  function readRecent() {
+    try {
+      return JSON.parse(localStorage.getItem(RECENT_KEY)) || {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function recordVisit() {
+    const path = normalizedPath(location.pathname);
+    if (path === normalizedPath(siteBase().pathname)) return;
+    try {
+      const recent = readRecent();
+      const entry = recent[path] || { n: 0, t: 0 };
+      entry.n += 1;
+      entry.t = Date.now();
+      recent[path] = entry;
+      const paths = Object.keys(recent);
+      if (paths.length > RECENT_MAX_STORED) {
+        paths
+          .sort(function (a, b) {
+            return recent[a].t - recent[b].t;
+          })
+          .slice(0, paths.length - RECENT_MAX_STORED)
+          .forEach(function (stale) {
+            delete recent[stale];
+          });
+      }
+      localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
+    } catch (_) {}
+  }
+
+  /* Frecency: the visit count decayed by a one-week half-life, so a
+     page read daily outranks one binged a month ago. */
+  function recentRows(data) {
+    const recent = readRecent();
+    const now = Date.now();
+    const scored = [];
+    const here = normalizedPath(location.pathname);
+    data.pages.forEach(function (page) {
+      const path = normalizedPath(page.url.pathname);
+      const entry = recent[path];
+      if (!entry || path === here) return;
+      scored.push({
+        page: page,
+        score: entry.n * Math.pow(0.5, (now - entry.t) / RECENT_HALF_LIFE_MS),
+      });
+    });
+    scored.sort(byScoreDesc);
+    return scored.slice(0, RECENT_ROWS).map(function (entry) {
+      return { title: entry.page.title, url: entry.page.url };
+    });
+  }
+
   /* ---------- search highlights (hlsearch + n/N) ---------- */
 
   /* Opening a /pattern result arms vim's hlsearch on the landing
@@ -688,8 +767,10 @@
       clampToViewport();
     }
 
+    /* Selection walks the option rows, not list.children — the recent
+       view prepends a non-option label row. */
     function paintSelection() {
-      const items = list.children;
+      const items = list.querySelectorAll(".kiln-jump-result");
       for (let i = 0; i < items.length; i++) {
         items[i].classList.toggle("kiln-jump-result--active", i === selected);
         items[i].setAttribute("aria-selected", i === selected);
@@ -717,8 +798,19 @@
         Math.max(48, window.innerHeight - top - 16) + "px";
     }
 
-    function paintResults() {
+    /* Paints the result rows, optionally under a bracket label ("[
+       RECENT ]") — presentation-only, so the listbox's options stay
+       the only interactive rows. */
+    function paintResults(heading) {
       list.textContent = "";
+      if (heading) {
+        const label = document.createElement("li");
+        label.className = "kiln-jump-label";
+        label.setAttribute("role", "presentation");
+        label.setAttribute("aria-hidden", "true");
+        label.textContent = "[ " + heading.toUpperCase() + " ]";
+        list.appendChild(label);
+      }
       results.forEach(function (page, i) {
         const item = document.createElement("li");
         item.className = "kiln-jump-result";
@@ -952,11 +1044,36 @@
       status.textContent = "";
     }
 
+    /* The overlay's resting state: recent pages, when any exist.
+       Async like search (the index resolves titles and prunes deleted
+       pages), so the seq guard applies; an empty history — or any
+       failure — keeps the clean bar. */
+    function paintRecent(seq) {
+      loadData().then(
+        function (data) {
+          if (seq !== renderSeq) return;
+          const rows = recentRows(data);
+          if (!rows.length) {
+            clearResults();
+            return;
+          }
+          results = rows;
+          selected = 0;
+          paintResults("recent");
+        },
+        function () {
+          if (seq !== renderSeq) return;
+          clearResults();
+        }
+      );
+    }
+
     function render() {
       const seq = ++renderSeq;
       const query = input.value.trim();
       if (!query || query === ":") {
-        clearResults();
+        if (variant === "overlay" && !query) paintRecent(seq);
+        else clearResults();
         return;
       }
       if (query.charAt(0) === ":") {
@@ -1001,7 +1118,7 @@
     }
 
     function openSelected() {
-      const item = list.children[selected];
+      const item = list.querySelectorAll(".kiln-jump-result")[selected];
       const link = item && item.querySelector("a");
       if (link) link.click();
     }
@@ -1183,6 +1300,7 @@
   KilnUtils.onPageChange(function () {
     closeOverlay();
     syncHomepage();
+    recordVisit();
     /* A /search pattern armed from the palette activates on the page
        it lands on — instant navigation and full load alike, which is
        why it rides in sessionStorage. Otherwise whatever highlights
