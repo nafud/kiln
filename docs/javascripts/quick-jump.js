@@ -54,11 +54,13 @@
      in key-nav.js — keep this in sync when they change. */
   const HELP_SECTIONS = [
     ["NAVIGATION", [
-      [["k", "j"], "Scroll up / down"],
+      [["k", "j"], "Line up / down"],
+      [["u", "d"], "Half page up / down"],
       [["gg", "G"], "Jump to top / bottom"],
       [["[", "]"], "Navigate headings"],
       [["<", ">"], "Navigate pages"],
       [["0"], "Home"],
+      [["1-6"], "Open section"],
     ]],
     ["SEARCH", [
       [["`"], "Search"],
@@ -67,7 +69,7 @@
       [["Esc"], "Clear search highlights"],
     ]],
     ["VIEW", [
-      [["s"], "Toggle sidebars"],
+      [["s"], "Toggle toc pane"],
       [["t"], "Toggle theme"],
     ]],
     ["COMMANDS", [
@@ -409,8 +411,6 @@
     }
   }
 
-  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-
   const MAX_MATCH_RANGES = 500;
 
   function highlightsSupported() {
@@ -500,10 +500,12 @@
     }
     searchState.index = index;
     paintSearchHighlights();
-    window.scrollBy({
-      top: ranges[index].getBoundingClientRect().top - window.innerHeight / 2,
-      behavior: reducedMotion.matches ? "auto" : "smooth",
-    });
+    /* Instant, like every scroll on the site: the viewport repaints
+       in place (the vim discipline in key-nav.js), never slides. */
+    window.scrollBy(
+      0,
+      ranges[index].getBoundingClientRect().top - window.innerHeight / 2
+    );
   }
 
   /* ---------- :x expression evaluator ---------- */

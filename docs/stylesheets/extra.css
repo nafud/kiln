@@ -3,9 +3,9 @@
    link served, now same-origin with no third-party fetch. Italic
    faces were never loaded; browsers synthesize oblique where content
    asks for it. font-display: swap matches the former loading
-   behavior, and overrides/main.html preloads the Regular weight. The
-   UnifrakturMaguntia logo font is embedded in ascii-logo.js as a
-   data: URI subset (glyphs for "Kiln" only). */
+   behavior, and overrides/main.html preloads the Regular weight. It
+   is the site's only font: the dot-matrix logo (ascii-logo.js) is
+   built from block-element characters in this same face. */
 
 @font-face {
   font-family: "JetBrains Mono";
@@ -43,10 +43,21 @@
   --md-text-font: "JetBrains Mono";
   --md-code-font: "JetBrains Mono";
 
-  /* ASCII logo resolution: smaller cells = more detail (see ascii-logo.js) */
+  /* Terminal frame: one pane border inset from the viewport edges,
+     with the header and statusline labels sitting on its top and
+     bottom lines (tmux pane-title style). The chrome row height is
+     2*inset + 1px, which centers the label text exactly on the
+     border line. */
+  --kiln-frame-inset: 12px;
+  --kiln-chrome-row: calc(var(--kiln-frame-inset) * 2 + 1px);
+
+  /* Dot-matrix logo resolution: smaller cells = finer dots (see
+     ascii-logo.js). The grid line-height is 1 so the half-block dot
+     pairs tile vertically without seams. */
   --kiln-logo-font-size: 0.5rem;
   --kiln-logo-line-height: 1.2;
-  /* Size of the plain "Kiln" text shown before/without JS generation */
+  --kiln-logo-grid-line-height: 1;
+  /* Size of the plain "KILN" text shown before/without JS generation */
   --kiln-logo-fallback-font-size: 2.6rem;
 
   /* Copy-button icon swap timing — single source of truth; the animations
@@ -70,7 +81,12 @@
   --md-accent-fg-color--transparent: var(--color-accent-transparent);
 }
 
-[data-md-color-scheme="slate"] {
+/* The :has twin re-declares the palette on the html element: Material
+   stamps data-md-color-scheme on body, but the frame masks are html
+   pseudo-elements (html::before/::after below) and would otherwise
+   resolve the light values in dark mode. */
+[data-md-color-scheme="slate"],
+html:has(> body[data-md-color-scheme="slate"]) {
   --color-bg: #1e2028;
   --color-surface: #252830;
   --color-border: #2e3138;
@@ -110,17 +126,167 @@ body {
   background: var(--color-bg);
 }
 
-/* Header */
+/* Terminal frame. The whole viewport is one pane: a fixed border box
+   (body::before) inset from the viewport edges, and two fixed
+   background masks (html::before/::after) covering the strips outside
+   the top and bottom lines, so scrolled content is clipped at the
+   frame edge exactly like text leaving a terminal pane. Layering:
+   content (auto) < masks (4) < border (5) < the header/statusline
+   labels (6), whose opaque backgrounds let the line run behind them. */
 
-.md-header {
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
-  box-shadow: none;
+html::before,
+html::after {
+  content: "";
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: var(--kiln-frame-inset);
+  background: var(--color-bg);
+  z-index: 4;
 }
 
-.md-header__title,
-.md-header__topic {
+html::before {
+  top: 0;
+}
+
+html::after {
+  bottom: 0;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: var(--kiln-frame-inset);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* The document scrollbar is gone — the pane has none; the statusline's
+   offset/percent readout is the position indicator. Inner scrollable
+   containers (code blocks, palette results, toc) keep theirs. */
+html {
+  scrollbar-width: none;
+  /* :target/anchor jumps clear the top chrome */
+  scroll-padding-top: calc(var(--kiln-chrome-row) + 1rem);
+}
+
+html::-webkit-scrollbar {
+  display: none;
+}
+
+/* Clearance between the frame lines and the content at rest. */
+.md-container {
+  padding-top: calc(var(--kiln-chrome-row) + 0.6rem);
+  padding-bottom: calc(var(--kiln-chrome-row) + 0.6rem);
+}
+
+/* Header: a fixed, transparent row of labels centered on the frame's
+   top border line (overrides/partials/header.html). Material's own
+   sticky surface styling is overridden entirely; only the labels take
+   pointer events, so the row never blocks clicks on content. */
+
+.md-header {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: transparent !important;
+  border: none;
+  box-shadow: none !important;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.kiln-header__inner {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  height: var(--kiln-chrome-row);
+  padding: 0 1.4rem;
+}
+
+.md-header .kiln-header__logo {
+  /* Material hides md-logo below its drawer breakpoint; the wordmark
+     is the frame's title at every width. */
+  display: block !important;
+  margin: 0;
+  padding: 0 0.45em;
+  height: auto;
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  font-size: 0.7rem;
   font-weight: 700;
+  letter-spacing: 0.04em;
+  pointer-events: auto;
+  transition: color 150ms ease;
+}
+
+.md-header .kiln-header__logo:hover {
+  color: var(--color-accent);
+  opacity: 1;
+}
+
+.kiln-header__nav {
+  display: flex;
+  align-items: center;
+  gap: 1.05em;
+  margin: 0;
+  padding: 0 0.45em;
+  list-style: none;
+  background: var(--color-bg);
+  pointer-events: auto;
+  overflow-x: auto;
+  scrollbar-width: none;
+  white-space: nowrap;
+}
+
+.kiln-header__nav::-webkit-scrollbar {
+  display: none;
+}
+
+.kiln-header__nav li {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kiln-header__link {
+  color: var(--color-text-muted);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  transition: color 150ms ease;
+}
+
+.kiln-header__link:hover {
+  color: var(--color-accent);
+}
+
+/* The current section carries vim's alternate-file star. */
+.kiln-header__link--active {
+  color: var(--color-accent);
+}
+
+.kiln-header__link--active::before {
+  content: "*";
+}
+
+.kiln-header__src {
+  margin-left: auto;
+  padding: 0 0.45em;
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  pointer-events: auto;
+  transition: color 150ms ease;
+}
+
+.kiln-header__src:hover {
+  color: var(--color-accent);
 }
 
 /* Footer */
@@ -143,43 +309,81 @@ body {
   display: none;
 }
 
-/* Sidebar */
+/* Sidebars. The left navigation sidebar is gone site-wide — the
+   header nav (and the 1-6 keys) replaced it, so it dies at every
+   width, drawer form included; its drawer toggle is not rendered
+   (overrides/partials/header.html). The right toc remains as a
+   bordered pane labelled "toc", hidden by default and toggled by s
+   (kiln-toc-shown on body, key-nav.js) — desktop only, since below
+   Material's 76.25em breakpoint it would be an off-canvas drawer
+   with no toggle left to open it. */
 
-.md-sidebar {
+.md-sidebar--primary {
+  display: none !important;
+}
+
+/* The body:not() form outranks Material's own
+   `.md-sidebar--secondary:not([hidden]) { display: block }` (a bare
+   .md-sidebar--secondary loses to it); with the class present the
+   hide stops matching and Material's rule shows the pane. */
+body:not(.kiln-toc-shown) .md-sidebar--secondary {
+  display: none;
+}
+
+/* Below the breakpoint the toc would be an off-canvas drawer with no
+   toggle left to open it — dead at any body state. */
+@media screen and (max-width: 76.2344em) {
+  .md-sidebar--secondary {
+    display: none !important;
+  }
+}
+
+.md-sidebar--secondary {
   background: var(--color-bg);
   color: var(--color-text-muted);
 }
 
-/* The sidebar scroll container must not chain overscroll into the
-   page: without this, a wheel gesture that runs a sidebar to its end
-   keeps scrolling the main document, and a gesture over a barely-
-   scrollable sidebar stutters, eats a tick, then yanks the page. */
-.md-sidebar__scrollwrap {
+/* With no sidebars in flow by default, the content column centers in
+   the full grid width (it keeps its 900px cap); when the toc pane is
+   shown it re-centers in the remainder, which Material's grid does on
+   its own. */
+.md-content {
+  margin: 0 auto;
+}
+
+/* The toc pane: the pane recipe in miniature — border on the sidebar
+   box, its "toc" label sitting on the border line, matching the
+   frame's own labels. The sidebar (sticky, non-scrolling) anchors the
+   label; the scrollwrap inside it scrolls, so the label never moves. */
+.md-sidebar--secondary .md-sidebar__scrollwrap {
   overscroll-behavior: contain;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding-top: 0.6rem;
 }
 
-.md-nav__title {
-  color: var(--color-text-primary);
+/* The label hangs on the pane's top border from the sidebar box (the
+   sticky, non-scrolling ancestor — the scrollwrap's own overflow
+   would clip an overhanging child). Material gives .md-sidebar
+   1.2rem vertical padding, which is where the scrollwrap's border
+   line sits. */
+.md-sidebar--secondary::before {
+  content: "toc";
+  position: absolute;
+  top: calc(1.2rem - 0.55em);
+  left: 0.9rem;
+  padding: 0 0.45em;
+  background: var(--color-bg);
+  font-size: 0.65rem;
   font-weight: 700;
-  font-size: 0.74rem;
-  box-shadow: none !important;
-  border: none !important;
+  letter-spacing: 0.08em;
+  color: var(--color-text-faint);
+  z-index: 10;
 }
 
-.md-nav--primary .md-nav__title {
-  background: transparent !important;
-}
-
-/* Section titles when expanded — match the collapsed grey uppercase label */
-
-.md-nav--primary > .md-nav__list > .md-nav__item > .md-nav > .md-nav__title {
-  text-transform: uppercase !important;
-  letter-spacing: 0.08em !important;
-  font-size: 0.65rem !important;
-  color: var(--color-text-faint) !important;
-  font-weight: 700 !important;
-  padding-top: 0.8rem !important;
-  box-shadow: none !important;
+/* Material's "Table of contents" title gives way to the border label. */
+.md-sidebar--secondary .md-nav__title {
+  display: none;
 }
 
 .md-nav__link {
@@ -308,6 +512,8 @@ body {
 
 .md-typeset pre.kiln-ascii.kiln-ascii--generated {
   font-size: var(--kiln-logo-font-size) !important;
+  line-height: var(--kiln-logo-grid-line-height) !important;
+  letter-spacing: 0 !important;
 }
 
 /* JS visitors never see the fallback title flash: under the pre-paint
@@ -626,53 +832,42 @@ tt {
   opacity: 1; /* cancel the generic link hover fade */
 }
 
-/* Hex reading-progress readout, fixed bottom-right (page-chrome.js).
-   Surface recipe; the label style minus the uppercase (hex offsets
-   stay lowercase, like addresses in content). Non-interactive, so no
-   hover lift. Fades in around scroll activity and out when scrolling
-   stops (page-chrome.js toggles --visible). */
-.scroll-progress {
+/* Statusline (page-chrome.js): the vim ruler, always present, its two
+   labels sitting on the frame's bottom border line exactly as the
+   header's sit on the top one. Left the page path, right the hex
+   offset readout plus vim's position token (All/Top/Bot/NN%). The
+   label style minus the uppercase (paths and hex offsets stay
+   lowercase, like addresses in content). Non-interactive. */
+.kiln-status {
   position: fixed;
-  right: 1rem;
-  bottom: 1rem;
-  z-index: 1000;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 6;
   display: flex;
   align-items: center;
-  height: 38px;
-  padding: 0 0.7rem;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  background: var(--color-surface);
+  justify-content: space-between;
+  gap: 1rem;
+  height: var(--kiln-chrome-row);
+  padding: 0 1.4rem;
   color: var(--color-text-muted);
   font-size: 0.65rem;
   font-weight: 700;
   letter-spacing: 0.05em;
   user-select: none;
   pointer-events: none;
-  opacity: 0;
-  transition: opacity 200ms ease;
 }
 
-.scroll-progress--visible {
-  opacity: 1;
+.kiln-status__path,
+.kiln-status__pos {
+  background: var(--color-bg);
+  padding: 0 0.45em;
+  white-space: nowrap;
 }
 
-/* Sidebars are hidden by default across the whole site; s (key-nav.js)
-   reveals them by putting kiln-sidebars-shown on body, and the choice
-   survives navigation.instant (Material never touches body) until the
-   next full load. Desktop only: below Material's 76.25em breakpoint
-   the sidebars are off-canvas drawers, and hiding them would break the
-   drawer toggles. The content column keeps its 900px cap and centers
-   in the freed width. */
-@media screen and (min-width: 76.25em) {
-  body:not(.kiln-sidebars-shown) .md-sidebar--primary,
-  body:not(.kiln-sidebars-shown) .md-sidebar--secondary {
-    display: none;
-  }
-
-  body:not(.kiln-sidebars-shown) .md-content {
-    margin: 0 auto;
-  }
+.kiln-status__path {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* : command output (quick-jump.js paints one pre of aligned
@@ -728,25 +923,11 @@ tt {
   display: none;
 }
 
-/* The homepage has no sidebars at all (the jump bar and the header are
-   its whole chrome): unconditional, so the s reveal class does not
-   apply there, and at drawer widths the drawer toggle goes with it. */
-body:has(.kiln-ascii) .md-sidebar--primary,
+/* The homepage has no toc pane (the jump bar and the frame chrome are
+   its whole furniture): unconditional, so the s reveal class never
+   applies there. */
 body:has(.kiln-ascii) .md-sidebar--secondary {
-  display: none;
-}
-
-body:has(.kiln-ascii) .md-header__button[for="__drawer"] {
-  display: none;
-}
-
-/* Homepage centering must not depend on the sidebar-reveal class: the
-   sidebars above are gone unconditionally, so without this, pressing s
-   (which drops the body:not(.kiln-sidebars-shown) centering rule)
-   would shift the homepage content into the layout slot of sidebars
-   that are not there. */
-.md-main:has(.kiln-ascii) .md-content {
-  margin: 0 auto;
+  display: none !important;
 }
 
 /* vim hlsearch (quick-jump.js: /search plus the n/N motions): every
@@ -1017,33 +1198,6 @@ body:has(.kiln-ascii) .md-header__button[for="__drawer"] {
 }
 
 
-/* Sticky sidebar title — opaque so scrolled content passes under it,
-   with a gradient fade hanging below it. The fade is a ::after on the
-   title itself (not an injected element), so it needs no JS, tracks
-   the title's height automatically, and is correct even though the
-   sidebars are display:none at load (the old JS measured a hidden
-   title as 0px and pinned the fade over the title text). */
-
-.md-sidebar--primary .md-nav--primary > .md-nav__title,
-.md-sidebar--secondary .md-nav__title {
-  position: sticky !important;
-  top: 0 !important;
-  z-index: 10 !important;
-  background: var(--color-bg) !important;
-}
-
-.md-sidebar--primary .md-nav--primary > .md-nav__title::after,
-.md-sidebar--secondary .md-nav__title::after {
-  content: "";
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  height: 20px;
-  background: linear-gradient(to bottom, var(--color-bg), transparent);
-  pointer-events: none;
-}
-
 /* Register cards */
 
 .register-grid {
@@ -1178,25 +1332,6 @@ body:has(.kiln-ascii) .md-header__button[for="__drawer"] {
 .md-typeset .kiln-term-flag:hover,
 .md-typeset .kiln-term-flag:focus-visible {
   color: var(--color-accent);
-}
-
-/* Top-level nav items — grey uppercase section labels (collapsed state) */
-
-.md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link {
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 0.65rem !important;
-  color: var(--color-text-faint) !important;
-  font-weight: 700;
-  margin-top: 0.6rem;
-}
-
-.md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link:hover {
-  color: var(--color-text-muted) !important;
-}
-
-.md-nav--primary > .md-nav__list > .md-nav__item > .md-nav__link .md-nav__icon {
-  color: var(--color-border);
 }
 
 /* Narrow screens */

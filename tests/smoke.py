@@ -2,9 +2,10 @@
 
 Runs against the built site (mkdocs build first) in headless Chromium
 and exercises what the build-check canaries cannot: the jump palette
-(search, grep, commands), the key bindings, the hlsearch motions, the
-ASCII logo, the widgets, the self-hosted fonts, and the no-JS
-fallbacks. CI runs it after the strict build (build-check.yml); locally:
+(search, grep, commands), the key bindings and quantized wheel, the
+hlsearch motions, the dot-matrix logo, the header nav and statusline,
+the widgets, the self-hosted fonts, and the no-JS fallbacks. CI runs
+it after the strict build (build-check.yml); locally:
 
     pip install -r requirements-dev.txt
     playwright install chromium        # once
@@ -165,7 +166,7 @@ def run(page):
         page.wait_for_timeout(400)
         assert page.evaluate("() => location.pathname") == path, "n/p navigated"
 
-    with step("keys: ] G gg scroll, t theme, s sidebars"):
+    with step("keys: ] G gg d scroll, t theme, s toc pane"):
         page.goto(chapter)
         page.wait_for_timeout(300)
         page.keyboard.press("]")
@@ -178,14 +179,62 @@ def run(page):
         page.keyboard.press("g")
         page.wait_for_timeout(500)
         assert page.evaluate("() => window.scrollY") < y_bottom, "gg did not return"
+        page.keyboard.press("d")
+        page.wait_for_timeout(300)
+        y_half = page.evaluate("() => window.scrollY")
+        assert 0 < y_half < y_bottom, "d did not scroll half a page"
+        lh = page.evaluate(
+            "() => parseFloat(getComputedStyle(document.querySelector('.md-typeset')).lineHeight)"
+        )
+        assert abs(y_half / lh - round(y_half / lh)) < 0.1, (
+            f"d landed off the line grid: {y_half} not a multiple of {lh}"
+        )
         scheme = page.evaluate("() => document.body.getAttribute('data-md-color-scheme')")
         page.keyboard.press("t")
         page.wait_for_timeout(200)
         assert page.evaluate("() => document.body.getAttribute('data-md-color-scheme')") != scheme
         page.keyboard.press("t")
         page.keyboard.press("s")
-        assert page.evaluate("() => document.body.classList.contains('kiln-sidebars-shown')")
+        assert page.evaluate("() => document.body.classList.contains('kiln-toc-shown')")
+        toc = page.eval_on_selector(
+            ".md-sidebar--secondary", "el => getComputedStyle(el).display"
+        )
+        assert toc == "block", "toc pane not shown after s"
         page.keyboard.press("s")
+
+    with step("wheel: quantized to whole line steps"):
+        page.goto(chapter)
+        page.wait_for_timeout(300)
+        page.mouse.move(700, 450)
+        page.mouse.wheel(0, 120)
+        page.wait_for_timeout(300)
+        y = page.evaluate("() => window.scrollY")
+        lh = page.evaluate(
+            "() => parseFloat(getComputedStyle(document.querySelector('.md-typeset')).lineHeight)"
+        )
+        assert abs(y - 3 * lh) < 2, f"one notch moved {y}, expected 3 lines ({3 * lh})"
+
+    with step("chrome: header nav and statusline"):
+        page.goto(chapter)
+        page.wait_for_timeout(400)
+        labels = page.eval_on_selector_all(
+            ".kiln-header__nav .kiln-header__link", "els => els.map(e => e.textContent)"
+        )
+        assert labels == [
+            "home", "guides", "links", "books", "bookmarks", "courses", "writeups",
+        ], f"header nav changed: {labels}"
+        active = page.eval_on_selector_all(
+            ".kiln-header__link--active", "els => els.map(e => e.textContent)"
+        )
+        assert active == ["books"], f"active nav item wrong: {active}"
+        path = page.eval_on_selector(".kiln-status__path", "el => el.textContent")
+        assert path == "~/books/csapp/csapp-chapter-03", f"statusline path: {path!r}"
+        pos = page.eval_on_selector(".kiln-status__pos", "el => el.textContent")
+        assert pos.startswith("0x") and pos.endswith("Top"), f"statusline pos: {pos!r}"
+        page.keyboard.press("G")
+        page.wait_for_timeout(300)
+        pos = page.eval_on_selector(".kiln-status__pos", "el => el.textContent")
+        assert pos.endswith("Bot"), f"statusline pos at bottom: {pos!r}"
 
     with step("widgets: keygen serial and two's-complement readout"):
         page.goto(f"{BASE}/writeups/crackmes-one/crackmes-one-cfb1/")
@@ -257,7 +306,11 @@ def run_no_js(browser):
             "pre.kiln-ascii", "el => ({op: getComputedStyle(el).opacity, text: el.textContent})"
         )
         assert cards != "none", "cards hidden without JS"
-        assert logo["op"] == "1" and logo["text"] == "Kiln", "logo title hidden without JS"
+        assert logo["op"] == "1" and logo["text"] == "KILN", "logo title hidden without JS"
+        links = page.eval_on_selector_all(
+            ".kiln-header__nav .kiln-header__link", "els => els.length"
+        )
+        assert links == 7, "header nav missing without JS"
         context.close()
 
 
