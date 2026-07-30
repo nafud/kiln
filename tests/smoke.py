@@ -122,6 +122,7 @@ def run(page):
             (":x 1 <<< 2", "E15: Invalid expression"),
             (":version", "local build"),
             (":nosuch", "E492: Not an editor command: nosuch"),
+            (":themes", "E492: Not an editor command: themes"),
         ]:
             open_overlay(page, query)
             assert expected in overlay_text(page), f"{query} missing {expected!r}"
@@ -145,9 +146,9 @@ def run(page):
         assert "3.5.4 Discussion" in overlay_text(page)
         close_overlay(page)
 
-    with step("palette: :themes lists themes, applies them, t cycles pairs"):
+    with step("palette: :theme lists themes, applies them, t cycles pairs"):
         page.goto(chapter)
-        open_overlay(page, ":themes")
+        open_overlay(page, ":theme")
         page.wait_for_selector(".kiln-jump--overlay .kiln-jump-result")
         text = overlay_text(page)
         # The current theme carries the * marker; the rows come from
@@ -184,9 +185,9 @@ def run(page):
         ink = page.eval_on_selector(".md-typeset h1", "el => getComputedStyle(el).color")
         assert ink == "rgb(192, 202, 245)", f"tokyo night ink not applied: {ink!r}"
         # The list stars the slate-based pair correctly.
-        open_overlay(page, ":themes")
+        open_overlay(page, ":theme")
         page.wait_for_selector(".kiln-jump--overlay .kiln-jump-result")
-        assert "tokyo night *" in overlay_text(page), "pair not starred in :themes"
+        assert "tokyo night *" in overlay_text(page), "pair not starred in :theme"
         # phosphor is the second slate-based pair; its ink must win
         # over the base slate block.
         for _ in range(5):
@@ -201,7 +202,7 @@ def run(page):
         ink = page.eval_on_selector(".md-typeset h1", "el => getComputedStyle(el).color")
         assert ink == "rgb(51, 255, 51)", f"phosphor ink not applied: {ink!r}"
         # Restore the default theme for the steps that follow.
-        open_overlay(page, ":themes")
+        open_overlay(page, ":theme")
         page.wait_for_selector(".kiln-jump--overlay .kiln-jump-result")
         page.keyboard.press("Enter")
         page.wait_for_timeout(200)
@@ -211,7 +212,7 @@ def run(page):
     with step("inline bar: theme apply and outside click reset it"):
         page.goto(BASE + "/")
         page.wait_for_selector(".kiln-jump--inline .kiln-jump-input")
-        page.locator(".kiln-jump--inline .kiln-jump-input").fill(":themes")
+        page.locator(".kiln-jump--inline .kiln-jump-input").fill(":theme")
         page.wait_for_timeout(200)
         page.keyboard.press("Enter")  # applies the selected (current) theme
         page.wait_for_timeout(200)
@@ -314,6 +315,20 @@ def run(page):
         page.wait_for_timeout(500)
         landed = page.evaluate("() => location.pathname")
         assert landed.endswith("/guides/"), f"1 did not open guides: {landed}"
+        # < and > step between the six sections along the header nav,
+        # wrapping at the ends.
+        page.keyboard.press(">")
+        page.wait_for_timeout(500)
+        landed = page.evaluate("() => location.pathname")
+        assert landed.endswith("/links/"), f"> did not step to links: {landed}"
+        page.keyboard.press("<")
+        page.wait_for_timeout(500)
+        landed = page.evaluate("() => location.pathname")
+        assert landed.endswith("/guides/"), f"< did not step back to guides: {landed}"
+        page.keyboard.press("<")
+        page.wait_for_timeout(500)
+        landed = page.evaluate("() => location.pathname")
+        assert landed.endswith("/writeups/"), f"< did not wrap to writeups: {landed}"
 
     with step("widgets: keygen serial and two's-complement readout"):
         page.goto(f"{BASE}/writeups/crackmes-one/crackmes-one-cfb1/")

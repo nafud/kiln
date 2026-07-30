@@ -100,13 +100,6 @@ jobs:
             exit 1
           }
 
-          # key-nav.js follows the hidden footer's prev/next links for the
-          # < / > page-switch keys (navigation.footer puts them in the DOM).
-          grep -qF -- 'md-footer__link' site/books/index.html || {
-            echo "::error::Material internal 'md-footer__link' is gone from the built HTML — a theme update likely renamed it or navigation.footer stopped emitting it. Update the page-switch keys in docs/javascripts/key-nav.js."
-            exit 1
-          }
-
           # The fonts are self-hosted; a Google Fonts reference creeping
           # back in would reintroduce the third-party fetch on every page.
           if grep -rqF -- 'fonts.googleapis' site/index.html site/stylesheets/; then

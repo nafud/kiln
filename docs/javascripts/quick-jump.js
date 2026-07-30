@@ -57,7 +57,7 @@
       [["k", "j"], "Scroll up / down"],
       [["gg", "G"], "Jump to top / bottom"],
       [["[", "]"], "Navigate headings"],
-      [["<", ">"], "Navigate pages"],
+      [["<", ">"], "Navigate sections"],
       [["0"], "Home"],
       [["1-6"], "Open section"],
     ]],
@@ -72,7 +72,7 @@
     ]],
     ["COMMANDS", [
       [[":toc"], "List page headings"],
-      [[":themes"], "List color themes"],
+      [[":theme"], "List color themes"],
       [[":x expr"], "Int calculator (hex/dec/bin)"],
       [[":x -wN expr"], "Two's complement at N bits"],
       [[":intro"], "Show intro screen"],
@@ -742,7 +742,7 @@
         item.id = listId + "-" + i;
         item.setAttribute("role", "option");
 
-        /* Action rows (:themes) carry a callback instead of a URL and
+        /* Action rows (:theme) carry a callback instead of a URL and
            render as href-less anchors — the click funnel below runs
            the action, and with no href a stray activation navigates
            nowhere. */
@@ -913,7 +913,7 @@
       paintResults();
     }
 
-    /* :themes — the color themes as selectable rows, read from
+    /* :theme — the color themes as selectable rows, read from
        Material's __palette radio group (the same radios the t key
        cycles), so mkdocs.yml stays the single source of truth: each
        row is a radio's toggle name, the current theme carrying vim's
@@ -1016,7 +1016,7 @@
       if (name === "x") paintCalc(args);
       else if (args) showMessage("E492: Not an editor command: " + raw);
       else if (name === "toc") paintToc();
-      else if (name === "themes") paintThemes();
+      else if (name === "theme") paintThemes();
       else if (name === "h" || name === "help") paintHelp();
       else if (name === "intro") paintIntro();
       else if (name === "version") paintVersion();

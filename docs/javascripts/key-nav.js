@@ -5,17 +5,16 @@
    down/up a step (uppercase J/K deliberately do nothing — vim gives
    them unrelated meanings), [ and ] to the previous/next h2 section
    on the page. Pages:
-   < and > follow the previous/next page in nav order, via Material's
-   footer links (the footer is display:none in extra.css but present in
-   the DOM; navigation.footer is enabled solely for this), 0 goes home
-   via the header logo, and 1-6 open the top-level categories by
-   clicking the header nav links (overrides/partials/header.html).
-   Clicking links, rather than assigning location, keeps
-   navigation.instant in charge. The letter bindings are all strictly
-   lowercase. t cycles the color theme by advancing Material's
-   __palette radio group (mkdocs.yml order; the theme's own toggle
-   button is hidden by extra.css, and the palette's :themes command
-   lists the same radios by name). There are no sidebars to toggle —
+   < and > step to the previous/next top-level section by clicking
+   its header nav link (overrides/partials/header.html), wrapping at
+   the ends; 0 goes home via the header logo, and 1-6 open the
+   sections directly. Clicking links, rather than assigning location,
+   keeps navigation.instant in charge. The letter bindings are all
+   strictly lowercase. t cycles the color theme by advancing
+   Material's __palette radio group (mkdocs.yml order; the theme's
+   own toggle button is hidden by extra.css, and the palette's :theme
+   command lists the same radios by name). There are no sidebars to
+   toggle —
    the header nav is the navigation and the palette's :toc lists the
    page's headings — so s is a plain dead key below. There is no help
    binding: help is the palette's :h/:help usage output
@@ -52,11 +51,6 @@
     return reducedMotion.matches ? "auto" : "smooth";
   }
 
-  function followPageLink(direction) {
-    const link = document.querySelector(".md-footer__link--" + direction);
-    if (link) link.click();
-  }
-
   function goHome() {
     const logo = document.querySelector(".md-header a.md-logo");
     if (logo) logo.click();
@@ -71,6 +65,33 @@
     );
     const link = links[n - 1];
     if (link) link.click();
+  }
+
+  /* Steps to the previous (direction -1) or next (+1) top-level
+     section, wrapping at the ends — the header nav is the axis the
+     < > motions move along, landing on section index pages only
+     (page-chrome.js keeps the active class current across
+     navigation.instant). On the homepage no item is active and the
+     motions enter the ring at its start or end. */
+  function stepSection(direction) {
+    const links = document.querySelectorAll(
+      ".kiln-header__nav .kiln-header__link"
+    );
+    if (!links.length) return;
+    let index = -1;
+    for (let i = 0; i < links.length; i++) {
+      if (links[i].classList.contains("kiln-header__link--active")) {
+        index = i;
+        break;
+      }
+    }
+    const next =
+      index === -1
+        ? direction > 0
+          ? 0
+          : links.length - 1
+        : (index + direction + links.length) % links.length;
+    links[next].click();
   }
 
   /* Scrolls to the previous (direction -1) or next (+1) h2 section.
@@ -211,10 +232,10 @@
         jumpToHeading(1);
         break;
       case "<":
-        followPageLink("prev");
+        stepSection(-1);
         break;
       case ">":
-        followPageLink("next");
+        stepSection(1);
         break;
       case "0":
         goHome();
