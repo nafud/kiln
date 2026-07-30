@@ -45,9 +45,14 @@ theme:
   # cycles these radios and the palette's :themes command lists them,
   # so the `toggle:` blocks exist to make Material render the radio
   # group, and each `toggle.name` is the theme's display name in the
-  # :themes list. tokyo-day is a custom scheme: Material's own defaults
-  # live on :root, so it inherits the stock light internals and
-  # extra.css re-colors it through the --color-* tokens alone.
+  # :themes list. A theme's identity is its scheme+primary pair: light
+  # themes use a custom scheme name (Material's own defaults live on
+  # :root, so an unknown scheme inherits the stock light internals and
+  # extra.css re-colors it through the --color-* tokens alone), while
+  # dark themes ride `scheme: slate` with a distinct `primary` slug —
+  # Material's entire dark kit (Pygments, admonitions) is scoped to
+  # slate in palette.css, so a custom-named dark scheme would render
+  # light code blocks on a dark ground.
   palette:
     - scheme: default
       primary: white
@@ -67,6 +72,24 @@ theme:
       toggle:
         icon: material/toggle-switch
         name: tokyo day
+    - scheme: slate
+      primary: tokyo-night
+      accent: blue
+      toggle:
+        icon: material/toggle-switch-off
+        name: tokyo night
+    - scheme: catppuccin-latte
+      primary: white
+      accent: blue
+      toggle:
+        icon: material/toggle-switch
+        name: catppuccin latte
+    - scheme: slate
+      primary: phosphor
+      accent: green
+      toggle:
+        icon: material/toggle-switch-off
+        name: phosphor
   features:
     - navigation.instant
     - navigation.tracking

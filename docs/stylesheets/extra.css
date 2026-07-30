@@ -106,8 +106,8 @@ html:has(> body[data-md-color-scheme="slate"]) {
    grey-blue ground. A light scheme, so Material's stock light
    internals stand (the scheme name is unknown to Material and its
    defaults live on :root); only the tokens change. The text ladder
-   descends through the palette's blues; the accent is the site's one
-   blue, which this theme happens to be built around. */
+   descends through the palette's blues; the accent is the site's
+   default blue, which this theme happens to be built around. */
 [data-md-color-scheme="tokyo-day"],
 html:has(> body[data-md-color-scheme="tokyo-day"]) {
   --color-bg: #e1e2e7;
@@ -122,6 +122,82 @@ html:has(> body[data-md-color-scheme="tokyo-day"]) {
   --color-code-bg: #d5d6db;
   --color-table-header-bg: #dcdee8;
   --color-shadow: rgba(41, 46, 66, 0.12);
+
+  --md-accent-fg-color: var(--color-accent);
+  --md-accent-fg-color--transparent: var(--color-accent-transparent);
+}
+
+/* tokyo night — the night side of the pair. Rides scheme slate with
+   primary tokyo-night (see the mkdocs.yml palette comment), so the
+   two-attribute selector outranks the base slate block above; the
+   :has twin gains the same second attribute. --md-hue tints
+   Material's slate-derived internals (code-block grounds,
+   admonition text) toward the palette's blue-violet cast. */
+[data-md-color-scheme="slate"][data-md-color-primary="tokyo-night"],
+html:has(> body[data-md-color-scheme="slate"][data-md-color-primary="tokyo-night"]) {
+  --md-hue: 235;
+  --color-bg: #1a1b26;
+  --color-surface: #1f2335;
+  --color-border: #3b4261;
+  --color-text-primary: #c0caf5;
+  --color-text-secondary: #a9b1d6;
+  --color-text-muted: #737aa2;
+  --color-text-faint: #565f89;
+  --color-accent: #7aa2f7;
+  --color-accent-transparent: rgba(122, 162, 247, 0.15);
+  --color-code-bg: #16161e;
+  --color-table-header-bg: #16161e;
+  --color-shadow: rgba(0, 0, 0, 0.35);
+
+  --md-accent-fg-color: var(--color-accent);
+  --md-accent-fg-color--transparent: var(--color-accent-transparent);
+}
+
+/* catppuccin latte — the canonical latte ladder: text through
+   subtext1/overlay2/overlay0, surfaces on mantle and crust, the
+   palette's own blue as accent. A light custom scheme like tokyo
+   day. */
+[data-md-color-scheme="catppuccin-latte"],
+html:has(> body[data-md-color-scheme="catppuccin-latte"]) {
+  --color-bg: #eff1f5;
+  --color-surface: #e6e9ef;
+  --color-border: #acb0be;
+  --color-text-primary: #4c4f69;
+  --color-text-secondary: #5c5f77;
+  --color-text-muted: #7c7f93;
+  --color-text-faint: #9ca0b0;
+  --color-accent: #1e66f5;
+  --color-accent-transparent: rgba(30, 102, 245, 0.12);
+  --color-code-bg: #e6e9ef;
+  --color-table-header-bg: #dce0e8;
+  --color-shadow: rgba(76, 79, 105, 0.12);
+
+  --md-accent-fg-color: var(--color-accent);
+  --md-accent-fg-color--transparent: var(--color-accent-transparent);
+}
+
+/* phosphor — not a port: a P1 green CRT, Kiln's own. The whole text
+   ladder is one phosphor at falling luminance, the accent a hotter
+   green, and the shadow glows instead of darkening. Rides slate like
+   tokyo night; Pygments keeps Material's dark token colors inside
+   code blocks (a full monochrome Pygments override is not worth the
+   maintenance), so listings read like a modern terminal wearing
+   green chrome. */
+[data-md-color-scheme="slate"][data-md-color-primary="phosphor"],
+html:has(> body[data-md-color-scheme="slate"][data-md-color-primary="phosphor"]) {
+  --md-hue: 120;
+  --color-bg: #0a0f0a;
+  --color-surface: #0d130d;
+  --color-border: #1d3b1d;
+  --color-text-primary: #33ff33;
+  --color-text-secondary: #2bd42b;
+  --color-text-muted: #1fa51f;
+  --color-text-faint: #157a15;
+  --color-accent: #66ff66;
+  --color-accent-transparent: rgba(51, 255, 51, 0.15);
+  --color-code-bg: #070c07;
+  --color-table-header-bg: #070c07;
+  --color-shadow: rgba(51, 255, 51, 0.10);
 
   --md-accent-fg-color: var(--color-accent);
   --md-accent-fg-color--transparent: var(--color-accent-transparent);

@@ -916,20 +916,26 @@
     /* :themes — the color themes as selectable rows, read from
        Material's __palette radio group (the same radios the t key
        cycles), so mkdocs.yml stays the single source of truth: each
-       row is a radio's toggle name, the current scheme carrying vim's
-       * marker. Rows are actions, not links — Enter or a click
-       applies the theme by clicking its radio (Material stamps body
-       and persists the choice) and dismisses the prompt. */
+       row is a radio's toggle name, the current theme carrying vim's
+       * marker — identified by the scheme+primary pair, since the
+       dark themes all ride scheme slate and differ only in primary.
+       Rows are actions, not links — Enter or a click applies the
+       theme by clicking its radio (Material stamps body and persists
+       the choice) and dismisses the prompt. */
     function paintThemes() {
       const radios = document.querySelectorAll('input[name="__palette"]');
-      const current = document.body.getAttribute("data-md-color-scheme");
+      const scheme = document.body.getAttribute("data-md-color-scheme");
+      const primary = document.body.getAttribute("data-md-color-primary");
       const rows = [];
       radios.forEach(function (radio) {
-        const scheme = radio.getAttribute("data-md-color-scheme");
+        const active =
+          radio.getAttribute("data-md-color-scheme") === scheme &&
+          radio.getAttribute("data-md-color-primary") === primary;
         rows.push({
           title:
-            (radio.getAttribute("aria-label") || scheme) +
-            (scheme === current ? " *" : ""),
+            (radio.getAttribute("aria-label") ||
+              radio.getAttribute("data-md-color-scheme")) +
+            (active ? " *" : ""),
           action: function () {
             radio.click();
           },

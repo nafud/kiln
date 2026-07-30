@@ -107,19 +107,24 @@
      order) — clicking the next input is what the theme's own toggle
      button did before extra.css hid it; the radios still render because
      the palette entries keep their toggle blocks. The current index is
-     read from the scheme actually applied to <body>, not from a checked
-     radio: on a fresh visit Material stamps the default scheme on body
-     but leaves every radio unchecked, so seeding from `.checked` would
-     misjudge the current palette and the first press could land on the
-     scheme already showing (the dead-first-press the t key used to
-     have). */
+     read from the scheme+primary pair actually applied to <body>, not
+     from a checked radio: on a fresh visit Material stamps the default
+     palette on body but leaves every radio unchecked, so seeding from
+     `.checked` would misjudge the current palette and the first press
+     could land on the theme already showing. The pair, not the scheme
+     alone, is a theme's identity — the dark themes all ride scheme
+     slate and differ only in primary (see mkdocs.yml). */
   function cyclePalette() {
     const inputs = document.querySelectorAll('input[name="__palette"]');
     if (!inputs.length) return;
-    const current = document.body.getAttribute("data-md-color-scheme");
+    const scheme = document.body.getAttribute("data-md-color-scheme");
+    const primary = document.body.getAttribute("data-md-color-primary");
     let index = 0;
     for (let i = 0; i < inputs.length; i++) {
-      if (inputs[i].getAttribute("data-md-color-scheme") === current) {
+      if (
+        inputs[i].getAttribute("data-md-color-scheme") === scheme &&
+        inputs[i].getAttribute("data-md-color-primary") === primary
+      ) {
         index = i;
         break;
       }

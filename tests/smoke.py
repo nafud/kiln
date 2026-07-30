@@ -145,16 +145,17 @@ def run(page):
         assert "3.5.4 Discussion" in overlay_text(page)
         close_overlay(page)
 
-    with step("palette: :themes lists themes, applies tokyo day"):
+    with step("palette: :themes lists themes, applies them, t cycles pairs"):
         page.goto(chapter)
         open_overlay(page, ":themes")
         page.wait_for_selector(".kiln-jump--overlay .kiln-jump-result")
         text = overlay_text(page)
         # The current theme carries the * marker; the rows come from
         # the __palette radios, so this also guards mkdocs.yml.
-        assert "light *" in text and "dark" in text and "tokyo day" in text, (
-            f"theme rows wrong: {text!r}"
-        )
+        for name in [
+            "light *", "dark", "tokyo day", "tokyo night", "catppuccin latte", "phosphor",
+        ]:
+            assert name in text, f"theme row {name!r} missing: {text!r}"
         page.keyboard.press("ArrowDown")
         page.keyboard.press("ArrowDown")
         page.keyboard.press("Enter")
@@ -170,11 +171,41 @@ def run(page):
             ".md-typeset h1", "el => getComputedStyle(el).color"
         )
         assert ink == "rgb(55, 96, 191)", f"tokyo day ink not applied: {ink!r}"
-        # t cycles onward from tokyo day, wrapping back to light.
+        # t steps to the next theme: tokyo night, a slate-based pair —
+        # this is what breaks if cyclePalette matches scheme alone.
         page.keyboard.press("t")
         page.wait_for_timeout(200)
+        pair = page.evaluate(
+            "() => [document.body.getAttribute('data-md-color-scheme'),"
+            " document.body.getAttribute('data-md-color-primary')]"
+        )
+        assert pair == ["slate", "tokyo-night"], f"t did not reach tokyo night: {pair}"
+        ink = page.eval_on_selector(".md-typeset h1", "el => getComputedStyle(el).color")
+        assert ink == "rgb(192, 202, 245)", f"tokyo night ink not applied: {ink!r}"
+        # The list stars the slate-based pair correctly.
+        open_overlay(page, ":themes")
+        page.wait_for_selector(".kiln-jump--overlay .kiln-jump-result")
+        assert "tokyo night *" in overlay_text(page), "pair not starred in :themes"
+        # phosphor is the second slate-based pair; its ink must win
+        # over the base slate block.
+        for _ in range(5):
+            page.keyboard.press("ArrowDown")
+        page.keyboard.press("Enter")
+        page.wait_for_timeout(200)
+        pair = page.evaluate(
+            "() => [document.body.getAttribute('data-md-color-scheme'),"
+            " document.body.getAttribute('data-md-color-primary')]"
+        )
+        assert pair == ["slate", "phosphor"], f"phosphor not applied: {pair}"
+        ink = page.eval_on_selector(".md-typeset h1", "el => getComputedStyle(el).color")
+        assert ink == "rgb(51, 255, 51)", f"phosphor ink not applied: {ink!r}"
+        # Restore the default theme for the steps that follow.
+        open_overlay(page, ":themes")
+        page.wait_for_selector(".kiln-jump--overlay .kiln-jump-result")
+        page.keyboard.press("Enter")
+        page.wait_for_timeout(200)
         scheme = page.evaluate("() => document.body.getAttribute('data-md-color-scheme')")
-        assert scheme == "default", f"t did not wrap to light: {scheme!r}"
+        assert scheme == "default", f"light not restored: {scheme!r}"
 
     with step("inline bar: theme apply and outside click reset it"):
         page.goto(BASE + "/")
