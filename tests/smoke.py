@@ -176,6 +176,32 @@ def run(page):
         scheme = page.evaluate("() => document.body.getAttribute('data-md-color-scheme')")
         assert scheme == "default", f"t did not wrap to light: {scheme!r}"
 
+    with step("inline bar: theme apply and outside click reset it"):
+        page.goto(BASE + "/")
+        page.wait_for_selector(".kiln-jump--inline .kiln-jump-input")
+        page.locator(".kiln-jump--inline .kiln-jump-input").fill(":themes")
+        page.wait_for_timeout(200)
+        page.keyboard.press("Enter")  # applies the selected (current) theme
+        page.wait_for_timeout(200)
+        val = page.eval_on_selector(".kiln-jump--inline .kiln-jump-input", "el => el.value")
+        rows = page.eval_on_selector_all(
+            ".kiln-jump--inline .kiln-jump-result", "els => els.length"
+        )
+        assert val == "" and rows == 0, (
+            f"inline bar did not reset after a theme apply: {val!r}, {rows} rows"
+        )
+        page.locator(".kiln-jump--inline .kiln-jump-input").fill("csapp")
+        page.wait_for_timeout(200)
+        page.mouse.click(40, 400)  # blank space left of the content column
+        page.wait_for_timeout(100)
+        val = page.eval_on_selector(".kiln-jump--inline .kiln-jump-input", "el => el.value")
+        rows = page.eval_on_selector_all(
+            ".kiln-jump--inline .kiln-jump-result", "els => els.length"
+        )
+        assert val == "" and rows == 0, (
+            f"outside click did not reset the inline bar: {val!r}, {rows} rows"
+        )
+
     with step("grep + hlsearch: / arms highlights, n cycles, Escape clears"):
         page.goto(f"{BASE}/books/index.html")
         open_overlay(page, "/register")

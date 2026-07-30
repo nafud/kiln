@@ -614,8 +614,11 @@
   /* ---------- palette component ---------- */
 
   /* Builds one palette instance ("overlay" or "inline" — same markup
-     and behavior, extra.css positions them differently). onDismiss runs
-     on Escape; the overlay closes, the inline variant just blurs. */
+     and behavior, extra.css positions them differently). onDismiss
+     runs on Escape, on an action row, and on a same-page anchor row;
+     the overlay closes, the inline variant resets to the resting bar
+     and blurs — nothing else would clear it, since none of those
+     dismissals brings a page change. */
   function createPalette(variant, onDismiss) {
     const listId = "kiln-jump-results-" + variant;
 
@@ -1261,16 +1264,41 @@
      navigation.instant replaces the content DOM, so this runs on
      every page change; leaving the homepage discards the mount with
      the rest of the content. */
+  let inlinePrompt = null;
+
+  /* Dismissing the inline bar returns it to rest — query cleared,
+     dropdown gone — then drops focus. The overlay disappears on
+     dismissal and resets on the next open; the inline bar is always
+     visible, so without the reset a dismissal that changes no page
+     (Escape, a theme row) would leave stale results floating over
+     the homepage. */
+  function dismissInline() {
+    if (!inlinePrompt) return;
+    inlinePrompt.reset();
+    inlinePrompt.input.blur();
+  }
+
   function syncHomepage() {
     const ascii = document.querySelector(".md-content .kiln-ascii");
     if (!ascii || document.querySelector(".kiln-jump--inline")) return;
-    const inline = createPalette("inline", function () {
-      inline.input.blur();
-    });
-    ascii.insertAdjacentElement("afterend", inline.root);
-    inline.reset();
-    inline.input.focus();
+    inlinePrompt = createPalette("inline", dismissInline);
+    ascii.insertAdjacentElement("afterend", inlinePrompt.root);
+    inlinePrompt.reset();
+    inlinePrompt.input.focus();
   }
+
+  /* Clicking outside the inline bar dismisses it, the counterpart of
+     the overlay's backdrop click. Attach-once on the document; a
+     mount discarded by navigation.instant is recognized by
+     isConnected, and clicks inside the bar (the input, a result row)
+     never reach here as outside. */
+  document.addEventListener("click", function (event) {
+    if (!inlinePrompt || !inlinePrompt.root.isConnected) return;
+    if (event.target instanceof Element && inlinePrompt.root.contains(event.target)) {
+      return;
+    }
+    dismissInline();
+  });
 
   KilnUtils.onPageChange(function () {
     closeOverlay();
