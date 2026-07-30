@@ -34,10 +34,6 @@ jobs:
       # theme update can rename them without any build error — this step
       # turns that silent breakage into a red check on the bump PR.
       #   data-md-component="dialog"  extra.css hides the copy toast
-      #   md-sidebar--primary         extra.css removes the left sidebar
-      #   md-sidebar--secondary,
-      #   md-sidebar__scrollwrap,
-      #   md-nav__title, md-nav__link extra.css toc pane styling
       #   md-search, __palette        hidden search / the t key's radios
       #   md-logo                     quick-jump's site base + the 0 key
       #   md-main__inner              extra.css :has() homepage flex stretch
@@ -48,15 +44,10 @@ jobs:
           # Hooks present in the built page HTML.
           for hook in \
             'data-md-component="dialog"' \
-            'md-sidebar--primary' \
-            'md-sidebar--secondary' \
-            'md-sidebar__scrollwrap' \
             'md-search' \
             'md-logo' \
             '__palette' \
             'data-md-component="palette"' \
-            'md-nav__title' \
-            'md-nav__link' \
             'md-main__inner' \
             'md-content__inner' \
             'md-typeset' \
@@ -66,6 +57,14 @@ jobs:
               exit 1
             }
           done
+
+          # overrides/main.html empties Material's site_nav block, so no
+          # page carries a sidebar; a block rename in a Material update
+          # would silently grow them back on every page.
+          if grep -qF -- 'md-sidebar' site/books/index.html; then
+            echo "::error::site pages grew sidebars back — Material's site_nav block was likely renamed. Update overrides/main.html."
+            exit 1
+          fi
 
           # The terminal header (nav links, statusline chrome) comes from
           # overrides/partials/header.html shadowing Material's header
@@ -77,16 +76,12 @@ jobs:
           }
 
           # The 404 override (overrides/404.html) replaces Material's
-          # site_nav and content template blocks; a block rename in a
-          # Material update would silently restore the default 404 page.
+          # content template block; a block rename in a Material update
+          # would silently restore the default 404 page.
           grep -qF -- 'kiln-404' site/404.html || {
             echo "::error::site/404.html lost the custom 404 markup — Material's 404.html or its content block likely changed. Update overrides/404.html."
             exit 1
           }
-          if grep -qF -- 'md-sidebar' site/404.html; then
-            echo "::error::site/404.html grew sidebars back — Material's site_nav block was likely renamed. Update overrides/404.html."
-            exit 1
-          fi
 
           # quick-jump.js builds its page list from the search plugin's
           # index; a plugin update that moves or renames it would break

@@ -54,8 +54,7 @@
      in key-nav.js — keep this in sync when they change. */
   const HELP_SECTIONS = [
     ["NAVIGATION", [
-      [["k", "j"], "Line up / down"],
-      [["u", "d"], "Half page up / down"],
+      [["k", "j"], "Scroll up / down"],
       [["gg", "G"], "Jump to top / bottom"],
       [["[", "]"], "Navigate headings"],
       [["<", ">"], "Navigate pages"],
@@ -69,7 +68,6 @@
       [["Esc"], "Clear search highlights"],
     ]],
     ["VIEW", [
-      [["s"], "Toggle toc pane"],
       [["t"], "Toggle theme"],
     ]],
     ["COMMANDS", [
@@ -411,6 +409,8 @@
     }
   }
 
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
   const MAX_MATCH_RANGES = 500;
 
   function highlightsSupported() {
@@ -500,12 +500,10 @@
     }
     searchState.index = index;
     paintSearchHighlights();
-    /* Instant, like every scroll on the site: the viewport repaints
-       in place (the vim discipline in key-nav.js), never slides. */
-    window.scrollBy(
-      0,
-      ranges[index].getBoundingClientRect().top - window.innerHeight / 2
-    );
+    window.scrollBy({
+      top: ranges[index].getBoundingClientRect().top - window.innerHeight / 2,
+      behavior: reducedMotion.matches ? "auto" : "smooth",
+    });
   }
 
   /* ---------- :x expression evaluator ---------- */
@@ -881,7 +879,7 @@
     }
 
     /* :toc — the current page's headings as jumpable rows, h2 and h3
-       (the [ ] keys only step h2s, and the sidebars rest hidden, so
+       (the [ ] keys only step h2s, and there is no toc sidebar, so
        this is the prompt's own way to get oriented mid-page). Painted
        through the normal result machinery, so Arrow/Enter work; the
        landing is a same-page anchor click, and openSelected dismisses
@@ -1147,8 +1145,8 @@
 
 
   /* Capture phase, matching key-nav.js's swallow listener (which
-     neutralizes Material's own s/S/F// search bindings — lowercase s
-     toggles the sidebars there, the palette is backtick's alone). */
+     neutralizes Material's own s/S/F// search bindings as dead keys —
+     the palette is backtick's alone). */
   window.addEventListener(
     "keydown",
     function (event) {

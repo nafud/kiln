@@ -2,8 +2,8 @@
 
    Ports the homepage logo's shimmer (see ascii-logo.js) onto heading
    text: while the pointer rests on an h1, each character wobbles along
-   a glyph ramp around its own position, driven by the same two
-   detuned sine waves, and the intensity envelope eases in on hover
+   the ASCII density ramp around its own position, driven by the same
+   two detuned sine waves, and the intensity envelope eases in on hover
    and releases after the pointer leaves, settling back on the exact
    original text. Unlike the logo, the trigger is hovering the heading
    text itself (an injected inline wrapper, so the block's empty width
@@ -17,9 +17,8 @@
 
   const CONFIG = {
     selector: ".md-content h1",
-    /* Substitution alphabet: a density-ordered glyph ramp (the old
-       logo alphabet) restricted to letters and digits, wobbled by the
-       same motion constants as the logo's shimmer. Punctuation is excluded
+    /* Substitution alphabet: the logo's density ramp (ascii-logo.js)
+       restricted to letters and digits. Punctuation is excluded
        because glyphs like "-" and "/" are soft-wrap opportunities, so
        a substitution that adds or removes one rewraps a multi-line
        heading mid-shimmer and reflows the whole page. Alphanumerics

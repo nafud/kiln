@@ -1,5 +1,11 @@
 {#-
-  Two jobs, both pre-paint.
+  Three jobs.
+
+  Suppresses both sidebars at the template level (the empty site_nav
+  block, the same device overrides/404.html has always used): the
+  header nav is the site's navigation, the palette's :toc lists a
+  page's headings, so neither the left nav sidebar nor the right toc
+  is rendered anywhere. The rest is pre-paint.
 
   Stamps kiln-js on the html element before first paint. The homepage
   card grid is the no-JS fallback for the jump bar (quick-jump.js);
@@ -16,6 +22,8 @@
   response goes unused and the font is fetched twice.
 -#}
 {% extends "base.html" %}
+
+{% block site_nav %}{% endblock %}
 
 {% block extrahead %}
   {{ super() }}

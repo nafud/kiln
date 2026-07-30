@@ -1,4 +1,4 @@
-<pre class="kiln-ascii" role="img" aria-label="Kiln">KILN</pre>
+<pre class="kiln-ascii" role="img" aria-label="Kiln">Kiln</pre>
 
 <div class="home-grid">
 

@@ -3,9 +3,9 @@
    link served, now same-origin with no third-party fetch. Italic
    faces were never loaded; browsers synthesize oblique where content
    asks for it. font-display: swap matches the former loading
-   behavior, and overrides/main.html preloads the Regular weight. It
-   is the site's only font: the dot-matrix logo (ascii-logo.js) is
-   built from block-element characters in this same face. */
+   behavior, and overrides/main.html preloads the Regular weight. The
+   UnifrakturMaguntia logo font is embedded in ascii-logo.js as a
+   data: URI subset (glyphs for "Kiln" only). */
 
 @font-face {
   font-family: "JetBrains Mono";
@@ -51,13 +51,10 @@
   --kiln-frame-inset: 12px;
   --kiln-chrome-row: calc(var(--kiln-frame-inset) * 2 + 1px);
 
-  /* Dot-matrix logo resolution: smaller cells = finer dots (see
-     ascii-logo.js). The grid line-height is 1 so the half-block dot
-     pairs tile vertically without seams. */
+  /* ASCII logo resolution: smaller cells = more detail (see ascii-logo.js) */
   --kiln-logo-font-size: 0.5rem;
   --kiln-logo-line-height: 1.2;
-  --kiln-logo-grid-line-height: 1;
-  /* Size of the plain "KILN" text shown before/without JS generation */
+  /* Size of the plain "Kiln" text shown before/without JS generation */
   --kiln-logo-fallback-font-size: 2.6rem;
 
   /* Copy-button icon swap timing — single source of truth; the animations
@@ -114,7 +111,6 @@ textarea,
 select,
 .md-typeset,
 .md-header,
-.md-nav,
 .md-search,
 .md-tabs {
   font-family: "JetBrains Mono", monospace !important;
@@ -165,7 +161,7 @@ body::before {
 
 /* The document scrollbar is gone — the pane has none; the statusline's
    offset/percent readout is the position indicator. Inner scrollable
-   containers (code blocks, palette results, toc) keep theirs. */
+   containers (code blocks, palette results) keep theirs. */
 html {
   scrollbar-width: none;
   /* :target/anchor jumps clear the top chrome */
@@ -309,98 +305,15 @@ html::-webkit-scrollbar {
   display: none;
 }
 
-/* Sidebars. The left navigation sidebar is gone site-wide — the
-   header nav (and the 1-6 keys) replaced it, so it dies at every
-   width, drawer form included; its drawer toggle is not rendered
-   (overrides/partials/header.html). The right toc remains as a
-   bordered pane labelled "toc", hidden by default and toggled by s
-   (kiln-toc-shown on body, key-nav.js) — desktop only, since below
-   Material's 76.25em breakpoint it would be an off-canvas drawer
-   with no toggle left to open it. */
-
-.md-sidebar--primary {
-  display: none !important;
-}
-
-/* The body:not() form outranks Material's own
-   `.md-sidebar--secondary:not([hidden]) { display: block }` (a bare
-   .md-sidebar--secondary loses to it); with the class present the
-   hide stops matching and Material's rule shows the pane. */
-body:not(.kiln-toc-shown) .md-sidebar--secondary {
-  display: none;
-}
-
-/* Below the breakpoint the toc would be an off-canvas drawer with no
-   toggle left to open it — dead at any body state. */
-@media screen and (max-width: 76.2344em) {
-  .md-sidebar--secondary {
-    display: none !important;
-  }
-}
-
-.md-sidebar--secondary {
-  background: var(--color-bg);
-  color: var(--color-text-muted);
-}
-
-/* With no sidebars in flow by default, the content column centers in
-   the full grid width (it keeps its 900px cap); when the toc pane is
-   shown it re-centers in the remainder, which Material's grid does on
-   its own. */
+/* Sidebars do not exist: overrides/main.html empties Material's
+   site_nav block (as overrides/404.html always has), so neither the
+   left navigation sidebar nor the right toc is ever rendered. The
+   header nav and the 1-6 keys are the navigation; the palette's :toc
+   command lists the page's headings. With nothing beside it in the
+   grid, the content column centers in the full width (keeping its
+   900px cap below). */
 .md-content {
   margin: 0 auto;
-}
-
-/* The toc pane: the pane recipe in miniature — border on the sidebar
-   box, its "toc" label sitting on the border line, matching the
-   frame's own labels. The sidebar (sticky, non-scrolling) anchors the
-   label; the scrollwrap inside it scrolls, so the label never moves. */
-.md-sidebar--secondary .md-sidebar__scrollwrap {
-  overscroll-behavior: contain;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  padding-top: 0.6rem;
-}
-
-/* The label hangs on the pane's top border from the sidebar box (the
-   sticky, non-scrolling ancestor — the scrollwrap's own overflow
-   would clip an overhanging child). Material gives .md-sidebar
-   1.2rem vertical padding, which is where the scrollwrap's border
-   line sits. */
-.md-sidebar--secondary::before {
-  content: "toc";
-  position: absolute;
-  top: calc(1.2rem - 0.55em);
-  left: 0.9rem;
-  padding: 0 0.45em;
-  background: var(--color-bg);
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--color-text-faint);
-  z-index: 10;
-}
-
-/* Material's "Table of contents" title gives way to the border label. */
-.md-sidebar--secondary .md-nav__title {
-  display: none;
-}
-
-.md-nav__link {
-  color: var(--color-text-muted);
-  font-size: 0.72rem;
-  transition: color 150ms ease;
-}
-
-.md-nav__link:hover,
-.md-nav__link--active {
-  color: var(--color-accent);
-}
-
-/* Right table of contents */
-
-.md-sidebar--secondary .md-nav__link {
-  font-size: 0.70rem;
 }
 
 /* Content */
@@ -512,8 +425,6 @@ body:not(.kiln-toc-shown) .md-sidebar--secondary {
 
 .md-typeset pre.kiln-ascii.kiln-ascii--generated {
   font-size: var(--kiln-logo-font-size) !important;
-  line-height: var(--kiln-logo-grid-line-height) !important;
-  letter-spacing: 0 !important;
 }
 
 /* JS visitors never see the fallback title flash: under the pre-paint
@@ -921,13 +832,6 @@ tt {
    .home-grid too and always keep their cards. */
 .kiln-js .md-content__inner:has(.kiln-ascii) .home-grid {
   display: none;
-}
-
-/* The homepage has no toc pane (the jump bar and the frame chrome are
-   its whole furniture): unconditional, so the s reveal class never
-   applies there. */
-body:has(.kiln-ascii) .md-sidebar--secondary {
-  display: none !important;
 }
 
 /* vim hlsearch (quick-jump.js: /search plus the n/N motions): every
