@@ -12,9 +12,10 @@
    clicking the header nav links (overrides/partials/header.html).
    Clicking links, rather than assigning location, keeps
    navigation.instant in charge. The letter bindings are all strictly
-   lowercase. t cycles the color palette by advancing Material's
-   __palette radio group (dark and light; the theme's own toggle
-   button is hidden by extra.css). There are no sidebars to toggle —
+   lowercase. t cycles the color theme by advancing Material's
+   __palette radio group (mkdocs.yml order; the theme's own toggle
+   button is hidden by extra.css, and the palette's :themes command
+   lists the same radios by name). There are no sidebars to toggle —
    the header nav is the navigation and the palette's :toc lists the
    page's headings — so s is a plain dead key below. There is no help
    binding: help is the palette's :h/:help usage output
@@ -102,7 +103,7 @@
     });
   }
 
-  /* Advances Material's palette radio group (light, dark in mkdocs.yml
+  /* Advances Material's palette radio group (themes in mkdocs.yml
      order) — clicking the next input is what the theme's own toggle
      button did before extra.css hid it; the radios still render because
      the palette entries keep their toggle blocks. The current index is

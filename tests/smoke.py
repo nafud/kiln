@@ -145,6 +145,37 @@ def run(page):
         assert "3.5.4 Discussion" in overlay_text(page)
         close_overlay(page)
 
+    with step("palette: :themes lists themes, applies tokyo day"):
+        page.goto(chapter)
+        open_overlay(page, ":themes")
+        page.wait_for_selector(".kiln-jump--overlay .kiln-jump-result")
+        text = overlay_text(page)
+        # The current theme carries the * marker; the rows come from
+        # the __palette radios, so this also guards mkdocs.yml.
+        assert "light *" in text and "dark" in text and "tokyo day" in text, (
+            f"theme rows wrong: {text!r}"
+        )
+        page.keyboard.press("ArrowDown")
+        page.keyboard.press("ArrowDown")
+        page.keyboard.press("Enter")
+        page.wait_for_timeout(200)
+        scheme = page.evaluate("() => document.body.getAttribute('data-md-color-scheme')")
+        assert scheme == "tokyo-day", f"tokyo day not applied: {scheme!r}"
+        assert not page.evaluate(
+            "() => document.querySelector('.kiln-jump--overlay').classList.contains('kiln-jump--open')"
+        ), "prompt not dismissed after applying a theme"
+        # The chapter prose must resolve the theme's ink, proving the
+        # token block and scheme stamp connect end to end.
+        ink = page.eval_on_selector(
+            ".md-typeset h1", "el => getComputedStyle(el).color"
+        )
+        assert ink == "rgb(55, 96, 191)", f"tokyo day ink not applied: {ink!r}"
+        # t cycles onward from tokyo day, wrapping back to light.
+        page.keyboard.press("t")
+        page.wait_for_timeout(200)
+        scheme = page.evaluate("() => document.body.getAttribute('data-md-color-scheme')")
+        assert scheme == "default", f"t did not wrap to light: {scheme!r}"
+
     with step("grep + hlsearch: / arms highlights, n cycles, Escape clears"):
         page.goto(f"{BASE}/books/index.html")
         open_overlay(page, "/register")

@@ -68,10 +68,11 @@
       [["Esc"], "Clear search highlights"],
     ]],
     ["VIEW", [
-      [["t"], "Toggle theme"],
+      [["t"], "Cycle theme"],
     ]],
     ["COMMANDS", [
       [[":toc"], "List page headings"],
+      [[":themes"], "List color themes"],
       [[":x expr"], "Int calculator (hex/dec/bin)"],
       [[":x -wN expr"], "Two's complement at N bits"],
       [[":intro"], "Show intro screen"],
@@ -738,8 +739,12 @@
         item.id = listId + "-" + i;
         item.setAttribute("role", "option");
 
+        /* Action rows (:themes) carry a callback instead of a URL and
+           render as href-less anchors — the click funnel below runs
+           the action, and with no href a stray activation navigates
+           nowhere. */
         const link = document.createElement("a");
-        link.href = page.url.href;
+        if (page.url) link.href = page.url.href;
 
         /* The title is the row's whole content: "Page" for page rows,
            "Page › Section" for content rows. No right-hand column — an
@@ -905,6 +910,37 @@
       paintResults();
     }
 
+    /* :themes — the color themes as selectable rows, read from
+       Material's __palette radio group (the same radios the t key
+       cycles), so mkdocs.yml stays the single source of truth: each
+       row is a radio's toggle name, the current scheme carrying vim's
+       * marker. Rows are actions, not links — Enter or a click
+       applies the theme by clicking its radio (Material stamps body
+       and persists the choice) and dismisses the prompt. */
+    function paintThemes() {
+      const radios = document.querySelectorAll('input[name="__palette"]');
+      const current = document.body.getAttribute("data-md-color-scheme");
+      const rows = [];
+      radios.forEach(function (radio) {
+        const scheme = radio.getAttribute("data-md-color-scheme");
+        rows.push({
+          title:
+            (radio.getAttribute("aria-label") || scheme) +
+            (scheme === current ? " *" : ""),
+          action: function () {
+            radio.click();
+          },
+        });
+      });
+      if (!rows.length) {
+        showMessage("no themes available");
+        return;
+      }
+      results = rows;
+      selected = 0;
+      paintResults();
+    }
+
     /* :x — the integer calculator, answering in the three bases an RE
        note flips between. Live like the rest of the palette: it
        re-evaluates per keystroke, so half-typed input paints E15
@@ -971,6 +1007,7 @@
       if (name === "x") paintCalc(args);
       else if (args) showMessage("E492: Not an editor command: " + raw);
       else if (name === "toc") paintToc();
+      else if (name === "themes") paintThemes();
       else if (name === "h" || name === "help") paintHelp();
       else if (name === "intro") paintIntro();
       else if (name === "version") paintVersion();
@@ -1061,6 +1098,22 @@
          not at all — arming this tab's search for it would light up a
          later unrelated navigation. */
       if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) {
+        return;
+      }
+      /* Action rows run their callback and dismiss; nothing below
+         (search arming, anchor dismissal) concerns them. The click
+         must also never bubble on: Material's instant-loading
+         observer on body constructs a URL from any clicked anchor's
+         href, and an href-less anchor's empty string throws inside
+         its RxJS pipeline, killing Material's components (the palette
+         radios among them) for the rest of the page's life. */
+      const index = Array.prototype.indexOf.call(list.children, link.closest("li"));
+      const row = results[index];
+      if (row && row.action) {
+        event.preventDefault();
+        event.stopPropagation();
+        row.action();
+        onDismiss();
         return;
       }
       const query = input.value.trim();
