@@ -90,6 +90,24 @@ theme:
       toggle:
         icon: material/toggle-switch-off
         name: phosphor
+    - scheme: slate
+      primary: terminal
+      accent: cyan
+      toggle:
+        icon: material/toggle-switch-off
+        name: terminal
+    - scheme: slate
+      primary: nord
+      accent: cyan
+      toggle:
+        icon: material/toggle-switch-off
+        name: nord
+    - scheme: slate
+      primary: vesper
+      accent: amber
+      toggle:
+        icon: material/toggle-switch-off
+        name: vesper
   features:
     - navigation.instant
     - navigation.tracking

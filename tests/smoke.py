@@ -153,7 +153,8 @@ def run(page):
         # The current theme carries the * marker; the rows come from
         # the __palette radios, so this also guards mkdocs.yml.
         for name in [
-            "light *", "dark", "tokyo day", "tokyo night", "catppuccin latte", "phosphor",
+            "light *", "dark", "tokyo day", "tokyo night", "catppuccin latte",
+            "phosphor", "terminal", "nord", "vesper",
         ]:
             assert name in text, f"theme row {name!r} missing: {text!r}"
         page.keyboard.press("ArrowDown")

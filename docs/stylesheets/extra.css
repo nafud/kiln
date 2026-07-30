@@ -203,6 +203,75 @@ html:has(> body[data-md-color-scheme="slate"][data-md-color-primary="phosphor"])
   --md-accent-fg-color--transparent: var(--color-accent-transparent);
 }
 
+/* terminal — grey text on true black, the stock console phosphor's
+   opposite number: no tint anywhere in the ladder, ANSI cyan as the
+   accent. Rides slate; --md-hue stays at slate's default, invisible
+   against pure black. */
+[data-md-color-scheme="slate"][data-md-color-primary="terminal"],
+html:has(> body[data-md-color-scheme="slate"][data-md-color-primary="terminal"]) {
+  --color-bg: #000000;
+  --color-surface: #0a0a0a;
+  --color-border: #2e2e2e;
+  --color-text-primary: #e6e6e6;
+  --color-text-secondary: #b3b3b3;
+  --color-text-muted: #7a7a7a;
+  --color-text-faint: #4d4d4d;
+  --color-accent: #00cdcd;
+  --color-accent-transparent: rgba(0, 205, 205, 0.15);
+  --color-code-bg: #050505;
+  --color-table-header-bg: #0a0a0a;
+  --color-shadow: rgba(0, 0, 0, 0.5);
+
+  --md-accent-fg-color: var(--color-accent);
+  --md-accent-fg-color--transparent: var(--color-accent-transparent);
+}
+
+/* nord — the canonical Polar Night / Snow Storm ladder (nord0/1/3
+   ground, nord6→nord4 ink falling to the brightened comment greys),
+   frost cyan nord8 as the accent. */
+[data-md-color-scheme="slate"][data-md-color-primary="nord"],
+html:has(> body[data-md-color-scheme="slate"][data-md-color-primary="nord"]) {
+  --md-hue: 220;
+  --color-bg: #2e3440;
+  --color-surface: #3b4252;
+  --color-border: #4c566a;
+  --color-text-primary: #eceff4;
+  --color-text-secondary: #d8dee9;
+  --color-text-muted: #7b88a1;
+  --color-text-faint: #616e88;
+  --color-accent: #88c0d0;
+  --color-accent-transparent: rgba(136, 192, 208, 0.15);
+  --color-code-bg: #292e39;
+  --color-table-header-bg: #272c37;
+  --color-shadow: rgba(0, 0, 0, 0.3);
+
+  --md-accent-fg-color: var(--color-accent);
+  --md-accent-fg-color--transparent: var(--color-accent-transparent);
+}
+
+/* vesper — near-black minimalism with the peach accent; the ladder
+   is vesper's neutral greys, --md-hue warmed slightly so Material's
+   internals sit with the accent rather than against it. */
+[data-md-color-scheme="slate"][data-md-color-primary="vesper"],
+html:has(> body[data-md-color-scheme="slate"][data-md-color-primary="vesper"]) {
+  --md-hue: 30;
+  --color-bg: #101010;
+  --color-surface: #161616;
+  --color-border: #282828;
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #a0a0a0;
+  --color-text-muted: #7e7e7e;
+  --color-text-faint: #505050;
+  --color-accent: #ffc799;
+  --color-accent-transparent: rgba(255, 199, 153, 0.15);
+  --color-code-bg: #0c0c0c;
+  --color-table-header-bg: #161616;
+  --color-shadow: rgba(0, 0, 0, 0.5);
+
+  --md-accent-fg-color: var(--color-accent);
+  --md-accent-fg-color--transparent: var(--color-accent-transparent);
+}
+
 /* Global font */
 
 html,
