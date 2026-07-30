@@ -1,12 +1,12 @@
-/* Page chrome: the statusline (vim's ruler on the frame's bottom
-   border) and the header nav's active-item sync. Scrolling and page
-   switching are keyboard-driven — see key-nav.js.
+/* Page chrome: the statusline (the position readout on the frame's
+   bottom border) and the header nav's active-item sync. Scrolling and
+   page switching are keyboard-driven — see key-nav.js.
 
    The statusline is always present: left the page path relative to
-   the site root (~ for the homepage), right vim's position token —
-   All when the page fits, Top/Bot at the ends, the percentage
-   between. The document scrollbar is hidden (extra.css), so this is
-   the position indicator. */
+   the site root (~ for the homepage), right the position token — All
+   when the page fits, Top at the start, otherwise the percentage
+   through 100% at the bottom. The document scrollbar is hidden
+   (extra.css), so this is the position indicator. */
 
 (function () {
   "use strict";
@@ -32,11 +32,14 @@
     scrollRange.max = doc.scrollHeight - doc.clientHeight;
   }
 
-  /* vim's ruler token for the current offset. */
+  /* The ruler token for the current offset: All when the page fits,
+     Top at the start, otherwise the percentage — held to 99% until
+     the bottom is actually reached, so 100% always means the end of
+     the page and never a rounding artifact. */
   function positionToken(offset, max) {
     if (max <= 0) return "All";
     if (offset <= 0) return "Top";
-    if (offset >= max) return "Bot";
+    if (offset >= max) return "100%";
     return Math.min(99, Math.max(1, Math.round((offset / max) * 100))) + "%";
   }
 

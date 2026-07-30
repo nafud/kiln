@@ -216,7 +216,7 @@ def run(page):
         # The scroll is smooth (key-nav.js), so poll for the settled
         # readout instead of guessing at the animation's duration.
         page.wait_for_function(
-            "() => document.querySelector('.kiln-status__pos').textContent === 'Bot'",
+            "() => document.querySelector('.kiln-status__pos').textContent === '100%'",
             timeout=5000,
         )
         # 1 opens the first section (the nav lists exactly the six
