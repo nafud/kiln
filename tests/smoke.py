@@ -213,9 +213,12 @@ def run(page):
         pos = page.eval_on_selector(".kiln-status__pos", "el => el.textContent")
         assert pos.startswith("0x") and pos.endswith("Top"), f"statusline pos: {pos!r}"
         page.keyboard.press("G")
-        page.wait_for_timeout(800)
-        pos = page.eval_on_selector(".kiln-status__pos", "el => el.textContent")
-        assert pos.endswith("Bot"), f"statusline pos at bottom: {pos!r}"
+        # The scroll is smooth (key-nav.js), so poll for the settled
+        # readout instead of guessing at the animation's duration.
+        page.wait_for_function(
+            "() => document.querySelector('.kiln-status__pos').textContent.endsWith('Bot')",
+            timeout=5000,
+        )
 
     with step("widgets: keygen serial and two's-complement readout"):
         page.goto(f"{BASE}/writeups/crackmes-one/crackmes-one-cfb1/")
