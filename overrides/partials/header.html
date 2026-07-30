@@ -4,13 +4,14 @@
   opaque bg so the line runs behind it, the tmux pane-title look).
 
   [kiln] is the a.md-logo home link — quick-jump.js derives the site
-  base from its href and the 0 key clicks it, so the class and the
-  href expression must stay. The nav lists the six top-level sections
-  (a section's link is its first child, the index page) plus home;
-  key-nav.js clicks these for the 1-6 keys. The active item is
-  stamped here for the no-JS render and re-synced by page-chrome.js
-  across navigation.instant page changes, which do not re-render the
-  header.
+  base from its href, and the 0 key clicks it, so the class and the
+  href expression must stay; there is no separate "home" nav item.
+  The nav lists the six top-level sections (a section's link is its
+  first child, the index page); key-nav.js clicks these for the 1-6
+  keys. The active item is stamped here for the no-JS render and
+  re-synced by page-chrome.js across navigation.instant page changes,
+  which do not re-render the header; on the homepage no item is
+  active.
 
   Material's palette radios (the t key advances them) and its search
   form (hidden by extra.css, but its JS expects the component) are
@@ -21,7 +22,6 @@
   <nav class="md-header__inner kiln-header__inner" aria-label="{{ lang.t('header') }}">
     <a href="{{ config.extra.homepage | d(nav.homepage.url, true) | url }}" title="{{ config.site_name | e }}" class="md-header__button md-logo kiln-header__logo" aria-label="{{ config.site_name }}" data-md-component="logo">[kiln]</a>
     <ul class="kiln-header__nav">
-      <li><a class="kiln-header__link{% if page and page.is_homepage %} kiln-header__link--active{% endif %}" href="{{ nav.homepage.url | url }}">home</a></li>
       {% for nav_item in nav %}
         {% set link = nav_item if nav_item.is_page else nav_item.children | first %}
         <li><a class="kiln-header__link{% if nav_item.active %} kiln-header__link--active{% endif %}" href="{{ link.url | url }}">{{ nav_item.title | lower }}</a></li>

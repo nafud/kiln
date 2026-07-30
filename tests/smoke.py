@@ -202,7 +202,7 @@ def run(page):
             ".kiln-header__nav .kiln-header__link", "els => els.map(e => e.textContent)"
         )
         assert labels == [
-            "home", "guides", "links", "books", "bookmarks", "courses", "writeups",
+            "guides", "links", "books", "bookmarks", "courses", "writeups",
         ], f"header nav changed: {labels}"
         active = page.eval_on_selector_all(
             ".kiln-header__link--active", "els => els.map(e => e.textContent)"
@@ -211,14 +211,20 @@ def run(page):
         path = page.eval_on_selector(".kiln-status__path", "el => el.textContent")
         assert path == "~/books/csapp/csapp-chapter-03", f"statusline path: {path!r}"
         pos = page.eval_on_selector(".kiln-status__pos", "el => el.textContent")
-        assert pos.startswith("0x") and pos.endswith("Top"), f"statusline pos: {pos!r}"
+        assert pos == "Top", f"statusline pos: {pos!r}"
         page.keyboard.press("G")
         # The scroll is smooth (key-nav.js), so poll for the settled
         # readout instead of guessing at the animation's duration.
         page.wait_for_function(
-            "() => document.querySelector('.kiln-status__pos').textContent.endsWith('Bot')",
+            "() => document.querySelector('.kiln-status__pos').textContent === 'Bot'",
             timeout=5000,
         )
+        # 1 opens the first section (the nav lists exactly the six
+        # sections; home belongs to 0 via the logo).
+        page.keyboard.press("1")
+        page.wait_for_timeout(500)
+        landed = page.evaluate("() => location.pathname")
+        assert landed.endswith("/guides/"), f"1 did not open guides: {landed}"
 
     with step("widgets: keygen serial and two's-complement readout"):
         page.goto(f"{BASE}/writeups/crackmes-one/crackmes-one-cfb1/")
@@ -294,7 +300,7 @@ def run_no_js(browser):
         links = page.eval_on_selector_all(
             ".kiln-header__nav .kiln-header__link", "els => els.length"
         )
-        assert links == 7, "header nav missing without JS"
+        assert links == 6, "header nav missing without JS"
         context.close()
 
 

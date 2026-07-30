@@ -3,20 +3,13 @@
    switching are keyboard-driven — see key-nav.js.
 
    The statusline is always present: left the page path relative to
-   the site root (~ for the homepage), right the hex offset readout
-   (0x1388/0x8d88) plus vim's position token — All when the page fits,
-   Top/Bot at the ends, the percentage between. The document
-   scrollbar is hidden (extra.css), so this is the position
-   indicator. */
+   the site root (~ for the homepage), right vim's position token —
+   All when the page fits, Top/Bot at the ends, the percentage
+   between. The document scrollbar is hidden (extra.css), so this is
+   the position indicator. */
 
 (function () {
   "use strict";
-
-  function formatHex(value, width) {
-    let s = Math.max(0, Math.round(value)).toString(16);
-    while (s.length < width) s = "0" + s;
-    return "0x" + s;
-  }
 
   /* Site base from the header logo's href — the same derivation
      quick-jump.js uses; the logo links to the site root at the right
@@ -32,15 +25,11 @@
      page. The range is measured on init, resize, and page change,
      re-measured lazily when the observed offset outruns the cache, and
      re-synced once per scroll burst (off the hot path). */
-  const scrollRange = { max: 0, hexWidth: 1 };
+  const scrollRange = { max: 0 };
 
   function measureScrollRange() {
     const doc = document.documentElement;
     scrollRange.max = doc.scrollHeight - doc.clientHeight;
-    scrollRange.hexWidth = Math.max(
-      1,
-      Math.round(scrollRange.max).toString(16).length
-    );
   }
 
   /* vim's ruler token for the current offset. */
@@ -51,27 +40,16 @@
     return Math.min(99, Math.max(1, Math.round((offset / max) * 100))) + "%";
   }
 
-  /* Right-hand statusline segment: hex offsets padded to the range's
-     width (so the readout never changes width while scrolling) plus
-     the position token. Looks its element up fresh per call, since
-     navigation.instant may have replaced it since the listener was
-     registered. */
+  /* Right-hand statusline segment: the position token alone. Looks
+     its element up fresh per call, since navigation.instant may have
+     replaced it since the listener was registered. */
   function updatePosition() {
     const pos = document.querySelector(".kiln-status__pos");
     if (!pos) return;
 
     if (window.scrollY > scrollRange.max) measureScrollRange();
-    if (scrollRange.max <= 0) {
-      pos.textContent = "All";
-      return;
-    }
     const offset = Math.min(window.scrollY, scrollRange.max);
-    pos.textContent =
-      formatHex(offset, scrollRange.hexWidth) +
-      "/" +
-      formatHex(scrollRange.max, scrollRange.hexWidth) +
-      " " +
-      positionToken(offset, scrollRange.max);
+    pos.textContent = positionToken(offset, scrollRange.max);
   }
 
   /* Left-hand segment: the page path below the site root, ~-prefixed
@@ -90,21 +68,20 @@
   /* Header nav active marker. The header is rendered once per full
      load and navigation.instant does not re-render it, so the
      Jinja-stamped active class goes stale on instant page changes;
-     this recomputes it from the current location. Home is active only
-     at the site root; a section link (its index page URL) is active
-     for every page under its directory. */
+     this recomputes it from the current location. A section link
+     (its index page URL) is active for every page under its
+     directory; on the homepage no item is active. */
   function syncActiveNav() {
     const links = document.querySelectorAll(".kiln-header__nav .kiln-header__link");
     if (!links.length) return;
     const here = location.pathname.replace(/index\.html$/, "");
-    links.forEach(function (link, i) {
+    links.forEach(function (link) {
       const target = new URL(
         link.getAttribute("href"),
         location.href
       ).pathname.replace(/index\.html$/, "");
       const dir = target.replace(/[^/]*$/, "");
-      const active = i === 0 ? here === target : here.startsWith(dir);
-      link.classList.toggle("kiln-header__link--active", active);
+      link.classList.toggle("kiln-header__link--active", here.startsWith(dir));
     });
   }
 

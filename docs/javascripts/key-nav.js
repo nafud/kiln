@@ -62,12 +62,13 @@
   }
 
   /* Opens the nth top-level section (1-based) by clicking its header
-     nav link; index 0 is home, owned by the 0 key via the logo. */
+     nav link; the nav lists exactly the six sections — home is the
+     [kiln] wordmark, owned by the 0 key via the logo. */
   function goToSection(n) {
     const links = document.querySelectorAll(
       ".kiln-header__nav .kiln-header__link"
     );
-    const link = links[n];
+    const link = links[n - 1];
     if (link) link.click();
   }
 

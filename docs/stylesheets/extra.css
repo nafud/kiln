@@ -745,10 +745,9 @@ tt {
 
 /* Statusline (page-chrome.js): the vim ruler, always present, its two
    labels sitting on the frame's bottom border line exactly as the
-   header's sit on the top one. Left the page path, right the hex
-   offset readout plus vim's position token (All/Top/Bot/NN%). The
-   label style minus the uppercase (paths and hex offsets stay
-   lowercase, like addresses in content). Non-interactive. */
+   header's sit on the top one. Left the page path, right vim's
+   position token (All/Top/Bot/NN%). The label style minus the
+   uppercase (paths stay lowercase, like a prompt). Non-interactive. */
 .kiln-status {
   position: fixed;
   left: 0;
