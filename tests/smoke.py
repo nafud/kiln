@@ -81,7 +81,7 @@ def close_overlay(page):
 
 
 def run(page):
-    chapter = f"{BASE}/books/csapp/csapp-chapter-03/"
+    chapter = f"{BASE}/books/csapp/chapter-03/"
 
     with step("homepage: logo generates, inline bar mounts"):
         page.goto(BASE + "/")
@@ -101,7 +101,7 @@ def run(page):
         assert loaded, "JetBrains Mono face not loaded"
 
     with step("palette: title search finds a chapter"):
-        page.goto(chapter.replace("csapp/csapp-chapter-03/", "index.html"))
+        page.goto(chapter.replace("csapp/chapter-03/", "index.html"))
         open_overlay(page, "csapp 3")
         page.wait_for_selector(".kiln-jump--overlay .kiln-jump-result")
         assert "Chapter 3" in overlay_text(page)
@@ -302,7 +302,7 @@ def run(page):
         )
         assert active == ["books"], f"active nav item wrong: {active}"
         path = page.eval_on_selector(".kiln-status__path", "el => el.textContent")
-        assert path == "~/books/csapp/csapp-chapter-03", f"statusline path: {path!r}"
+        assert path == "~/books/csapp/chapter-03", f"statusline path: {path!r}"
         pos = page.eval_on_selector(".kiln-status__pos", "el => el.textContent")
         assert pos == "Top", f"statusline pos: {pos!r}"
         page.keyboard.press("G")
@@ -320,7 +320,7 @@ def run(page):
         assert landed.endswith("/guides/"), f"1 did not open guides: {landed}"
 
     with step("widgets: keygen serial and two's-complement readout"):
-        page.goto(f"{BASE}/writeups/crackmes-one/crackmes-one-cfb1/")
+        page.goto(f"{BASE}/writeups/crackmes-one/cfb1/")
         page.wait_for_selector(".kiln-widget[data-widget='cfb1-keygen'] .kiln-term-out")
         out = page.eval_on_selector(
             ".kiln-widget[data-widget='cfb1-keygen'] .kiln-term-out", "el => el.textContent"

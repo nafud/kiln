@@ -128,28 +128,28 @@ nav:
       - books/index.md
       - "Computer Systems: A Programmer's Perspective":
           - books/csapp/index.md
-          - Chapter 3: books/csapp/csapp-chapter-03.md
-          - Chapter 4: books/csapp/csapp-chapter-04.md
-          - Chapter 7: books/csapp/csapp-chapter-07.md
-          - Chapter 8: books/csapp/csapp-chapter-08.md
-          - Chapter 9: books/csapp/csapp-chapter-09.md
+          - Chapter 3: books/csapp/chapter-03.md
+          - Chapter 4: books/csapp/chapter-04.md
+          - Chapter 7: books/csapp/chapter-07.md
+          - Chapter 8: books/csapp/chapter-08.md
+          - Chapter 9: books/csapp/chapter-09.md
       - Modern x86 Assembly Language Programming:
           - books/mx86alp/index.md
-          - Chapter 1: books/mx86alp/mx86alp-chapter-01.md
-          - Chapter 6: books/mx86alp/mx86alp-chapter-06.md
+          - Chapter 1: books/mx86alp/chapter-01.md
+          - Chapter 6: books/mx86alp/chapter-06.md
       - Practical Reverse Engineering:
           - books/pre/index.md
-          - Chapter 1: books/pre/pre-chapter-01.md
-          - Chapter 2: books/pre/pre-chapter-02.md
-          - Chapter 3: books/pre/pre-chapter-03.md
+          - Chapter 1: books/pre/chapter-01.md
+          - Chapter 2: books/pre/chapter-02.md
+          - Chapter 3: books/pre/chapter-03.md
       - Practical Binary Analysis:
           - books/pba/index.md
-          - Chapter 1: books/pba/pba-chapter-01.md
-          - Chapter 2: books/pba/pba-chapter-02.md
-          - Chapter 3: books/pba/pba-chapter-03.md
+          - Chapter 1: books/pba/chapter-01.md
+          - Chapter 2: books/pba/chapter-02.md
+          - Chapter 3: books/pba/chapter-03.md
       - Reverse Engineering for Beginners:
           - books/re4b/index.md
-          - Chapter 1: books/re4b/re4b-chapter-01.md
+          - Chapter 1: books/re4b/chapter-01.md
 
   - Bookmarks: bookmarks/index.md
 
@@ -164,10 +164,10 @@ nav:
       - writeups/index.md
       - Crackmes.one:
           - writeups/crackmes-one/index.md
-          - CFB1: writeups/crackmes-one/crackmes-one-cfb1.md
-          - CFB2: writeups/crackmes-one/crackmes-one-cfb2.md
+          - CFB1: writeups/crackmes-one/cfb1.md
+          - CFB2: writeups/crackmes-one/cfb2.md
       - Challenges.re:
           - writeups/challenges-re/index.md
-          - RE4B Chapter 1: writeups/challenges-re/challenges-re-re4b-ch01.md
+          - RE4B Chapter 1: writeups/challenges-re/re4b-ch01.md
       - Hack This Site:
           - writeups/hack-this-site/index.md

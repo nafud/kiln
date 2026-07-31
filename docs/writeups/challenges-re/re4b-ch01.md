@@ -1,13 +1,13 @@
 # RE4B Chapter 1
 
-Solutions to the [challenges.re](https://challenges.re/){ .external-link } exercises referenced in *Reverse Engineering for Beginners*, Chapter 1. Each challenge gives a short listing and asks what the code does. Where a challenge adds follow-up questions, they are answered in place. Book notes are at [RE4B Chapter 1](../../books/re4b/re4b-chapter-01.md).
+Solutions to the [challenges.re](https://challenges.re/){ .external-link } exercises referenced in *Reverse Engineering for Beginners*, Chapter 1. Each challenge gives a short listing and asks what the code does. Where a challenge adds follow-up questions, they are answered in place. Book notes are at [RE4B Chapter 1](../../books/re4b/chapter-01.md).
 
 | Challenge | Book section | Topic |
 | --------- | ------------ | ----- |
-| [48](#challenge-48-messagebeep-wrapper) | [1.5.6](../../books/re4b/re4b-chapter-01.md#156-exercises) | win32 library wrapper (x86) |
-| [49](#challenge-49-sleep-wrapper) | [1.5.6](../../books/re4b/re4b-chapter-01.md#156-exercises) | Linux library wrapper (x64, AT&T) |
-| [51](#challenge-51-printf-with-missing-arguments) | [1.9.5](../../books/re4b/re4b-chapter-01.md#195-exercises) | stack noise, missing arguments |
-| [52](#challenge-52-printf-of-time) | [1.9.5](../../books/re4b/re4b-chapter-01.md#195-exercises) | timestamp, 64-bit time_t truncation |
+| [48](#challenge-48-messagebeep-wrapper) | [1.5.6](../../books/re4b/chapter-01.md#156-exercises) | win32 library wrapper (x86) |
+| [49](#challenge-49-sleep-wrapper) | [1.5.6](../../books/re4b/chapter-01.md#156-exercises) | Linux library wrapper (x64, AT&T) |
+| [51](#challenge-51-printf-with-missing-arguments) | [1.9.5](../../books/re4b/chapter-01.md#195-exercises) | stack noise, missing arguments |
+| [52](#challenge-52-printf-of-time) | [1.9.5](../../books/re4b/chapter-01.md#195-exercises) | timestamp, 64-bit time_t truncation |
 
 ## Challenge #48, MessageBeep wrapper
 

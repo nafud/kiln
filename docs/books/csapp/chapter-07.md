@@ -186,7 +186,7 @@ ELF defines 32 relocation types; two matter here:
 
 | Type | Meaning |
 | --- | --- |
-| `R_X86_64_PC32` | Relocate a reference using a 32-bit PC-relative address — an offset added to the run-time PC, which holds the address of the *next* instruction (see [CSAPP §3.6.3](csapp-chapter-03.md)). |
+| `R_X86_64_PC32` | Relocate a reference using a 32-bit PC-relative address — an offset added to the run-time PC, which holds the address of the *next* instruction (see [CSAPP §3.6.3](chapter-03.md)). |
 | `R_X86_64_32` | Relocate a reference using a 32-bit absolute address. |
 
 Both types assume the **small code model** — total code plus data under 2 GB, reachable with 32-bit PC-relative addressing — which is gcc's default; larger programs need `-mcmodel=medium` or `-mcmodel=large`.
