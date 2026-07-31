@@ -59,31 +59,13 @@ theme:
       accent: blue
       toggle:
         icon: material/toggle-switch
-        name: light
+        name: system light
     - scheme: slate
       primary: black
       accent: blue
       toggle:
         icon: material/toggle-switch-off
-        name: dark
-    - scheme: tokyo-day
-      primary: white
-      accent: blue
-      toggle:
-        icon: material/toggle-switch
-        name: tokyo day
-    - scheme: slate
-      primary: tokyo-night
-      accent: blue
-      toggle:
-        icon: material/toggle-switch-off
-        name: tokyo night
-    - scheme: catppuccin-latte
-      primary: white
-      accent: blue
-      toggle:
-        icon: material/toggle-switch
-        name: catppuccin latte
+        name: system dark
     - scheme: slate
       primary: phosphor
       accent: green
@@ -102,12 +84,6 @@ theme:
       toggle:
         icon: material/toggle-switch-off
         name: nord
-    - scheme: slate
-      primary: vesper
-      accent: amber
-      toggle:
-        icon: material/toggle-switch-off
-        name: vesper
   features:
     - navigation.instant
     - navigation.tracking

@@ -57,7 +57,6 @@
       [["k", "j"], "Scroll up / down"],
       [["gg", "G"], "Jump to top / bottom"],
       [["[", "]"], "Navigate headings"],
-      [["<", ">"], "Navigate sections"],
       [["0"], "Home"],
       [["1-6"], "Open section"],
     ]],
@@ -611,6 +610,47 @@
     return value;
   }
 
+  /* ---------- :theme live preview ---------- */
+
+  /* Hovering or arrow-selecting a :theme row shows the theme before
+     it is committed: the row's scheme/primary/accent stamp onto body
+     directly (the CSS reads only those attributes), while Material's
+     persisted choice is untouched. The stamp that was live when the
+     first preview fired is saved once; committing (the radio click,
+     which makes Material stamp and persist the same pair) clears it,
+     and anything that takes the rows away without a commit — a new
+     query, Escape, a dismissal — restores it. */
+  const themePreview = { saved: null };
+
+  function previewTheme(radio) {
+    if (!themePreview.saved) {
+      themePreview.saved = {
+        scheme: document.body.getAttribute("data-md-color-scheme"),
+        primary: document.body.getAttribute("data-md-color-primary"),
+        accent: document.body.getAttribute("data-md-color-accent"),
+      };
+    }
+    ["scheme", "primary", "accent"].forEach(function (part) {
+      document.body.setAttribute(
+        "data-md-color-" + part,
+        radio.getAttribute("data-md-color-" + part)
+      );
+    });
+  }
+
+  function commitThemePreview() {
+    themePreview.saved = null;
+  }
+
+  function resetThemePreview() {
+    const saved = themePreview.saved;
+    if (!saved) return;
+    themePreview.saved = null;
+    document.body.setAttribute("data-md-color-scheme", saved.scheme);
+    document.body.setAttribute("data-md-color-primary", saved.primary);
+    document.body.setAttribute("data-md-color-accent", saved.accent);
+  }
+
   /* ---------- palette component ---------- */
 
   /* Builds one palette instance ("overlay" or "inline" — same markup
@@ -919,9 +959,11 @@
        row is a radio's toggle name, the current theme carrying vim's
        * marker — identified by the scheme+primary pair, since the
        dark themes all ride scheme slate and differ only in primary.
-       Rows are actions, not links — Enter or a click applies the
-       theme by clicking its radio (Material stamps body and persists
-       the choice) and dismisses the prompt. */
+       Rows are actions, not links — hovering or arrow-selecting one
+       previews its theme live (see the preview helpers above), and
+       Enter or a click commits it by clicking its radio (Material
+       stamps body and persists the choice) and dismisses the
+       prompt. */
     function paintThemes() {
       const radios = document.querySelectorAll('input[name="__palette"]');
       const scheme = document.body.getAttribute("data-md-color-scheme");
@@ -936,6 +978,9 @@
             (radio.getAttribute("aria-label") ||
               radio.getAttribute("data-md-color-scheme")) +
             (active ? " *" : ""),
+          preview: function () {
+            previewTheme(radio);
+          },
           action: function () {
             radio.click();
           },
@@ -1038,6 +1083,9 @@
     }
 
     function render() {
+      /* Any query change takes the :theme rows away; an uncommitted
+         preview goes with them (no-op otherwise). */
+      resetThemePreview();
       const seq = ++renderSeq;
       const query = input.value.trim();
       if (!query || query === ":") {
@@ -1121,6 +1169,7 @@
       if (row && row.action) {
         event.preventDefault();
         event.stopPropagation();
+        commitThemePreview();
         row.action();
         onDismiss();
         return;
@@ -1137,12 +1186,32 @@
 
     input.addEventListener("input", render);
 
+    /* Hovering a row moves the selection to it, and rows that carry a
+       preview (the :theme list) show it live — one behavior for mouse
+       and keyboard alike. mousemove rather than mouseover: repaints
+       and scrollIntoView refire mouseover under a stationary pointer,
+       which would let the resting mouse fight the arrow keys for the
+       selection. */
+    list.addEventListener("mousemove", function (event) {
+      const item =
+        event.target instanceof Element ? event.target.closest("li") : null;
+      const index = Array.prototype.indexOf.call(list.children, item);
+      if (index === selected) return;
+      const row = results[index];
+      if (!row || !row.preview) return;
+      selected = index;
+      paintSelection();
+      row.preview();
+    });
+
     input.addEventListener("keydown", function (event) {
       if (event.key === "ArrowDown" || event.key === "ArrowUp") {
         if (results.length) {
           const step = event.key === "ArrowDown" ? 1 : -1;
           selected = (selected + step + results.length) % results.length;
           paintSelection();
+          const row = results[selected];
+          if (row && row.preview) row.preview();
         }
         event.preventDefault();
       } else if (event.key === "Enter") {
@@ -1192,6 +1261,9 @@
 
   function closeOverlay() {
     if (!overlayOpen()) return;
+    /* The overlay keeps its query while closed (it resets on the next
+       open), so an uncommitted :theme preview must be undone here. */
+    resetThemePreview();
     overlay.root.classList.remove("kiln-jump--open");
     overlay.input.blur();
   }

@@ -5,11 +5,10 @@
    down/up a step (uppercase J/K deliberately do nothing — vim gives
    them unrelated meanings), [ and ] to the previous/next h2 section
    on the page. Pages:
-   < and > step to the previous/next top-level section by clicking
-   its header nav link (overrides/partials/header.html), wrapping at
-   the ends; 0 goes home via the header logo, and 1-6 open the
-   sections directly. Clicking links, rather than assigning location,
-   keeps navigation.instant in charge. The letter bindings are all
+   0 goes home via the header logo, and 1-6 open the top-level
+   sections by clicking the header nav links
+   (overrides/partials/header.html). Clicking links, rather than
+   assigning location, keeps navigation.instant in charge. The letter bindings are all
    strictly lowercase. t cycles the color theme by advancing
    Material's __palette radio group (mkdocs.yml order; the theme's
    own toggle button is hidden by extra.css, and the palette's :theme
@@ -65,33 +64,6 @@
     );
     const link = links[n - 1];
     if (link) link.click();
-  }
-
-  /* Steps to the previous (direction -1) or next (+1) top-level
-     section, wrapping at the ends — the header nav is the axis the
-     < > motions move along, landing on section index pages only
-     (page-chrome.js keeps the active class current across
-     navigation.instant). On the homepage no item is active and the
-     motions enter the ring at its start or end. */
-  function stepSection(direction) {
-    const links = document.querySelectorAll(
-      ".kiln-header__nav .kiln-header__link"
-    );
-    if (!links.length) return;
-    let index = -1;
-    for (let i = 0; i < links.length; i++) {
-      if (links[i].classList.contains("kiln-header__link--active")) {
-        index = i;
-        break;
-      }
-    }
-    const next =
-      index === -1
-        ? direction > 0
-          ? 0
-          : links.length - 1
-        : (index + direction + links.length) % links.length;
-    links[next].click();
   }
 
   /* Scrolls to the previous (direction -1) or next (+1) h2 section.
@@ -230,12 +202,6 @@
         break;
       case "]":
         jumpToHeading(1);
-        break;
-      case "<":
-        stepSection(-1);
-        break;
-      case ">":
-        stepSection(1);
         break;
       case "0":
         goHome();

@@ -102,87 +102,13 @@ html:has(> body[data-md-color-scheme="slate"]) {
   --md-accent-fg-color--transparent: var(--color-accent-transparent);
 }
 
-/* tokyo day — the day variant of Tokyo Night: blue ink on a cool
-   grey-blue ground. A light scheme, so Material's stock light
-   internals stand (the scheme name is unknown to Material and its
-   defaults live on :root); only the tokens change. The text ladder
-   descends through the palette's blues; the accent is the site's
-   default blue, which this theme happens to be built around. */
-[data-md-color-scheme="tokyo-day"],
-html:has(> body[data-md-color-scheme="tokyo-day"]) {
-  --color-bg: #e1e2e7;
-  --color-surface: #e9e9ec;
-  --color-border: #a8aecb;
-  --color-text-primary: #3760bf;
-  --color-text-secondary: #6172b0;
-  --color-text-muted: #848cb5;
-  --color-text-faint: #a1a6c5;
-  --color-accent: #2563eb;
-  --color-accent-transparent: rgba(37, 99, 235, 0.12);
-  --color-code-bg: #d5d6db;
-  --color-table-header-bg: #dcdee8;
-  --color-shadow: rgba(41, 46, 66, 0.12);
-
-  --md-accent-fg-color: var(--color-accent);
-  --md-accent-fg-color--transparent: var(--color-accent-transparent);
-}
-
-/* tokyo night — the night side of the pair. Rides scheme slate with
-   primary tokyo-night (see the mkdocs.yml palette comment), so the
-   two-attribute selector outranks the base slate block above; the
-   :has twin gains the same second attribute. --md-hue tints
-   Material's slate-derived internals (code-block grounds,
-   admonition text) toward the palette's blue-violet cast. */
-[data-md-color-scheme="slate"][data-md-color-primary="tokyo-night"],
-html:has(> body[data-md-color-scheme="slate"][data-md-color-primary="tokyo-night"]) {
-  --md-hue: 235;
-  --color-bg: #1a1b26;
-  --color-surface: #1f2335;
-  --color-border: #3b4261;
-  --color-text-primary: #c0caf5;
-  --color-text-secondary: #a9b1d6;
-  --color-text-muted: #737aa2;
-  --color-text-faint: #565f89;
-  --color-accent: #7aa2f7;
-  --color-accent-transparent: rgba(122, 162, 247, 0.15);
-  --color-code-bg: #16161e;
-  --color-table-header-bg: #16161e;
-  --color-shadow: rgba(0, 0, 0, 0.35);
-
-  --md-accent-fg-color: var(--color-accent);
-  --md-accent-fg-color--transparent: var(--color-accent-transparent);
-}
-
-/* catppuccin latte — the canonical latte ladder: text through
-   subtext1/overlay2/overlay0, surfaces on mantle and crust, the
-   palette's own blue as accent. A light custom scheme like tokyo
-   day. */
-[data-md-color-scheme="catppuccin-latte"],
-html:has(> body[data-md-color-scheme="catppuccin-latte"]) {
-  --color-bg: #eff1f5;
-  --color-surface: #e6e9ef;
-  --color-border: #acb0be;
-  --color-text-primary: #4c4f69;
-  --color-text-secondary: #5c5f77;
-  --color-text-muted: #7c7f93;
-  --color-text-faint: #9ca0b0;
-  --color-accent: #1e66f5;
-  --color-accent-transparent: rgba(30, 102, 245, 0.12);
-  --color-code-bg: #e6e9ef;
-  --color-table-header-bg: #dce0e8;
-  --color-shadow: rgba(76, 79, 105, 0.12);
-
-  --md-accent-fg-color: var(--color-accent);
-  --md-accent-fg-color--transparent: var(--color-accent-transparent);
-}
-
 /* phosphor — not a port: a P1 green CRT, Kiln's own. The whole text
    ladder is one phosphor at falling luminance, the accent a hotter
-   green, and the shadow glows instead of darkening. Rides slate like
-   tokyo night; Pygments keeps Material's dark token colors inside
-   code blocks (a full monochrome Pygments override is not worth the
-   maintenance), so listings read like a modern terminal wearing
-   green chrome. */
+   green, and the shadow glows instead of darkening. Rides slate with
+   --md-hue tinting Material's internals green; Pygments keeps
+   Material's dark token colors inside code blocks (a full monochrome
+   Pygments override is not worth the maintenance), so listings read
+   like a modern terminal wearing green chrome. */
 [data-md-color-scheme="slate"][data-md-color-primary="phosphor"],
 html:has(> body[data-md-color-scheme="slate"][data-md-color-primary="phosphor"]) {
   --md-hue: 120;
@@ -244,29 +170,6 @@ html:has(> body[data-md-color-scheme="slate"][data-md-color-primary="nord"]) {
   --color-code-bg: #292e39;
   --color-table-header-bg: #272c37;
   --color-shadow: rgba(0, 0, 0, 0.3);
-
-  --md-accent-fg-color: var(--color-accent);
-  --md-accent-fg-color--transparent: var(--color-accent-transparent);
-}
-
-/* vesper — near-black minimalism with the peach accent; the ladder
-   is vesper's neutral greys, --md-hue warmed slightly so Material's
-   internals sit with the accent rather than against it. */
-[data-md-color-scheme="slate"][data-md-color-primary="vesper"],
-html:has(> body[data-md-color-scheme="slate"][data-md-color-primary="vesper"]) {
-  --md-hue: 30;
-  --color-bg: #101010;
-  --color-surface: #161616;
-  --color-border: #282828;
-  --color-text-primary: #ffffff;
-  --color-text-secondary: #a0a0a0;
-  --color-text-muted: #7e7e7e;
-  --color-text-faint: #505050;
-  --color-accent: #ffc799;
-  --color-accent-transparent: rgba(255, 199, 153, 0.15);
-  --color-code-bg: #0c0c0c;
-  --color-table-header-bg: #161616;
-  --color-shadow: rgba(0, 0, 0, 0.5);
 
   --md-accent-fg-color: var(--color-accent);
   --md-accent-fg-color--transparent: var(--color-accent-transparent);
@@ -500,9 +403,9 @@ html::-webkit-scrollbar {
 }
 
 /* Headings take the ladder's primary step explicitly: Material colors
-   h1 through its own --md-default-fg-color--light, which tracks the
-   default/slate schemes but not a custom one (tokyo day would keep
-   near-black headings on blue prose without this). */
+   h1 through its own --md-default-fg-color--light, which tracks its
+   built-in schemes but not the per-theme token ladder — without this
+   a theme's headings would fall out of step with its prose. */
 .md-typeset h1,
 .md-typeset h2,
 .md-typeset h3 {

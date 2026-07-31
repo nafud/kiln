@@ -146,7 +146,7 @@ def run(page):
         assert "3.5.4 Discussion" in overlay_text(page)
         close_overlay(page)
 
-    with step("palette: :theme lists themes, applies them, t cycles pairs"):
+    with step("palette: :theme lists, previews, commits; t cycles pairs"):
         page.goto(chapter)
         open_overlay(page, ":theme")
         page.wait_for_selector(".kiln-jump--overlay .kiln-jump-result")
@@ -154,43 +154,37 @@ def run(page):
         # The current theme carries the * marker; the rows come from
         # the __palette radios, so this also guards mkdocs.yml.
         for name in [
-            "light *", "dark", "tokyo day", "tokyo night", "catppuccin latte",
-            "phosphor", "terminal", "nord", "vesper",
+            "system light *", "system dark", "phosphor", "terminal", "nord",
         ]:
             assert name in text, f"theme row {name!r} missing: {text!r}"
-        page.keyboard.press("ArrowDown")
-        page.keyboard.press("ArrowDown")
-        page.keyboard.press("Enter")
-        page.wait_for_timeout(200)
-        scheme = page.evaluate("() => document.body.getAttribute('data-md-color-scheme')")
-        assert scheme == "tokyo-day", f"tokyo day not applied: {scheme!r}"
-        assert not page.evaluate(
-            "() => document.querySelector('.kiln-jump--overlay').classList.contains('kiln-jump--open')"
-        ), "prompt not dismissed after applying a theme"
-        # The chapter prose must resolve the theme's ink, proving the
-        # token block and scheme stamp connect end to end.
-        ink = page.eval_on_selector(
-            ".md-typeset h1", "el => getComputedStyle(el).color"
-        )
-        assert ink == "rgb(55, 96, 191)", f"tokyo day ink not applied: {ink!r}"
-        # t steps to the next theme: tokyo night, a slate-based pair —
-        # this is what breaks if cyclePalette matches scheme alone.
-        page.keyboard.press("t")
-        page.wait_for_timeout(200)
+        # Arrow-selecting previews the theme live without committing.
+        page.keyboard.press("ArrowDown")  # system dark
+        page.keyboard.press("ArrowDown")  # phosphor
+        page.wait_for_timeout(150)
         pair = page.evaluate(
             "() => [document.body.getAttribute('data-md-color-scheme'),"
             " document.body.getAttribute('data-md-color-primary')]"
         )
-        assert pair == ["slate", "tokyo-night"], f"t did not reach tokyo night: {pair}"
+        assert pair == ["slate", "phosphor"], f"arrow preview wrong: {pair}"
         ink = page.eval_on_selector(".md-typeset h1", "el => getComputedStyle(el).color")
-        assert ink == "rgb(192, 202, 245)", f"tokyo night ink not applied: {ink!r}"
-        # The list stars the slate-based pair correctly.
+        assert ink == "rgb(51, 255, 51)", f"phosphor preview ink: {ink!r}"
+        # Hovering another row moves the preview with it.
+        page.hover(".kiln-jump--overlay .kiln-jump-result:nth-child(4) a")
+        page.wait_for_timeout(150)
+        pair = page.evaluate(
+            "() => [document.body.getAttribute('data-md-color-scheme'),"
+            " document.body.getAttribute('data-md-color-primary')]"
+        )
+        assert pair == ["slate", "terminal"], f"hover preview wrong: {pair}"
+        # Escape dismisses without committing: the preview reverts.
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(150)
+        scheme = page.evaluate("() => document.body.getAttribute('data-md-color-scheme')")
+        assert scheme == "default", f"preview not reverted on Escape: {scheme!r}"
+        # Enter commits: apply nord (last row) for real.
         open_overlay(page, ":theme")
         page.wait_for_selector(".kiln-jump--overlay .kiln-jump-result")
-        assert "tokyo night *" in overlay_text(page), "pair not starred in :theme"
-        # phosphor is the second slate-based pair; its ink must win
-        # over the base slate block.
-        for _ in range(5):
+        for _ in range(4):
             page.keyboard.press("ArrowDown")
         page.keyboard.press("Enter")
         page.wait_for_timeout(200)
@@ -198,16 +192,23 @@ def run(page):
             "() => [document.body.getAttribute('data-md-color-scheme'),"
             " document.body.getAttribute('data-md-color-primary')]"
         )
-        assert pair == ["slate", "phosphor"], f"phosphor not applied: {pair}"
+        assert pair == ["slate", "nord"], f"nord not applied: {pair}"
         ink = page.eval_on_selector(".md-typeset h1", "el => getComputedStyle(el).color")
-        assert ink == "rgb(51, 255, 51)", f"phosphor ink not applied: {ink!r}"
-        # Restore the default theme for the steps that follow.
+        assert ink == "rgb(236, 239, 244)", f"nord ink not applied: {ink!r}"
+        assert not page.evaluate(
+            "() => document.querySelector('.kiln-jump--overlay').classList.contains('kiln-jump--open')"
+        ), "prompt not dismissed after committing a theme"
+        # The list stars the committed slate-based pair.
         open_overlay(page, ":theme")
         page.wait_for_selector(".kiln-jump--overlay .kiln-jump-result")
-        page.keyboard.press("Enter")
+        assert "nord *" in overlay_text(page), "pair not starred in :theme"
+        close_overlay(page)
+        # t cycles onward from nord (the last theme), wrapping to
+        # system light — the pair-matched cycle.
+        page.keyboard.press("t")
         page.wait_for_timeout(200)
         scheme = page.evaluate("() => document.body.getAttribute('data-md-color-scheme')")
-        assert scheme == "default", f"light not restored: {scheme!r}"
+        assert scheme == "default", f"t did not wrap to system light: {scheme!r}"
 
     with step("inline bar: theme apply and outside click reset it"):
         page.goto(BASE + "/")
@@ -273,7 +274,9 @@ def run(page):
         page.keyboard.press("t")
         page.wait_for_timeout(200)
         assert page.evaluate("() => document.body.getAttribute('data-md-color-scheme')") != scheme
-        page.keyboard.press("t")
+        # Restore the default theme directly (t would need a full lap).
+        page.evaluate("() => document.querySelectorAll('input[name=\"__palette\"]')[0].click()")
+        page.wait_for_timeout(100)
         # There are no sidebars; s is a neutralized dead key — it must
         # neither focus Material's hidden search nor mark up body.
         page.keyboard.press("s")
@@ -315,20 +318,6 @@ def run(page):
         page.wait_for_timeout(500)
         landed = page.evaluate("() => location.pathname")
         assert landed.endswith("/guides/"), f"1 did not open guides: {landed}"
-        # < and > step between the six sections along the header nav,
-        # wrapping at the ends.
-        page.keyboard.press(">")
-        page.wait_for_timeout(500)
-        landed = page.evaluate("() => location.pathname")
-        assert landed.endswith("/links/"), f"> did not step to links: {landed}"
-        page.keyboard.press("<")
-        page.wait_for_timeout(500)
-        landed = page.evaluate("() => location.pathname")
-        assert landed.endswith("/guides/"), f"< did not step back to guides: {landed}"
-        page.keyboard.press("<")
-        page.wait_for_timeout(500)
-        landed = page.evaluate("() => location.pathname")
-        assert landed.endswith("/writeups/"), f"< did not wrap to writeups: {landed}"
 
     with step("widgets: keygen serial and two's-complement readout"):
         page.goto(f"{BASE}/writeups/crackmes-one/crackmes-one-cfb1/")
