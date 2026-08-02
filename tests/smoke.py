@@ -154,12 +154,12 @@ def run(page):
         # The current theme carries the * marker; the rows come from
         # the __palette radios, so this also guards mkdocs.yml.
         for name in [
-            "system light *", "system dark", "phosphor", "terminal", "nord",
+            "terminal *", "system light", "system dark", "phosphor", "nord",
         ]:
             assert name in text, f"theme row {name!r} missing: {text!r}"
         # Arrow-selecting previews the theme live without committing.
-        page.keyboard.press("ArrowDown")  # system dark
-        page.keyboard.press("ArrowDown")  # phosphor
+        for _ in range(3):
+            page.keyboard.press("ArrowDown")  # -> phosphor
         page.wait_for_timeout(150)
         pair = page.evaluate(
             "() => [document.body.getAttribute('data-md-color-scheme'),"
@@ -169,18 +169,22 @@ def run(page):
         ink = page.eval_on_selector(".md-typeset h1", "el => getComputedStyle(el).color")
         assert ink == "rgb(51, 255, 51)", f"phosphor preview ink: {ink!r}"
         # Hovering another row moves the preview with it.
-        page.hover(".kiln-jump--overlay .kiln-jump-result:nth-child(4) a")
+        page.hover(".kiln-jump--overlay .kiln-jump-result:nth-child(2) a")
         page.wait_for_timeout(150)
         pair = page.evaluate(
             "() => [document.body.getAttribute('data-md-color-scheme'),"
             " document.body.getAttribute('data-md-color-primary')]"
         )
-        assert pair == ["slate", "terminal"], f"hover preview wrong: {pair}"
-        # Escape dismisses without committing: the preview reverts.
+        assert pair == ["default", "white"], f"hover preview wrong: {pair}"
+        # Escape dismisses without committing: the preview reverts to
+        # the default theme, terminal.
         page.keyboard.press("Escape")
         page.wait_for_timeout(150)
-        scheme = page.evaluate("() => document.body.getAttribute('data-md-color-scheme')")
-        assert scheme == "default", f"preview not reverted on Escape: {scheme!r}"
+        pair = page.evaluate(
+            "() => [document.body.getAttribute('data-md-color-scheme'),"
+            " document.body.getAttribute('data-md-color-primary')]"
+        )
+        assert pair == ["slate", "terminal"], f"preview not reverted on Escape: {pair}"
         # Enter commits: apply nord (last row) for real.
         open_overlay(page, ":theme")
         page.wait_for_selector(".kiln-jump--overlay .kiln-jump-result")
@@ -204,11 +208,14 @@ def run(page):
         assert "nord *" in overlay_text(page), "pair not starred in :theme"
         close_overlay(page)
         # t cycles onward from nord (the last theme), wrapping to
-        # system light — the pair-matched cycle.
+        # terminal — the pair-matched cycle.
         page.keyboard.press("t")
         page.wait_for_timeout(200)
-        scheme = page.evaluate("() => document.body.getAttribute('data-md-color-scheme')")
-        assert scheme == "default", f"t did not wrap to system light: {scheme!r}"
+        pair = page.evaluate(
+            "() => [document.body.getAttribute('data-md-color-scheme'),"
+            " document.body.getAttribute('data-md-color-primary')]"
+        )
+        assert pair == ["slate", "terminal"], f"t did not wrap to terminal: {pair}"
 
     with step("inline bar: theme apply and outside click reset it"):
         page.goto(BASE + "/")
