@@ -35,7 +35,6 @@ markdown_extensions:
 theme:
   name: material
   custom_dir: overrides
-  logo: assets/images/kiln-logo-favicon.png
   favicon: assets/images/kiln-logo-favicon.png
   font: false
   # The site's themes, terminal first (the first entry is what a new
@@ -46,11 +45,12 @@ theme:
   # command lists them, so the `toggle:` blocks exist to make Material
   # render the radio group, and each `toggle.name` is the theme's
   # display name in the :theme list. A theme's identity is its
-  # scheme+primary pair: light themes use a custom scheme name
+  # scheme+primary pair: a light theme takes a custom scheme name
   # (Material's own defaults live on :root, so an unknown scheme
   # inherits the stock light internals and extra.css re-colors it
-  # through the --color-* tokens alone), while dark themes ride
-  # `scheme: slate` with a distinct `primary` slug — Material's entire
+  # through the --color-* tokens alone; the stock light theme itself
+  # rides `default`), while dark themes ride `scheme: slate` with a
+  # distinct `primary` slug — Material's entire
   # dark kit (Pygments, admonitions) is scoped to slate in palette.css,
   # so a custom-named dark scheme would render light code blocks on a
   # dark ground.
@@ -85,12 +85,14 @@ theme:
       toggle:
         icon: material/toggle-switch-off
         name: nord
+  # Only features whose machinery still exists: instant navigation
+  # (the page scripts are built around it) and the code-copy button.
+  # The sidebar/toc-bound features (navigation.tracking/indexes/prune,
+  # toc.follow) died with the sidebars — overrides/main.html empties
+  # the site_nav block, so there is no toc component to track or
+  # follow and no rendered nav to prune or index.
   features:
     - navigation.instant
-    - navigation.tracking
-    - navigation.indexes
-    - navigation.prune
-    - toc.follow
     - content.code.copy
 
 extra_css:

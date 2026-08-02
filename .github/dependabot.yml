@@ -1,11 +1,18 @@
+# Update PRs target secondary, never primary: the branch pipeline
+# (see CLAUDE.md) reviews bumps on secondary behind build-check, and
+# primary receives only fast-forward pushes of CI-verified secondary
+# states. Without target-branch Dependabot PRs would aim at the
+# default branch (primary) and bypass the whole pipeline.
 version: 2
 updates:
   - package-ecosystem: pip
     directory: "/"
+    target-branch: secondary
     schedule:
       interval: weekly
 
   - package-ecosystem: github-actions
     directory: "/"
+    target-branch: secondary
     schedule:
       interval: weekly

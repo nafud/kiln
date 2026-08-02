@@ -11,14 +11,6 @@
 (function () {
   "use strict";
 
-  /* Site base from the header logo's href — the same derivation
-     quick-jump.js uses; the logo links to the site root at the right
-     relative depth on every page. */
-  function siteBase() {
-    const logo = document.querySelector(".md-header a.md-logo");
-    return new URL(logo ? logo.getAttribute("href") : ".", location.href);
-  }
-
   /* Cached scroll range for the readout. Reading scrollHeight forces a
      layout flush, so the per-scroll-event path must never touch it —
      during wheel autoscroll that flush lands on every frame of a long
@@ -60,7 +52,7 @@
   function updatePath() {
     const path = document.querySelector(".kiln-status__path");
     if (!path) return;
-    const base = siteBase().pathname;
+    const base = KilnUtils.siteBase().pathname;
     let rel = location.pathname.startsWith(base)
       ? location.pathname.slice(base.length)
       : location.pathname;

@@ -78,6 +78,17 @@
   --md-accent-fg-color--transparent: var(--color-accent-transparent);
 }
 
+/* The accent bridge again at body level: Material's palette.css sets
+   --md-accent-fg-color under [data-md-color-accent=…] on body, which
+   beats the :root copy above by inheritance proximity — without this,
+   system light's hovered links drift to Material's stock accent blue.
+   The other themes' token blocks already match body and win on their
+   own. */
+[data-md-color-scheme="default"] {
+  --md-accent-fg-color: var(--color-accent);
+  --md-accent-fg-color--transparent: var(--color-accent-transparent);
+}
+
 /* Non-default themes re-declare the tokens per scheme. Each block's
    :has twin repeats them on the html element: Material stamps
    data-md-color-scheme on body, but the frame masks are html
@@ -185,8 +196,7 @@ textarea,
 select,
 .md-typeset,
 .md-header,
-.md-search,
-.md-tabs {
+.md-search {
   font-family: "JetBrains Mono", monospace !important;
 }
 

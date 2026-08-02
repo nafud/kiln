@@ -1,7 +1,13 @@
 name: Build Check
 
+# pull_request covers PRs into secondary (Dependabot's update PRs
+# land there), so a bump shows a real check before merge instead of
+# green-by-absence; push covers direct commits.
 on:
   push:
+    branches:
+      - secondary
+  pull_request:
     branches:
       - secondary
   workflow_dispatch:
@@ -51,7 +57,10 @@ jobs:
             'md-main__inner' \
             'md-content__inner' \
             'md-typeset' \
-            'md-header'; do
+            'md-header' \
+            'md-container' \
+            'md-footer' \
+            'data-md-color-scheme'; do
             grep -qF -- "$hook" site/index.html || {
               echo "::error::Material internal '$hook' is gone from the built HTML — a theme update likely renamed it. Update the overrides in docs/stylesheets/extra.css and the page scripts that hook it."
               exit 1
@@ -117,6 +126,21 @@ jobs:
               exit 1
             }
           done
+
+          # Two hooks that never appear in the homepage HTML: the
+          # filename header on title= fences (rendered only on pages
+          # that use them) and the table wrapper class Material's JS
+          # adds at runtime (guarded in the JS bundle, like the copy
+          # button in the CSS bundle).
+          grep -qF -- 'class="filename"' site/books/csapp/chapter-03/index.html || {
+            echo "::error::span.filename is gone from title= fences — Pygments/Material likely changed the markup. Update the filename-header rule in docs/stylesheets/extra.css."
+            exit 1
+          }
+          js=$(ls site/assets/javascripts/bundle.*.min.js | head -1)
+          grep -qF -- 'md-typeset__table' "$js" || {
+            echo "::error::Material internal 'md-typeset__table' is gone from the JS bundle — a theme update likely renamed the runtime table wrapper. Update the table rules in docs/stylesheets/extra.css."
+            exit 1
+          }
 
       - name: Install smoke-test dependencies
         run: |

@@ -24,12 +24,12 @@
    s/S, F and / — are neutralized by a capture-phase listener below
    so nothing can summon the hidden search form: all of them are dead
    keys, and the jump palette is backtick's alone (quick-jump.js).
-   Material's p/n page keys are neutralized the same way: < and > are
-   the page motions here, n/N belong to the palette's /search as
-   vim's search-repeat motions (quick-jump.js owns them and registers
-   earlier, so it wins the capture race while a search is armed), and
-   p/P are plain dead keys (vim means paste by them). All of them
-   still type normally in inputs.
+   Material's p/n page keys are neutralized the same way: n/N belong
+   to the palette's /search as vim's search-repeat motions
+   (quick-jump.js owns them and registers earlier, so it wins the
+   capture race while a search is armed), and p/P are plain dead keys
+   (vim means paste by them). All of them still type normally in
+   inputs.
 
    Keys are ignored while typing (inputs, textareas, contenteditable)
    and in chords with Ctrl/Alt/Meta. Scrolling is smooth unless the
@@ -70,12 +70,14 @@
      The anchor line sits just below the top chrome; next is the first
      heading below it, previous the last heading above it, with a
      small tolerance so the heading currently at the anchor line is
-     not re-selected. */
+     not re-selected. The anchor line is the shared
+     KilnUtils.anchorOffset, so [ ] and the palette's n/N motions
+     agree on where the top is. */
   function jumpToHeading(direction) {
     const headings = document.querySelectorAll(".md-content h2");
     if (!headings.length) return;
 
-    const offset = 48;
+    const offset = KilnUtils.anchorOffset();
     const tolerance = 4;
     let target = null;
     for (let i = 0; i < headings.length; i++) {

@@ -17,6 +17,10 @@ concurrency:
 
 jobs:
   deploy:
+    # workflow_dispatch offers a branch picker; production only ever
+    # builds from primary, so a dispatch from any other ref is a no-op
+    # instead of a rogue deploy.
+    if: github.ref == 'refs/heads/primary'
     runs-on: ubuntu-latest
 
     environment:

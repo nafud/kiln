@@ -38,8 +38,9 @@
    pages keep their card grids — the rule is gated on the ASCII logo).
 
    Pages come from the search plugin's search_index.json, the same data
-   Material's search uses, fetched lazily once per full page load — no
-   extra build step. The overlay lives on document.body and survives
+   Material's search uses, prefetched on browser idle and cached per
+   full page load (the on-demand load is the fallback) — no extra
+   build step. The overlay lives on document.body and survives
    navigation.instant; the inline variant is remounted per homepage
    visit via KilnUtils.onPageChange. */
 
@@ -82,21 +83,13 @@
 
   /* ---------- page data ---------- */
 
-  /* The header logo links to the site root on every page, at the right
-     relative depth, so it doubles as the base for site-absolute URLs
-     (key-nav.js clicks the same element for the 0 key). */
-  function siteBase() {
-    const logo = document.querySelector(".md-header a.md-logo");
-    return new URL(logo ? logo.getAttribute("href") : ".", location.href);
-  }
-
   /* One fetch of the search plugin's index feeds both views below.
      Cached for the lifetime of the full page load; a failed fetch
      clears the cache so a later open retries. */
   let indexPromise = null;
   function loadIndex() {
     if (!indexPromise) {
-      indexPromise = fetch(new URL("search/search_index.json", siteBase()))
+      indexPromise = fetch(new URL("search/search_index.json", KilnUtils.siteBase()))
         .then(function (response) {
           if (!response.ok) throw new Error("HTTP " + response.status);
           return response.json();
@@ -135,7 +128,7 @@
   function loadData() {
     if (dataCache) return Promise.resolve(dataCache);
     return loadIndex().then(function (index) {
-      const base = siteBase();
+      const base = KilnUtils.siteBase();
       const pageTitles = {};
       index.docs.forEach(function (doc) {
         if (doc.location.indexOf("#") === -1) {
@@ -180,7 +173,7 @@
   let versionPromise = null;
   function loadVersion() {
     if (!versionPromise) {
-      versionPromise = fetch(new URL("version.json", siteBase()))
+      versionPromise = fetch(new URL("version.json", KilnUtils.siteBase()))
         .then(function (response) {
           if (!response.ok) throw new Error("HTTP " + response.status);
           return response.json();
@@ -481,8 +474,7 @@
     if (!ranges.length) return;
     let index;
     if (searchState.index === -1) {
-      const header = document.querySelector(".md-header");
-      const anchor = (header ? header.offsetHeight : 0) + 16;
+      const anchor = KilnUtils.anchorOffset();
       index = direction > 0 ? 0 : ranges.length - 1;
       for (let i = 0; i < ranges.length; i++) {
         const top = ranges[i].getBoundingClientRect().top;
@@ -514,6 +506,13 @@
      literals and the C integer operators at C precedence (| ^ &
      << >> + - * / % and unary - ~, parentheses). Anything the
      grammar rejects throws, and :x reports it as vim's E15. */
+  /* BigInt values built with the constructor, never literals — the
+     same old-parser strategy page-utils.js documents for twosReadout:
+     a literal would make this whole file (navigation, search, help) a
+     SyntaxError, instead of failing only where :x exercises BigInt. */
+  const ZERO = BigInt(0);
+  const SHIFT_CAP = BigInt(512); /* larger shift amounts are rejected */
+
   function evalIntExpr(source) {
     let pos = 0;
 
@@ -565,13 +564,13 @@
         case "&": return a & b;
         /* An absurd shift amount would let BigInt allocate gigabytes;
            512 bits covers anything a binary note works with. */
-        case "<<": if (b < 0n || b > 512n) fail(); return a << b;
-        case ">>": if (b < 0n || b > 512n) fail(); return a >> b;
+        case "<<": if (b < ZERO || b > SHIFT_CAP) fail(); return a << b;
+        case ">>": if (b < ZERO || b > SHIFT_CAP) fail(); return a >> b;
         case "+": return a + b;
         case "-": return a - b;
         case "*": return a * b;
-        case "/": if (b === 0n) fail(); return a / b;
-        case "%": if (b === 0n) fail(); return a % b;
+        case "/": if (b === ZERO) fail(); return a / b;
+        case "%": if (b === ZERO) fail(); return a % b;
       }
     }
 
@@ -826,6 +825,9 @@
       list.appendChild(item);
       input.setAttribute("aria-expanded", "false");
       input.removeAttribute("aria-activedescendant");
+      /* Command output is not options: clear the live result count,
+         or AT keeps announcing the previous query's "N results". */
+      status.textContent = "";
       clampToViewport();
     }
 
@@ -1039,8 +1041,8 @@
         ]);
         return;
       }
-      const sign = value < 0n ? "-" : "";
-      const abs = value < 0n ? -value : value;
+      const sign = value < ZERO ? "-" : "";
+      const abs = value < ZERO ? -value : value;
       paintOutput([
         "hex  " + sign + "0x" + abs.toString(16),
         "dec  " + value.toString(10),
@@ -1147,31 +1149,50 @@
        anchor row (a :toc row, a section hit on the open page)
        dismisses the prompt, since no page change will fire for a
        hash jump and the page change is what normally closes it. */
+    /* Rows never steal focus from the input (the combobox rule): a
+       mousedown that moved focus to body would leave the prompt open
+       but deaf to Escape — notably after a guarded modified click on
+       an action row, which navigates nowhere — and the keys would
+       fall through to the page while a preview is still showing.
+       Activation runs on click, so this changes nothing else; the
+       guard is scoped to anchors so the results scrollbar still
+       drags. */
+    list.addEventListener("mousedown", function (event) {
+      const target = event.target;
+      if (target instanceof Element && target.closest("a")) {
+        event.preventDefault();
+      }
+    });
+
     list.addEventListener("click", function (event) {
       const target = event.target;
       const link = target instanceof Element ? target.closest("a") : null;
       if (!link) return;
-      /* A modified click (new tab, download) navigates elsewhere or
-         not at all — arming this tab's search for it would light up a
-         later unrelated navigation. */
-      if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) {
-        return;
-      }
-      /* Action rows run their callback and dismiss; nothing below
-         (search arming, anchor dismissal) concerns them. The click
-         must also never bubble on: Material's instant-loading
-         observer on body constructs a URL from any clicked anchor's
-         href, and an href-less anchor's empty string throws inside
-         its RxJS pipeline, killing Material's components (the palette
-         radios among them) for the rest of the page's life. */
+      /* Action rows are handled before the modified-click guard below:
+       their click must never bubble on, modifiers or not — Material's
+       instant-loading observer on body constructs a URL from any
+       clicked anchor's href, and an action row's empty href throws
+       inside its RxJS pipeline, killing Material's components (the
+       palette radios among them) for the rest of the page's life. A
+       modified click on an action row is meaningless (nothing to open
+       in a tab), so it is swallowed without running the action. */
       const index = Array.prototype.indexOf.call(list.children, link.closest("li"));
       const row = results[index];
       if (row && row.action) {
         event.preventDefault();
         event.stopPropagation();
+        if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) {
+          return;
+        }
         commitThemePreview();
         row.action();
         onDismiss();
+        return;
+      }
+      /* A modified click (new tab, download) navigates elsewhere or
+         not at all — arming this tab's search for it would light up a
+         later unrelated navigation. */
+      if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey) {
         return;
       }
       const query = input.value.trim();
@@ -1186,12 +1207,12 @@
 
     input.addEventListener("input", render);
 
-    /* Hovering a row moves the selection to it, and rows that carry a
-       preview (the :theme list) show it live — one behavior for mouse
-       and keyboard alike. mousemove rather than mouseover: repaints
-       and scrollIntoView refire mouseover under a stationary pointer,
-       which would let the resting mouse fight the arrow keys for the
-       selection. */
+    /* Hovering a :theme row moves the selection to it and shows its
+       preview live, so mouse and keyboard agree on what Enter would
+       commit. Ordinary result rows keep their CSS hover styling only —
+       moving the selection under a resting mouse would fight the
+       arrow keys. mousemove rather than mouseover: repaints and
+       scrollIntoView refire mouseover under a stationary pointer. */
     list.addEventListener("mousemove", function (event) {
       const item =
         event.target instanceof Element ? event.target.closest("li") : null;
@@ -1301,7 +1322,7 @@
         /* vim's search-repeat motions, owned here because the pattern
            and ranges live here. This capture listener registers
            before key-nav.js's swallow listener (script load order),
-           which turns n/N — and Material's p/P page keys — into dead
+           which turns n/N — and Material's p/n page keys — into dead
            keys: with no armed search these fall through to the
            swallow and do nothing; with one armed, this handler wins
            the race and cycles. */
@@ -1315,8 +1336,11 @@
       if (event.key === "Escape" && !inPalette) {
         /* Clears the armed search — pattern, ranges, and tint in one
            go (vim splits this between :noh and a new search; one key
-           is simpler and predictable). The palette's own Escape lives
-           on its input and is untouched. */
+           is simpler and predictable). Not from typing contexts: an
+           Escape that leaves a widget input must not also clear the
+           page's highlights. The palette's own Escape lives on its
+           input and is untouched. */
+        if (KilnUtils.isTypingTarget(event.target)) return;
         if (searchState.pattern) clearSearch();
         return;
       }
@@ -1327,7 +1351,7 @@
            reads as enter-and-leave-the-prompt). */
         if (KilnUtils.isTypingTarget(event.target) && !inPalette) return;
         if (overlayOpen()) closeOverlay();
-        else if (inPalette) event.target.blur();
+        else if (inPalette) dismissInline();
         else openPrompt();
         event.preventDefault();
       }
@@ -1380,6 +1404,12 @@
 
   KilnUtils.onPageChange(function () {
     closeOverlay();
+    /* A preview armed in the inline bar can reach here without any
+       dismissal — browser Back/Forward fires no click and no query
+       change, and closeOverlay above no-ops when the overlay is
+       closed. Body attributes survive navigation.instant, so an
+       uncommitted preview would otherwise ride onto the next page. */
+    resetThemePreview();
     syncHomepage();
     /* A /search pattern armed from the palette activates on the page
        it lands on — instant navigation and full load alike, which is

@@ -420,9 +420,11 @@ def main():
                 lambda r: external.append(r.url) if "127.0.0.1" not in r.url else None,
             )
             run(page)
-            with step("self-contained: no font/CDN origins contacted"):
-                fonts = [u for u in external if "fonts.g" in u]
-                assert not fonts, fonts
+            with step("self-contained: no external origins contacted at all"):
+                # The site is fully self-hosted by design: fonts, scripts,
+                # and data all come from the site origin. Any request that
+                # leaves 127.0.0.1 is a regression, not just Google Fonts.
+                assert not external, external
             run_no_js(browser)
             browser.close()
     finally:
