@@ -85,4 +85,3 @@ External sources for tools and malware samples.
 | Resource |
 |---|
 | [theZoo](https://thezoo.morirt.com/){ .external-link } |
-| [Ultimate RAT Collection](https://github.com/Cryakl/Ultimate-RAT-Collection){ .external-link } |

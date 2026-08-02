@@ -25,7 +25,11 @@ jobs:
       # --scheme limits the run to remote links (relative .md links are
       # the strict build's job). 403/429 are accepted: the malware
       # sample sources and several blogs sit behind bot protection, and
-      # a challenge page is not a dead link.
+      # a challenge page is not a dead link. 503 is accepted too — it
+      # means the server exists and answered (hackthissite.org spends
+      # half its life mid-DDoS); a dead link 404s or times out. The
+      # 35s timeout accommodates hosts that answer runners slowly
+      # (agner.org, sweetscape.com) without masking real rot.
       - name: Check external links
         uses: lycheeverse/lychee-action@v2
         with:
@@ -33,8 +37,8 @@ jobs:
             --no-progress
             --scheme https
             --scheme http
-            --accept '200..=299, 403, 429'
-            --timeout 20
+            --accept '200..=299, 403, 429, 503'
+            --timeout 35
             --max-retries 3
             'docs/**/*.md'
           fail: true
