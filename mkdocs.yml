@@ -125,7 +125,6 @@ nav:
       - Arch Linux: guides/arch-linux/index.md
       - Radare2: guides/radare2/index.md
       - Volatility 3: guides/volatility3/index.md
-      - Workspace setup: guides/workspace-setup/index.md
 
   - Links: links/index.md
 
