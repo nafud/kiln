@@ -19,4 +19,9 @@ Usage guides and cheat sheets for the tools in regular use.
 <span class="home-card-text">Memory forensics plugin reference.</span>
 </a>
 
+<a class="home-card" href="workspace-setup/">
+<span class="home-card-title">Workspace setup</span>
+<span class="home-card-text">The niri workspace in one command.</span>
+</a>
+
 </div>
