@@ -264,12 +264,12 @@ def run(page):
         page.wait_for_timeout(400)
         assert page.evaluate("() => location.pathname") == path, "n/p navigated"
 
-    with step("keys: ] G gg scroll, t theme, s dead"):
+    with step("keys: l G gg scroll, t theme, s dead"):
         page.goto(chapter)
         page.wait_for_timeout(300)
-        page.keyboard.press("]")
+        page.keyboard.press("l")
         page.wait_for_timeout(400)
-        assert page.evaluate("() => window.scrollY") > 0, "] did not scroll"
+        assert page.evaluate("() => window.scrollY") > 0, "l did not scroll"
         page.keyboard.press("G")
         page.wait_for_timeout(700)
         y_bottom = page.evaluate("() => window.scrollY")

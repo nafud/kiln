@@ -3,8 +3,9 @@
    Scrolling is the vim vocabulary, case-accurate: gg (a two-tap
    chord) jumps to the top, G to the bottom, lowercase j/k scroll
    down/up a step (uppercase J/K deliberately do nothing — vim gives
-   them unrelated meanings), [ and ] to the previous/next h2 section
-   on the page. Pages:
+   them unrelated meanings), h and l to the previous/next h2 section
+   on the page (vim's horizontal pair, repurposed as the horizontal
+   motion a document has: across sections; uppercase H/L stay dead). Pages:
    0 goes home via the header logo, and 1-6 open the top-level
    sections by clicking the header nav links
    (overrides/partials/header.html). Clicking links, rather than
@@ -71,7 +72,7 @@
      heading below it, previous the last heading above it, with a
      small tolerance so the heading currently at the anchor line is
      not re-selected. The anchor line is the shared
-     KilnUtils.anchorOffset, so [ ] and the palette's n/N motions
+     KilnUtils.anchorOffset, so h/l and the palette's n/N motions
      agree on where the top is. */
   function jumpToHeading(direction) {
     const headings = document.querySelectorAll(".md-content h2");
@@ -199,10 +200,10 @@
       case "k":
         window.scrollBy({ top: -SCROLL_STEP_PX, behavior: scrollBehavior() });
         break;
-      case "[":
+      case "h":
         jumpToHeading(-1);
         break;
-      case "]":
+      case "l":
         jumpToHeading(1);
         break;
       case "0":

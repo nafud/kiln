@@ -57,7 +57,7 @@
     ["NAVIGATION", [
       [["k", "j"], "Scroll up / down"],
       [["gg", "G"], "Jump to top / bottom"],
-      [["[", "]"], "Navigate headings"],
+      [["h", "l"], "Navigate headings"],
       [["0"], "Home"],
       [["1-6"], "Open section"],
     ]],
@@ -929,7 +929,7 @@
     }
 
     /* :toc — the current page's headings as jumpable rows, h2 and h3
-       (the [ ] keys only step h2s, and there is no toc sidebar, so
+       (the h/l keys only step h2s, and there is no toc sidebar, so
        this is the prompt's own way to get oriented mid-page). Painted
        through the normal result machinery, so Arrow/Enter work; the
        landing is a same-page anchor click, and openSelected dismisses

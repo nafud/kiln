@@ -42,7 +42,7 @@ const KilnUtils = {
   },
 
   /* The anchor line for in-page vertical positioning — just below the
-     fixed header chrome. Shared by the [ ] heading motions
+     fixed header chrome. Shared by the h/l heading motions
      (key-nav.js) and the n/N match motions (quick-jump.js), so the
      two vocabularies always agree on where "the top" is. */
   anchorOffset: function () {
