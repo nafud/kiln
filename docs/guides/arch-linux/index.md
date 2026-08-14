@@ -1,13 +1,11 @@
 # Arch Linux
 
-A manual installation, no archinstall, run over SSH from a second machine
-and ending in a LUKS2-encrypted btrfs system with a snapshot before every
-package transaction, bootable snapshot entries in GRUB, zram swap, and the
-niri workspace deployed from
-[dotfiles](https://github.com/nafud/dotfiles){ .external-link } in one
-command. Written on a Tiger Lake ThinkBook (Iris Xe graphics, NVMe disk,
-UEFI); the shape transfers to any UEFI machine, though device names,
-sizes, and firmware keys may not.
+A manual Arch Linux installation, run over SSH from a second machine. The
+result is a LUKS2-encrypted btrfs system with automatic snapshots and the
+niri workspace from
+[dotfiles](https://github.com/nafud/dotfiles){ .external-link } deployed
+in one command. Written on a Tiger Lake ThinkBook; the shape transfers to
+any UEFI machine.
 
 ## Decisions
 
@@ -16,27 +14,12 @@ follows from them.
 
 | Topic | Choice | Rationale |
 | --- | --- | --- |
-| Filesystem | btrfs on LUKS2, no LVM | Subvolumes share one pool instead of fixed-size volumes, and snapper plus grub-btrfs give a rollback point before every update on a rolling release. ZFS was considered and rejected as an out-of-tree module on a rolling kernel whose multi-disk strengths a single NVMe never uses |
-| Bootloader | GRUB | grub-btrfs generates boot menu entries for snapshots; systemd-boot has no equivalent |
-| `/boot` | Separate unencrypted ext4 | GRUB never has to unlock LUKS, so the LUKS2 argon2id defaults stay |
-| Kernels | `linux` and `linux-lts` | Snapshots do not cover `/boot`. The LTS entry answers a broken kernel the way snapshots answer broken userspace |
-| Swap | zram only | No partition, no swapfile, no hibernation. Plain suspend covers the use case |
-| Secure Boot | Off, for the install and after | The Arch ISO is unsigned. Re-enabling later with `sbctl` and custom keys is possible and out of scope |
-
-## Preparation
-
-Two things before the ISO ever boots.
-
-**Backup.** The install wipes the disk whole. Anything not in a remote
-repository dies with it, so sweep the outgoing system first. SSH keys
-(`~/.ssh`) matter twice over, once as data and once because pushing to the
-dotfiles repository from the new system depends on them. GPG keys, browser
-profiles, documents, and any uncommitted configs round out the list.
-
-**Secure Boot.** The outgoing OS boots through a Microsoft-signed shim; the
-Arch ISO is unsigned and the firmware will refuse it. Enter firmware setup
-(F1 at power-on on ThinkBooks), then Security, Secure Boot, Disabled. It
-stays off after the install.
+| Filesystem | btrfs on LUKS2, no LVM | Subvolumes share one pool with no fixed sizes; snapper makes upgrades reversible |
+| Bootloader | GRUB | grub-btrfs generates boot entries for snapshots; systemd-boot has no equivalent |
+| `/boot` | Separate unencrypted ext4 | GRUB never unlocks LUKS, so the LUKS2 argon2id defaults stay |
+| Kernels | `linux` and `linux-lts` | Snapshots do not cover `/boot`; the LTS entry answers a broken kernel |
+| Swap | zram only | Compressed swap in RAM; no partition, no swapfile, no hibernation |
+| Secure Boot | Off, before and after | The Arch ISO is unsigned; re-enabling with `sbctl` is out of scope |
 
 ## ISO and USB
 
@@ -51,9 +34,11 @@ lsblk -d -o NAME,SIZE,MODEL     # identify the stick, not a hard disk
 sudo dd if=archlinux-x86_64.iso of=/dev/sdX bs=4M status=progress conv=fsync
 ```
 
-Boot the target machine with F12 and pick the `UEFI:`-prefixed entry for
-the stick. A legacy entry may sit next to it in the menu, and booting that
-one lands in BIOS mode, which fails the first sanity check below.
+Secure Boot must be disabled first (firmware setup, F1 at power-on here);
+the Arch ISO is unsigned and the firmware refuses it otherwise. Then boot
+the target machine with F12 and pick the `UEFI:`-prefixed entry for the
+stick. A legacy entry may sit next to it in the menu, and booting that one
+lands in BIOS mode, which fails the first sanity check below.
 
 ## Remote Session
 
