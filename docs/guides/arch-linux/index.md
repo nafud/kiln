@@ -1,8 +1,8 @@
 # Arch Linux
 
-A manual Arch Linux installation, run over SSH from a second machine. The
-result is a LUKS2-encrypted btrfs system with automatic snapshots and the
-niri workspace from
+A manual Arch Linux installation from the live ISO console. The result is
+a LUKS2-encrypted btrfs system with automatic snapshots and the niri
+workspace from
 [dotfiles](https://github.com/nafud/dotfiles){ .external-link } deployed
 in one command. Written on a Tiger Lake ThinkBook; the shape transfers to
 any UEFI machine.
@@ -40,31 +40,25 @@ the target machine with F12 and pick the `UEFI:`-prefixed entry for the
 stick. A legacy entry may sit next to it in the menu, and booting that one
 lands in BIOS mode, which fails the first sanity check below.
 
-## Remote Session
+## Network
 
-The install runs over SSH for copy-paste, scrollback, and documentation in
-a browser. Only this bootstrap and the LUKS passphrase ever need the target
-machine's own keyboard. The live ISO already runs sshd, but root's password
-is empty and SSH refuses empty passwords, so at the target's console set
-one, join the network, and note the address.
+Nothing installs without internet, so this comes first. Ethernet works on
+plug-in; Wi-Fi joins through iwd at the console.
 
 ```console
-# passwd
 # iwctl
 [iwd]# station wlan0 connect "SSID"
 [iwd]# exit
-# ip -br addr
+# ping -c1 archlinux.org
 ```
 
-Ethernet needs none of the iwctl part. From the second machine, connect and
-open a multiplexer immediately; a Wi-Fi hiccup then suspends the SSH
-session without killing a package transaction mid-write, and `tmux attach`
-resumes it.
-
-```bash
-ssh root@<ip>
-tmux
-```
+Working the rest of the guide over SSH from another machine is optional;
+it buys copy-paste and scrollback, nothing more, and every command below
+is the same either way. The live ISO already runs sshd, but root's
+password is empty and SSH refuses empty passwords, so set one with
+`passwd`, read the address from `ip -br addr`, connect with
+`ssh root@<ip>`, and open `tmux` so a dropped connection never kills a
+package transaction mid-write.
 
 ## Disk Layout
 
@@ -280,13 +274,12 @@ cryptsetup close cryptroot
 reboot                          # remove the USB stick when the screen blanks
 ```
 
-The SSH session dies with the reboot, and the LUKS passphrase is a
-pre-boot prompt that only the physical keyboard can answer. The expected
-sequence on screen, in order. The GRUB menu with entries for both `linux`
-and `linux-lts`; the passphrase prompt from the initramfs; a console
-login. Log in as the user, join the network with `nmtui`, and the rest of
-the work can return to SSH (as the user; root logins are refused, and the
-address may have changed).
+The expected sequence on screen, in order. The GRUB menu with entries for
+both `linux` and `linux-lts`; the LUKS passphrase prompt from the
+initramfs; a console login. Log in as the user and join the network with
+`nmtui`; the remaining steps run from this console. (Over SSH, the session
+died with the reboot; reconnect as the user once the network is up, since
+root logins are refused and the address may have changed.)
 
 ```bash
 ping -c3 archlinux.org
