@@ -1,28 +1,18 @@
 # Arch Linux
 
-A manual installation, no archinstall, run over SSH from a second machine.
-The result is a LUKS2-encrypted btrfs system with a snapshot before every
-pacman transaction, GRUB with bootable snapshot entries, zram swap, and the
+A manual installation, no archinstall, run over SSH from a second machine
+and ending in a LUKS2-encrypted btrfs system with a snapshot before every
+package transaction, bootable snapshot entries in GRUB, zram swap, and the
 niri workspace deployed from
 [dotfiles](https://github.com/nafud/dotfiles){ .external-link } in one
-command. Written against one specific laptop. The shape transfers to any
-UEFI machine; the device names, sizes, and firmware keys may not.
+command. Written on a Tiger Lake ThinkBook (Iris Xe graphics, NVMe disk,
+UEFI); the shape transfers to any UEFI machine, though device names,
+sizes, and firmware keys may not.
 
-## Target
+## Decisions
 
-| Component | Detail |
-| --- | --- |
-| Machine | Lenovo ThinkBook 14 G2 ITL (20VD) |
-| CPU | Intel Core i7-1165G7 (Tiger Lake, 4c/8t) |
-| GPU | Intel Iris Xe, kernel `i915` driver |
-| RAM | 24 GB |
-| Disk | 477 GB NVMe at `/dev/nvme0n1` |
-| Wireless | Intel Wi-Fi 6 AX201 on `iwlwifi`; its Bluetooth half stays soft-blocked and unused |
-| Camera | UVC device, works with no packages |
-| Firmware | UEFI. Secure Boot on under the outgoing OS, disabled for good below |
-
-**Decisions.** Settled up front, since the whole disk layout follows from
-them.
+These were settled before the first command, since the whole disk layout
+follows from them.
 
 | Topic | Choice | Rationale |
 | --- | --- | --- |
