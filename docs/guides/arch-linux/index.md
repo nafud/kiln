@@ -1,9 +1,9 @@
 # Arch Linux
 
 A manual installation, no archinstall, run over SSH from a second machine.
-The result is a LUKS2-encrypted btrfs system with a snapshot before every
-pacman transaction, GRUB with bootable snapshot entries, zram swap, and the
-niri workspace deployed from
+The result is a LUKS2-encrypted btrfs system with manual pre-upgrade
+snapshots, GRUB with bootable snapshot entries, zram swap, and the niri
+workspace deployed from
 [dotfiles](https://github.com/nafud/dotfiles){ .external-link } in one
 command. Written against one specific laptop. The shape transfers to any
 UEFI machine; the device names, sizes, and firmware keys may not.
@@ -26,7 +26,7 @@ them.
 
 | Topic | Choice | Rationale |
 | --- | --- | --- |
-| Filesystem | btrfs on LUKS2, no LVM | Subvolumes share one pool instead of fixed-size volumes, and snapper plus grub-btrfs give a rollback point before every update on a rolling release. ZFS was considered and rejected as an out-of-tree module on a rolling kernel whose multi-disk strengths a single NVMe never uses |
+| Filesystem | btrfs on LUKS2, no LVM | Subvolumes share one pool instead of fixed-size volumes, and snapper plus grub-btrfs give a manual revert point before major upgrades. ZFS was considered and rejected as an out-of-tree module on a rolling kernel whose multi-disk strengths a single NVMe never uses |
 | Bootloader | GRUB | grub-btrfs generates boot menu entries for snapshots; systemd-boot has no equivalent |
 | `/boot` | Separate unencrypted ext4 | GRUB never has to unlock LUKS, so the LUKS2 argon2id defaults stay |
 | Kernels | `linux` and `linux-lts` | Snapshots do not cover `/boot`. The LTS entry answers a broken kernel the way snapshots answer broken userspace |
@@ -333,22 +333,31 @@ default stands.
 
 ## Snapshots
 
-The payoff of the btrfs decision. The strategy is transaction-driven
-snapshots only. On a rolling release, pacman transactions are precisely
-the events worth rolling back to, so the snapshot list stays a clean
-history of system changes. Timeline and per-boot snapshots were considered
-and rejected as noise that buries the meaningful pre-update points, and
-Timeshift was rejected because on Arch it fights snapper's layout and
-needs AUR glue. Ad-hoc points before risky experiments remain one command
-away (`snapper create --description "before X"`).
+The payoff of the btrfs decision. The strategy is manual snapshots before
+major upgrades only, an emergency revert point and nothing more. One
+command creates it, and the `--cleanup-algorithm number` flag is
+load-bearing; a manual snapshot created without one is invisible to the
+cleanup timer and accumulates forever, while with it old snapshots age out
+under `NUMBER_LIMIT`.
 
 ```bash
-sudo pacman -S snapper snap-pac grub-btrfs inotify-tools
+sudo snapper create --cleanup-algorithm number -d "pre upgrade"
 ```
 
-`snap-pac` hooks pacman so every transaction gets a pre/post snapshot pair
-with zero configuration. `grub-btrfs` turns snapshots into boot menu
-entries, and `inotify-tools` lets its daemon watch for new ones.
+The alternatives were considered and rejected. Per-transaction pairs
+(snap-pac) and timeline and per-boot snapshots all bury the meaningful
+pre-upgrade points in noise the policy does not want, and Timeshift on
+Arch fights snapper's layout and needs AUR glue. The accepted tradeoff of
+manual-only is that a routine upgrade that breaks something has no
+automatic pre-point; the fallback there is the LTS kernel entry and chroot
+repair.
+
+```bash
+sudo pacman -S snapper grub-btrfs inotify-tools
+```
+
+`grub-btrfs` turns snapshots into boot menu entries, and `inotify-tools`
+lets its daemon watch for new ones.
 
 **Config.** `snapper create-config` insists on creating its own
 `.snapshots` as a subvolume nested inside `@`, which is exactly what the
@@ -371,7 +380,7 @@ In `/etc/snapper/configs/root`, four values.
 
 ```text
 ALLOW_GROUPS="wheel"          # snapper list without sudo
-TIMELINE_CREATE="no"          # transaction-driven only
+TIMELINE_CREATE="no"          # manual pre-upgrade snapshots only
 NUMBER_LIMIT="20"
 NUMBER_LIMIT_IMPORTANT="10"
 ```
@@ -400,20 +409,22 @@ silent corruption instead of waiting for a read to stumble over it.
 sudo systemctl enable --now btrfs-scrub@-.timer     # "-" escapes the path /
 ```
 
-**Verify.** Install any small package and `snapper list` should show a
-pre/post pair carrying that pacman command as its description; after a
-reboot the GRUB menu carries an Arch Linux snapshots submenu.
+**Verify.** Create a test snapshot and `snapper list` should show it with
+`number` in its Cleanup column; after a reboot the GRUB menu carries an
+Arch Linux snapshots submenu. The test snapshot can be dropped with
+`snapper delete` or left to age out.
 
 ```bash
-sudo pacman -S tree
-snapper list                    # a pre/post pair for the transaction
+sudo snapper create --cleanup-algorithm number -d "test snapshot"
+snapper list                    # the snapshot, Cleanup column "number"
 ```
 
-**Rollback.** Two tools for two failure sizes. A bad config change or one
-broken package reverts in place with
-`sudo snapper undochange <pre>..<post>`. A system that no longer works
-rolls back whole by swapping `@` out, from a booted snapshot or the live
-ISO (unlock and mount the top level first, as in Disk Layout).
+**Rollback.** Two tools for two failure sizes. A system that still boots
+reverts in place with `sudo snapper undochange <N>..0`, which undoes
+everything changed since snapshot N (0 names the current state). A system
+that no longer works rolls back whole by swapping `@` out, from a booted
+snapshot or the live ISO (unlock and mount the top level first, as in Disk
+Layout).
 
 ```bash
 sudo mount -o subvolid=5 /dev/mapper/cryptroot /mnt
