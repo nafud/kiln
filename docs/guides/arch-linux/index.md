@@ -642,14 +642,45 @@ against boot-chain tampering, in increasing order of effort.
 A firmware administrator password is the first and costs nothing to
 maintain. It locks firmware setup and the boot menu, so boot order,
 the Secure Boot state, and USB booting cannot be changed without it.
+The command below reboots directly into firmware setup, where the
+password is set. In the same visit, clear the factory Secure Boot
+keys, which puts the firmware in Setup Mode and leaves Secure Boot
+off, ready for custom keys.
 
-Re-enabling Secure Boot with custom keys is the second and is a
-self-contained project on the installed system. `sbctl` generates and
-enrolls a personal key set while the firmware is in Setup Mode, signs
-the bootloader and kernels, and re-signs them from a pacman hook on
-every update. Microsoft's vendor keys stay enrolled alongside, since
-firmware capsules and GPU option ROMs may be signed by them. The
-result verifies GRUB and the kernels, while the initramfs stays
-outside the signed set, a limit of pairing Secure Boot with this
-bootloader. Enrollment writes to the firmware's key stores, so read
-the sbctl documentation in full before starting.
+```bash
+systemctl reboot --firmware-setup
+```
+
+Re-enabling Secure Boot with custom keys is the second and runs
+entirely on the installed system. `sbctl status` must report Setup
+Mode before anything is enrolled. `create-keys` generates a personal
+key set, and `enroll-keys -m` installs it into the firmware with
+Microsoft's vendor keys alongside, since firmware capsules and GPU
+option ROMs may be signed by them. GRUB itself needs a reinstall with
+`--disable-shim-lock` before signing, because its Secure Boot path
+otherwise expects the shim verification protocol that only a
+distribution's signed bootloader provides, and it refuses to start
+kernels without it. Enrollment writes to the firmware's key stores,
+the one step whose failure modes are firmware-specific, so read the
+sbctl documentation before starting. Sign the reinstalled binary,
+then reboot into firmware once more and switch Secure Boot on.
+
+```bash
+sudo pacman -S sbctl
+sbctl status
+sudo sbctl create-keys
+sudo sbctl enroll-keys -m
+sudo grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB --modules=tpm --disable-shim-lock --recheck
+sudo sbctl sign -s /boot/efi/EFI/GRUB/grubx64.efi
+systemctl reboot --firmware-setup
+```
+
+After the reboot, `sbctl status` must report Secure Boot enabled. The
+firmware now verifies GRUB's signature before running it, which closes
+the swapped-bootloader attack, while everything GRUB loads afterward,
+the kernel and initramfs, stays outside the verified chain, the limit
+of pairing Secure Boot with this bootloader. `-s` records the binary
+in sbctl's database, and a pacman hook re-signs recorded files that an
+update changes. A GRUB package update is the one manual case, repeat
+the same grub-install run and follow it with `sudo sbctl sign-all`,
+since grub-install outside pacman bypasses the hook.
