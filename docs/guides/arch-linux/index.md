@@ -9,11 +9,11 @@ in one command.
 
 | Topic | Choice | Rationale |
 | --- | --- | --- |
-| Filesystem | btrfs on LUKS2 | Subvolumes share one pool; snapper makes upgrades reversible |
+| Filesystem | btrfs on LUKS2 | Subvolumes share one pool, and snapper makes upgrades reversible |
 | Bootloader | GRUB | grub-btrfs generates boot entries for snapshots |
-| `/boot` | Unencrypted ext4 | GRUB never unlocks LUKS; the LUKS2 argon2id defaults stay |
-| Kernels | `linux`, `linux-lts` | Snapshots do not cover `/boot`; LTS answers a broken kernel |
-| Swap | zram | Compressed swap in RAM; no partition, no hibernation |
+| `/boot` | Unencrypted ext4 | GRUB never unlocks LUKS, so the LUKS2 argon2id defaults stay |
+| Kernels | `linux`, `linux-lts` | Snapshots do not cover `/boot`, so the LTS kernel answers a broken one |
+| Swap | zram | Compressed swap in RAM, with no partition and no hibernation |
 | Secure Boot | Off | The Arch ISO is unsigned |
 
 ## ISO and USB
@@ -29,10 +29,9 @@ lsblk -d -o NAME,SIZE,MODEL
 sudo dd if=archlinux-x86_64.iso of=/dev/sdX bs=4M status=progress conv=fsync
 ```
 
-Secure Boot must be disabled first (firmware setup, commonly F1, F2, or
-Del at power-on); the Arch ISO is unsigned and the firmware refuses it
-otherwise. Then boot the target machine through its boot menu (commonly
-F12).
+The Arch ISO is unsigned, so Secure Boot must be disabled in firmware
+setup (commonly F1, F2, or Del at power-on) before the stick will boot.
+Boot the target machine through its boot menu, commonly F12.
 
 ## Network
 
