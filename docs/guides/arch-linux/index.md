@@ -68,8 +68,8 @@ tmux
 ## Disk Layout
 
 !!! warning "Full wipe"
-    Partitioning destroys the previous contents of the disk, the
-    outgoing OS included.
+    Partitioning erases the entire disk, including the installed
+    operating system.
 
 Confirm UEFI mode and identify the target disk.
 
@@ -89,10 +89,6 @@ partition by its partition type rather than by name or position.
 | `t` | Partition type. Partition `1` becomes type `1`, EFI System |
 | `w` | Write the table and exit |
 
-When a new partition covers a filesystem left by the previous system,
-fdisk detects the old signature and offers to wipe it. Accepting is
-correct, the metadata belongs to the erased installation.
-
 | Partition | Size | Type | Purpose |
 | --- | --- | --- | --- |
 | `nvme0n1p1` | 1G | EFI System | ESP, mounted at `/boot/efi`, read by the firmware |
@@ -103,13 +99,14 @@ One gigabyte on `/boot` is sized for two kernels, each with a regular
 and a fallback initramfs image.
 
 Format the two plain partitions, then create and open the encrypted
-container. `luksFormat` asks for an uppercase `YES` and a passphrase,
-entered blind twice, and this passphrase unlocks the disk at every boot
-from then on. The defaults produce LUKS2 with argon2id, a memory-hard
-key derivation function, and they stand because `/boot` lives outside
-the container, so no bootloader compatibility constraint touches the
-LUKS parameters. `open` exposes the container's plaintext view as
-`/dev/mapper/cryptroot`, the device everything after builds on.
+container. `luksFormat` asks for an uppercase `YES` as confirmation and
+reads the passphrase twice without echo. This passphrase unlocks the
+disk at every boot. The defaults give LUKS2 with argon2id, a memory-hard
+key derivation function, and they need no adjustment here because
+`/boot` sits outside the container and the bootloader never has to open
+it. `open` maps the decrypted view of the partition to
+`/dev/mapper/cryptroot`, the device that every following step operates
+on.
 
 ```bash
 mkfs.fat -F32 /dev/nvme0n1p1
@@ -119,13 +116,16 @@ cryptsetup luksFormat /dev/nvme0n1p3
 cryptsetup open /dev/nvme0n1p3 cryptroot
 ```
 
-A btrfs subvolume is an independently mountable and snapshottable file
-tree inside one filesystem, so all subvolumes draw from the pool's free
-space with no fixed sizes. Five carve up this system. `@` and `@home`
-separate system from data. `@log` and `@pkg` stay out of snapshots, so
-a rollback neither reverts the logs that explain what went wrong nor
-re-downloads the package cache. `@snapshots` sits at the top level,
-where a root rollback cannot take the snapshots down with it.
+A btrfs subvolume is an independently mountable file tree inside one
+filesystem. Subvolumes share the pool's free space, need no fixed
+sizes, and can be snapshotted on their own. This layout uses five of
+them. `@` holds the root filesystem and `@home` keeps user data apart
+from it, so a root rollback leaves `/home` untouched. `@log` and `@pkg`
+exclude the system logs and the package cache from those snapshots,
+which keeps a rollback from reverting the logs that explain a failure
+or discarding downloaded packages. `@snapshots` stores the snapshots
+themselves outside `@`, so replacing the root subvolume never destroys
+its own history.
 
 ```bash
 mkfs.btrfs -L arch /dev/mapper/cryptroot
