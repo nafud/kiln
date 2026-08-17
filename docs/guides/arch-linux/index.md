@@ -415,11 +415,9 @@ one transaction because partial upgrades are unsupported, so no line
 separates minor updates from major ones, and whether an upgrade was
 risky becomes clear only in hindsight. Bracketing every pacman
 transaction instead makes the revert point exist by construction, and
-the snapshot list stays a clean history of system changes. Timeline and
-per-boot snapshots would bury the meaningful pre-update points under
-noise, and Timeshift fights snapper's layout on Arch, so both were
-rejected. An ad-hoc point before a risky experiment remains one command
-away with `snapper create --description "before X"`.
+the snapshot list stays a clean history of system changes. An ad-hoc
+point before a risky experiment remains one command away with
+`snapper create --description "before X"`.
 
 ```bash
 sudo pacman -S snapper snap-pac grub-btrfs inotify-tools
