@@ -36,9 +36,10 @@ F12).
 
 ## Network
 
-The installation requires a network connection. Ethernet with DHCP works
-without configuration; Wi-Fi authenticates through iwd. `device list`
-inside iwctl prints the interface name when it is not `wlan0`.
+The installation requires a network connection. A wired connection with
+DHCP works without configuration, and Wi-Fi authenticates through iwd.
+If the wireless interface is not named `wlan0`, `device list` inside
+iwctl prints the actual name.
 
 ```console
 # iwctl
@@ -49,11 +50,11 @@ inside iwctl prints the interface name when it is not `wlan0`.
 
 ## Remote Session (Optional)
 
-The remaining steps can run over SSH from another machine. sshd is
-running on the live ISO; root's password is empty, and SSH rejects empty
-passwords. Set a password, read the address, and connect. tmux keeps the
-installation alive across a dropped connection, and `tmux attach` resumes
-it.
+The remaining steps can run over SSH from another machine. The live ISO
+already runs sshd, but root has no password yet, and SSH rejects empty
+passwords. Set one, read the machine's address, and connect from the
+other side. Opening tmux after connecting keeps the installation alive
+if the connection drops, and `tmux attach` resumes it.
 
 ```console
 # passwd
