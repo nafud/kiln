@@ -589,21 +589,23 @@ One command deploys the entire workspace.
 curl -fsSL https://raw.githubusercontent.com/nafud/dotfiles/main/bootstrap.sh | bash
 ```
 
-The bootstrap clones the repository into `~/dotfiles` over HTTPS (receiving
-needs no SSH key; the push URL is set to SSH for when the backed-up key
-returns) and hands off to `setup.sh`, which is idempotent end to end. One
-run installs the packages (the niri stack, the terminal tools, PipeWire,
-the browsers, the desktop apps, `tlp` and `thermald`), bootstraps paru for
-the AUR set (Mullvad VPN, Chrome, Mullvad Browser, Spotify), installs and
-enables greetd with tuigreet, enables the maintenance timers, links
-`config/` into `~/.config` and `bin/` into `~/.local/bin`, writes the
-shell block and system defaults, validates the niri config, and prints a
-probed component summary.
+The bootstrap clones the repository into `~/dotfiles` over HTTPS, so
+receiving needs no SSH key, and sets the push URL to SSH for
+authenticated pushes later. It then hands off to `setup.sh`, which is
+idempotent end to end. One run installs the pacman set covering the
+niri stack, the terminal tools, PipeWire, the browsers, the desktop
+apps, and the power management daemons, then bootstraps paru for the
+AUR set of Mullvad VPN, Chrome, Mullvad Browser, and Spotify. It also
+installs and enables greetd with tuigreet, enables the maintenance
+timers, links `config/` into `~/.config` and `bin/` into
+`~/.local/bin`, writes the managed shell block and system defaults,
+validates the niri config, and prints a probed component summary.
 
-A reboot lands in tuigreet; pick the `niri` session. The first-session
-sweep, in order. The bar is up and notifications work (`notify-send
-test`); the launcher (Mod+D), terminal (Mod+T), and lock (Mod+Shift+L)
-answer; `pulsemixer` sees PipeWire sinks and Print takes a screenshot; the
-bar's updates badge counts pending pacman and AUR updates; `mullvad
-account login` brings the vpn module to life; `bash ~/dotfiles/setup.sh
-summary` reports every row green.
+A reboot lands in tuigreet, where the `niri` session is picked. A short
+sweep then confirms the session. The bar is up and `notify-send test`
+raises a notification. The launcher on Mod+D, the terminal on Mod+T,
+and the lock on Mod+Shift+L all answer. `pulsemixer` sees the PipeWire
+sinks and Print takes a screenshot. The updates badge on the bar counts
+pending pacman and AUR updates, and `mullvad account login` activates
+the vpn module. `bash ~/dotfiles/setup.sh summary` must report every
+row green.
