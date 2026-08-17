@@ -189,7 +189,7 @@ be ignored.
 | `base-devel git` | `git` clones the workspace repository, `base-devel` builds its AUR set |
 | `sudo vim man-db man-pages openssh` | `base` alone ships no editor, no sudo, and no man pages |
 
-???+ note "If pacstrap fails at checking keys"
+!!! note "If pacstrap fails at checking keys"
     A failure at `checking keys in keyring` with `Public keyring not
     found`, `keyring is not writable`, and `required key missing from
     keyring` means the live ISO never initialized its own keyring. The
