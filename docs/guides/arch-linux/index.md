@@ -3,10 +3,9 @@
 A manual Arch Linux installation. The result is a LUKS2-encrypted btrfs
 system with automatic snapshots and the niri workspace from
 [dotfiles](https://github.com/nafud/dotfiles){ .external-link } deployed
-in one command. Angle-bracket placeholders take your values; `nvme0n1` is
-the example disk on a UEFI machine.
+in one command.
 
-## Decisions
+## Objectives
 
 | Topic | Choice | Rationale |
 | --- | --- | --- |
@@ -33,9 +32,7 @@ sudo dd if=archlinux-x86_64.iso of=/dev/sdX bs=4M status=progress conv=fsync
 Secure Boot must be disabled first (firmware setup, commonly F1, F2, or
 Del at power-on); the Arch ISO is unsigned and the firmware refuses it
 otherwise. Then boot the target machine through its boot menu (commonly
-F12) and pick the `UEFI:`-prefixed entry for the stick. A legacy entry may
-sit next to it in the menu, and booting that one lands in BIOS mode, which
-fails the first sanity check below.
+F12).
 
 ## Remote Session
 
