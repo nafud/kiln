@@ -163,9 +163,7 @@ plus `/boot` and `/boot/efi`.
 
 pacstrap installs packages into the mounted target at `/mnt`. One call
 covers the kernel, firmware, filesystem tools, bootloader, and the
-utilities the first boot depends on. Type it as one continuous line. A
-package list split across shell continuation lines is easy to lose, and
-a pacstrap call that receives no packages installs only `base`.
+utilities the first boot depends on. Type it as one continuous line.
 
 ```bash
 pacstrap -K /mnt base linux linux-lts linux-firmware intel-ucode sof-firmware btrfs-progs cryptsetup e2fsprogs dosfstools grub efibootmgr networkmanager base-devel sudo vim git man-db man-pages openssh
@@ -191,7 +189,7 @@ be ignored.
 | `base-devel git` | `git` clones the workspace repository, `base-devel` builds its AUR set |
 | `sudo vim man-db man-pages openssh` | `base` alone ships no editor, no sudo, and no man pages |
 
-??? note "If pacstrap fails at checking keys"
+???+ note "If pacstrap fails at checking keys"
     A failure at `checking keys in keyring` with `Public keyring not
     found`, `keyring is not writable`, and `required key missing from
     keyring` means the live ISO never initialized its own keyring. The
