@@ -241,9 +241,11 @@ cat /mnt/etc/fstab
 
 Three properties must hold. All five btrfs entries share one UUID, the
 UUID of the single filesystem inside the LUKS container, and each
-selects its own subvolume through a `subvol=` option, `/@` for root.
-Every btrfs line carries `compress=zstd` and `noatime`. `/boot` appears
-as ext4 and `/boot/efi` as vfat, each under its own UUID.
+selects its own subvolume through a `subvol=` option, `/@` for root,
+with no `subvolid=` beside it, since the rollback in Snapshots
+replaces `@` with a subvolume of a different id. Every btrfs line
+carries `compress=zstd` and `noatime`. `/boot` appears as ext4 and
+`/boot/efi` as vfat, each under its own UUID.
 
 ## System Configuration
 
@@ -487,22 +489,22 @@ NUMBER_LIMIT_IMPORTANT="10"
 
 ### Services and Boot Entries
 
-The snapper package ships `snapper-timeline.timer` enabled, which the
-transaction-only policy disables outright. Any timeline snapshot it
-fired before the config edit appears in `snapper list` with cleanup
-`timeline` and is deleted by number. Of the two units enabled here,
-`snapper-cleanup.timer` prunes by the limits above and `grub-btrfsd`
-watches `/.snapshots` for changes.
+Two units carry the section. `snapper-cleanup.timer` prunes snapshots
+by the limits above, and `grub-btrfsd` watches `/.snapshots` for
+changes.
 
 Snapper snapshots are read-only, and booting one cleanly needs a tmpfs
 overlay on top, which the `grub-btrfs-overlayfs` initramfs hook
 provides. Append it to the end of the HOOKS line from System
 Configuration, then regenerate the initramfs and the GRUB config. A
 booted snapshot is an inspection environment, and changes made inside
-it evaporate on reboot.
+it evaporate on reboot. The entry pairs the current kernel from
+`/boot` with the snapshot's older modules, so inspection is dependable
+only while the two match and degrades once a kernel upgrade separates
+them. Recovery that must work goes through the LTS entry or the
+rollback below.
 
 ```bash
-sudo systemctl disable --now snapper-timeline.timer
 sudo systemctl enable --now snapper-cleanup.timer
 sudo systemctl enable --now grub-btrfsd
 
@@ -587,6 +589,17 @@ readahead, `watermark_scale_factor = 125` starts background reclaim
 earlier, and `watermark_boost_factor = 0` disables a reclaim boost that
 only pays off on disk-backed swap.
 
+The kernel also boots with zswap on, a compressed cache that sits in
+front of every swap device and intercepts pages before they reach
+zram, leaving the device idle and its statistics misleading. Turn it
+off now through sysfs and permanently on the kernel command line.
+
+```bash
+echo 0 | sudo tee /sys/module/zswap/parameters/enabled
+sudo sed -i 's|^GRUB_CMDLINE_LINUX="\(.*\)"|GRUB_CMDLINE_LINUX="\1 zswap.enabled=0"|' /etc/default/grub
+sudo grub-mkconfig -o /boot/grub/grub.cfg
+```
+
 ```text
 vm.swappiness = 180
 vm.watermark_boost_factor = 0
@@ -608,7 +621,8 @@ swapon --show
 
 `zramctl` must show `zram0` with zstd compression, half of RAM in size,
 and near-zero use. `swapon --show` must list `/dev/zram0` active at
-priority 100.
+priority 100, and `cat /sys/module/zswap/parameters/enabled` must
+print `N`.
 
 ## Workspace
 
