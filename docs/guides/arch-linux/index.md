@@ -161,28 +161,29 @@ plus `/boot` and `/boot/efi`.
 
 ## Base System
 
-One pacstrap call carries everything the installed system cannot live
-without once the live ISO is gone. Type it as one continuous line; a
+pacstrap installs packages into the mounted target at `/mnt`. One call
+covers the kernel, firmware, filesystem tools, bootloader, and the
+utilities the first boot depends on. Type it as one continuous line. A
 package list split across shell continuation lines is easy to lose, and
-pacstrap invoked with no packages silently installs bare `base` alone.
+a pacstrap call that receives no packages installs only `base`.
 
 ```bash
 pacstrap -K /mnt base linux linux-lts linux-firmware intel-ucode sof-firmware btrfs-progs cryptsetup e2fsprogs dosfstools grub efibootmgr networkmanager base-devel sudo vim git man-db man-pages openssh
 ```
 
-`-K` initializes a fresh pacman keyring in the target. Two provider
-prompts appear mid-run (`iptables` and the initramfs generator); a plain
-Enter takes the correct default on both, `iptables` and `mkinitcpio`.
-Near the end, "Possibly missing firmware for module" warnings during
-initramfs generation name hardware the machine does not have and are
-expected noise.
+`-K` initializes a fresh pacman keyring inside the target. The run
+pauses twice for provider prompts, once for `iptables` and once for the
+initramfs generator, and a plain Enter accepts the correct default on
+both. `Possibly missing firmware for module` warnings during initramfs
+generation name drivers for hardware the machine does not have and can
+be ignored.
 
 | Packages | Reason |
 | --- | --- |
 | `base linux linux-firmware` | The core system |
-| `linux-lts` | The fallback kernel from the decisions table |
+| `linux-lts` | The fallback kernel |
 | `intel-ucode` | CPU microcode, picked up by GRUB automatically (`amd-ucode` on AMD) |
-| `sof-firmware` | Audio firmware for recent Intel laptops (Sound Open Firmware). Without it the desktop works and the speakers stay silent |
+| `sof-firmware` | Audio firmware for recent Intel laptops. Without it the system runs but the speakers stay silent |
 | `btrfs-progs cryptsetup` | Root filesystem tools and the LUKS unlock inside the initramfs |
 | `e2fsprogs dosfstools` | fsck for the ext4 `/boot` and the FAT32 ESP |
 | `grub efibootmgr` | Bootloader, installed and configured in the chroot |
@@ -191,17 +192,17 @@ expected noise.
 | `sudo vim man-db man-pages openssh` | `base` alone ships no editor, no sudo, and no man pages |
 
 ??? note "If pacstrap fails at checking keys"
-    A failure at "(N/N) checking keys in keyring" with `Public keyring
-    not found`, a wall of `keyring is not writable`, and `required key
-    missing from keyring` means the live ISO's own keyring was never
-    initialized. The archiso initializes it in a boot service
-    (`pacman-init`) ordered after time synchronization; on a network
-    that blocks NTP the sync never completes and the service sits
-    queued forever (`systemctl status pacman-init` shows `inactive
-    (dead)` with a pending `Job:`, and `timedatectl` shows
-    `System clock synchronized: no` under an otherwise correct clock).
-    Do the service's work by hand, refresh the keys, and rerun without
-    `-K`, so the now-working host keyring is copied into the target.
+    A failure at `checking keys in keyring` with `Public keyring not
+    found`, `keyring is not writable`, and `required key missing from
+    keyring` means the live ISO never initialized its own keyring. The
+    archiso does this in the `pacman-init` boot service, which is
+    ordered after time synchronization. On a network that blocks NTP
+    the synchronization never completes and the service stays queued.
+    `systemctl status pacman-init` then reports `inactive (dead)` with
+    a pending job, and `timedatectl` shows the clock as not
+    synchronized. The fix performs the service's work by hand,
+    refreshes the keys, and reruns pacstrap without `-K`, which copies
+    the now-working host keyring into the target.
 
     ```bash
     systemctl cancel
@@ -213,26 +214,26 @@ expected noise.
     ```
 
     The failed run already downloaded every package into the target's
-    own cache (the `@pkg` subvolume), so the retry re-verifies from
-    disk and is fast. `/etc/pacman.d/gnupg` on the live ISO is a
-    pre-mounted ramdisk; it cannot be removed, only initialized in
-    place, which is why the fix never `rm`s it.
+    cache on the `@pkg` subvolume, so the retry verifies from disk
+    instead of downloading again. `/etc/pacman.d/gnupg` on the live ISO
+    is a pre-mounted ramdisk, which can only be initialized in place,
+    and this is why the fix removes the target's keyring rather than
+    the host's.
 
-Generate fstab and read it before moving on. Everything about how the
-system mounts at boot flows from this file, and this is the cheapest moment
-to catch a mistake from the previous section.
+Generate the fstab and inspect it before moving on. The installed
+system assembles its mounts from this file at every boot, so an error
+here surfaces later as a system that fails to come up.
 
 ```bash
 genfstab -U /mnt >> /mnt/etc/fstab
 cat /mnt/etc/fstab
 ```
 
-Three things must hold. Root is the btrfs filesystem's UUID with
-`subvol=/@` (all five btrfs entries share that one UUID, one filesystem
-seen through five subvolumes, resolved through the unlocked mapper at
-boot); the four other subvolume mounts are present and carry
-`compress=zstd` and `noatime`; `/boot` (ext4) and `/boot/efi` (vfat) both
-appear.
+Three properties must hold. All five btrfs entries share one UUID, the
+UUID of the single filesystem inside the LUKS container, and each
+selects its own subvolume through a `subvol=` option, `/@` for root.
+Every btrfs line carries `compress=zstd` and `noatime`. `/boot` appears
+as ext4 and `/boot/efi` as vfat, each under its own UUID.
 
 ## System Configuration
 
