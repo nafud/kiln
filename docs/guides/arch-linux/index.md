@@ -78,24 +78,38 @@ cat /sys/firmware/efi/fw_platform_size    # 64 on UEFI
 lsblk -d -o NAME,SIZE,MODEL
 ```
 
-Partition with `fdisk /dev/nvme0n1`. `g` writes a new GPT label, `n`
-creates each partition, `t` sets the first partition's type to `1`
-(EFI System), and `w` writes the result. For each partition, the number
-and first-sector prompts take their defaults with Enter, and the size
-belongs to the last-sector prompt (`+1G`). Where a new partition overlaps
-an old filesystem, fdisk offers to wipe the leftover signature, and `Y`
-accepts.
+UEFI boots from GPT disks, and the firmware locates the EFI system
+partition by its partition type rather than by name or position.
+`fdisk /dev/nvme0n1` builds the table from four commands.
+
+| Command | Effect |
+| --- | --- |
+| `g` | New GPT disklabel |
+| `n` | New partition. The number and first-sector prompts take their defaults, and the last-sector prompt takes the size, `+1G` for the first two partitions and the default for the third |
+| `t` | Partition type. Partition `1` becomes type `1`, EFI System |
+| `w` | Write the table and exit |
+
+When a new partition covers a filesystem left by the previous system,
+fdisk detects the old signature and offers to wipe it. Accepting is
+correct, the metadata belongs to the erased installation.
 
 | Partition | Size | Type | Purpose |
 | --- | --- | --- | --- |
-| `nvme0n1p1` | 1G | EFI System | ESP, mounted at `/boot/efi` |
-| `nvme0n1p2` | 1G | Linux | `/boot`, unencrypted ext4 |
-| `nvme0n1p3` | rest of the disk | Linux | LUKS2 container |
+| `nvme0n1p1` | 1G | EFI System | ESP, mounted at `/boot/efi`, read by the firmware |
+| `nvme0n1p2` | 1G | Linux filesystem | `/boot`, ext4, read by GRUB |
+| `nvme0n1p3` | rest of the disk | Linux filesystem | LUKS2 container |
+
+One gigabyte on `/boot` is sized for two kernels, each with a regular
+and a fallback initramfs image.
 
 Format the two plain partitions, then create and open the encrypted
-container. The cryptsetup defaults produce LUKS2 with argon2id, and they
-stand because `/boot` lives outside the container, so GRUB never reads
-through the encryption.
+container. `luksFormat` asks for an uppercase `YES` and a passphrase,
+entered blind twice, and this passphrase unlocks the disk at every boot
+from then on. The defaults produce LUKS2 with argon2id, a memory-hard
+key derivation function, and they stand because `/boot` lives outside
+the container, so no bootloader compatibility constraint touches the
+LUKS parameters. `open` exposes the container's plaintext view as
+`/dev/mapper/cryptroot`, the device everything after builds on.
 
 ```bash
 mkfs.fat -F32 /dev/nvme0n1p1
@@ -105,12 +119,13 @@ cryptsetup luksFormat /dev/nvme0n1p3
 cryptsetup open /dev/nvme0n1p3 cryptroot
 ```
 
-btrfs goes directly on the mapper device, carved into five subvolumes.
-`@` and `@home` separate system from data without fixing either size.
-`@log` and `@pkg` stay out of snapshots, so a rollback neither reverts
-the logs that explain what went wrong nor re-downloads the package
-cache. `@snapshots` sits at the top level, where a root rollback cannot
-take the snapshots down with it.
+A btrfs subvolume is an independently mountable and snapshottable file
+tree inside one filesystem, so all subvolumes draw from the pool's free
+space with no fixed sizes. Five carve up this system. `@` and `@home`
+separate system from data. `@log` and `@pkg` stay out of snapshots, so
+a rollback neither reverts the logs that explain what went wrong nor
+re-downloads the package cache. `@snapshots` sits at the top level,
+where a root rollback cannot take the snapshots down with it.
 
 ```bash
 mkfs.btrfs -L arch /dev/mapper/cryptroot
@@ -124,8 +139,11 @@ btrfs subvolume create /mnt/@snapshots   # /.snapshots
 umount /mnt
 ```
 
-Mount the tree. `compress=zstd` enables transparent compression, which
-typically saves 30 to 50 percent on system files at negligible CPU cost.
+Mount the tree, each subvolume by name. `compress=zstd` enables
+transparent compression, which typically saves 30 to 50 percent on
+system files at negligible CPU cost, and `noatime` drops access-time
+updates, which otherwise turn every read into a small metadata write.
+`--mkdir` creates each mountpoint on the way.
 
 ```bash
 o=compress=zstd,noatime
@@ -137,6 +155,9 @@ mount --mkdir -o subvol=@snapshots,$o /dev/mapper/cryptroot /mnt/.snapshots
 mount --mkdir /dev/nvme0n1p2 /mnt/boot
 mount --mkdir /dev/nvme0n1p1 /mnt/boot/efi
 ```
+
+`findmnt -R /mnt` shows the assembled tree, five btrfs subvolume mounts
+plus `/boot` and `/boot/efi`.
 
 ## Base System
 
