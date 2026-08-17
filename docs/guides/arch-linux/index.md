@@ -592,20 +592,14 @@ curl -fsSL https://raw.githubusercontent.com/nafud/dotfiles/main/bootstrap.sh | 
 The bootstrap clones the repository into `~/dotfiles` over HTTPS, so
 receiving needs no SSH key, and sets the push URL to SSH for
 authenticated pushes later. It then hands off to `setup.sh`, which is
-idempotent end to end. One run installs the pacman set covering the
-niri stack, the terminal tools, PipeWire, the browsers, the desktop
-apps, and the power management daemons, then bootstraps paru for the
-AUR set of Mullvad VPN, Chrome, Mullvad Browser, and Spotify. It also
+idempotent end to end. One run installs the full package set from the
+official repositories, bootstraps paru and installs the AUR set,
 installs and enables greetd with tuigreet, enables the maintenance
 timers, links `config/` into `~/.config` and `bin/` into
 `~/.local/bin`, writes the managed shell block and system defaults,
 validates the niri config, and prints a probed component summary.
 
-A reboot lands in tuigreet, where the `niri` session is picked. A short
-sweep then confirms the session. The bar is up and `notify-send test`
-raises a notification. The launcher on Mod+D, the terminal on Mod+T,
-and the lock on Mod+Shift+L all answer. `pulsemixer` sees the PipeWire
-sinks and Print takes a screenshot. The updates badge on the bar counts
-pending pacman and AUR updates, and `mullvad account login` activates
-the vpn module. `bash ~/dotfiles/setup.sh summary` must report every
-row green.
+A reboot lands in tuigreet, where the `niri` session is picked.
+Exercise the session once, the bar, notifications, launcher, terminal,
+lock, audio, and screenshots, and `bash ~/dotfiles/setup.sh summary`
+must report every row green.
