@@ -264,7 +264,9 @@ skips, and the grant itself is one uncomment. Find the
 `# `, and save. `groups <user>` must then list `wheel`, and
 `grep '^%wheel' /etc/sudoers` must print the uncommented line.
 
-**Graphics.** On Intel graphics, mesa provides OpenGL, `vulkan-intel`
+## Graphics
+
+On Intel graphics, mesa provides OpenGL, `vulkan-intel`
 provides Vulkan, and `intel-media-driver` provides VA-API hardware
 video decode, which moves video playback off the CPU. Another GPU
 vendor swaps in its own Vulkan and VA-API packages while mesa stays.
@@ -275,7 +277,9 @@ since a Wayland compositor reaches the kernel driver through mesa.
 pacman -S mesa vulkan-intel intel-media-driver
 ```
 
-**Initramfs.** The initramfs prompts for the LUKS passphrase at boot,
+## Initramfs
+
+The initramfs prompts for the LUKS passphrase at boot,
 and the `encrypt` hook is what gives it that ability. Order matters in
 the hook list. The keyboard hooks precede `encrypt` so the passphrase
 prompt has a working keyboard, `microcode` embeds the CPU microcode
@@ -299,7 +303,9 @@ that no font is configured because `/etc/vconsole.conf` sets only the
 keymap, and the missing-firmware warnings repeat what pacstrap already
 showed.
 
-**GRUB.** The kernel command line tells the initramfs which device to
+## GRUB
+
+The kernel command line tells the initramfs which device to
 unlock and what to name the mapping. The UUID belongs to the raw
 partition, never to the mapper device it opens into, and
 `allow-discards` passes TRIM through the encryption layer. A
@@ -330,7 +336,9 @@ prepends `intel-ucode.img` to every initrd so the microcode loads
 first, warns that os-prober will not run, which is correct on a
 single-OS disk, and ends with `done`.
 
-**Services.** Enable the units the first boot relies on. NetworkManager
+## Services
+
+Enable the units the first boot relies on. NetworkManager
 brings the network up, `fstrim.timer` runs a weekly TRIM pass over the
 SSD, `systemd-timesyncd` keeps the clock synchronized, and `sshd` is
 optional for working over SSH after the reboot.
