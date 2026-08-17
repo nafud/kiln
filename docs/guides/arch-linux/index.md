@@ -409,33 +409,34 @@ only if standby drain becomes noticeable.
 
 ## Snapshots
 
-The payoff of the btrfs decision. The strategy is automatic
-transaction-driven snapshots. An Arch upgrade moves the whole system in
-one transaction (partial upgrades are unsupported), so no line separates
-minor updates from major ones, and whether an upgrade was risky is only
-known in hindsight; bracketing every pacman transaction instead makes the
-revert point exist by construction, and the snapshot list stays a clean
-history of system changes. Timeline and per-boot snapshots were considered
-and rejected as noise that buries the meaningful pre-update points, and
-Timeshift was rejected because on Arch it fights snapper's layout and
-needs AUR glue. Ad-hoc points before risky experiments remain one command
-away (`snapper create --description "before X"`).
+Snapshots are the point of the btrfs layout, and the strategy is
+automatic transaction-driven snapshots. Arch moves the whole system in
+one transaction because partial upgrades are unsupported, so no line
+separates minor updates from major ones, and whether an upgrade was
+risky becomes clear only in hindsight. Bracketing every pacman
+transaction instead makes the revert point exist by construction, and
+the snapshot list stays a clean history of system changes. Timeline and
+per-boot snapshots would bury the meaningful pre-update points under
+noise, and Timeshift fights snapper's layout on Arch, so both were
+rejected. An ad-hoc point before a risky experiment remains one command
+away with `snapper create --description "before X"`.
 
 ```bash
 sudo pacman -S snapper snap-pac grub-btrfs inotify-tools
 ```
 
-`snap-pac` hooks pacman so every transaction gets a pre/post snapshot pair
-with zero configuration, and its pairs carry the `number` cleanup
-algorithm, so the cleanup timer below disposes of old ones automatically
-under `NUMBER_LIMIT`. `grub-btrfs` turns snapshots into boot menu entries,
-and `inotify-tools` lets its daemon watch for new ones.
+`snap-pac` hooks pacman so every transaction receives a pre and post
+snapshot pair with no configuration. The pairs carry the `number`
+cleanup algorithm, which lets the cleanup timer below dispose of old
+ones under `NUMBER_LIMIT`. `grub-btrfs` turns snapshots into boot menu
+entries, and `inotify-tools` lets its daemon watch for new ones.
 
-**Config.** `snapper create-config` insists on creating its own
-`.snapshots` as a subvolume nested inside `@`, which is exactly what the
-layout avoids; nested there, a root rollback would revert the snapshots
-too. Let it create the config, then swap its nested subvolume for the
-top-level `@snapshots`.
+### Configuration
+
+`snapper create-config` insists on creating `.snapshots` as a subvolume
+nested inside `@`, which the layout deliberately avoids, since a root
+rollback would revert nested snapshots along with it. Let it create the
+config, then swap the nested subvolume for the top-level `@snapshots`.
 
 ```bash
 sudo umount /.snapshots
@@ -448,7 +449,7 @@ sudo chmod 750 /.snapshots
 sudo chown :wheel /.snapshots
 ```
 
-In `/etc/snapper/configs/root`, four values.
+Set four values in `/etc/snapper/configs/root`.
 
 ```text
 ALLOW_GROUPS="wheel"          # snapper list without sudo
@@ -457,54 +458,65 @@ NUMBER_LIMIT="20"
 NUMBER_LIMIT_IMPORTANT="10"
 ```
 
-**Services and boot entries.** The snapper package ships
-`snapper-timeline.timer` enabled; under the transaction-only policy it is
-disabled outright, and any timeline snapshot it fired off before the
-config edit (`snapper list` shows it with cleanup `timeline`) is deleted
-by number. Snapper snapshots are read-only, and booting one cleanly needs
-a tmpfs overlay on top, provided by the `grub-btrfs-overlayfs` initramfs
-hook. Append it to the end of the HOOKS line from System Configuration,
-regenerate, and refresh GRUB once; the daemon keeps the snapshot submenu
-current from then on. A booted snapshot is an inspection environment.
-Changes made inside it evaporate on reboot.
+### Services and Boot Entries
+
+The snapper package ships `snapper-timeline.timer` enabled, which the
+transaction-only policy disables outright. Any timeline snapshot it
+fired before the config edit appears in `snapper list` with cleanup
+`timeline` and is deleted by number. Of the two units enabled here,
+`snapper-cleanup.timer` prunes by the limits above and `grub-btrfsd`
+watches `/.snapshots` for changes.
+
+Snapper snapshots are read-only, and booting one cleanly needs a tmpfs
+overlay on top, which the `grub-btrfs-overlayfs` initramfs hook
+provides. Append it to the end of the HOOKS line from System
+Configuration, then regenerate the initramfs and the GRUB config. A
+booted snapshot is an inspection environment, and changes made inside
+it evaporate on reboot.
 
 ```bash
 sudo systemctl disable --now snapper-timeline.timer
-sudo systemctl enable --now snapper-cleanup.timer   # prunes per NUMBER_LIMIT
-sudo systemctl enable --now grub-btrfsd             # watches /.snapshots
+sudo systemctl enable --now snapper-cleanup.timer
+sudo systemctl enable --now grub-btrfsd
 
-# append grub-btrfs-overlayfs to the end of HOOKS in /etc/mkinitcpio.conf, then
 sudo mkinitcpio -P
 sudo grub-mkconfig -o /boot/grub/grub.cfg
 ```
 
-The `grub-mkconfig` run now also prints "Detecting snapshots" and lists
-what it found; that is grub-btrfs generating the submenu.
+The `grub-mkconfig` run now also prints `Detecting snapshots` and lists
+what it found, which is grub-btrfs generating the submenu. The daemon
+keeps that submenu current from then on.
 
-**Scrub.** Snapshots answer bad changes; scrubbing answers bad disks. A
-monthly scrub reads everything and verifies btrfs checksums, surfacing
-silent corruption instead of waiting for a read to stumble over it.
+### Scrub
+
+Snapshots answer bad changes and scrubbing answers bad disks. A monthly
+scrub reads every block and verifies btrfs checksums, surfacing silent
+corruption instead of waiting for a read to stumble over it.
 
 ```bash
 sudo systemctl enable --now btrfs-scrub@-.timer     # "-" escapes the path /
 ```
 
-**Verify.** Install any small package. The transaction itself announces
-the machinery ("Performing snapper pre snapshots" before the install,
-"post snapshots" after), and `snapper list` then shows the pre/post pair
-with cleanup `number` and the pacman command as its description; after a
-reboot the GRUB menu carries an Arch Linux snapshots submenu.
+### Verification
+
+Install any small package. The transaction announces the machinery with
+`Performing snapper pre snapshots` before the install and
+`post snapshots` after. `snapper list` then shows the pre and post pair
+with cleanup `number` and the pacman command as its description, and
+after a reboot the GRUB menu carries an Arch Linux snapshots submenu.
 
 ```bash
 sudo pacman -S tree
-snapper list                    # a pre/post pair for the transaction
+snapper list
 ```
 
-**Rollback.** Two tools for two failure sizes. A bad config change or one
-broken package reverts in place with
-`sudo snapper undochange <pre>..<post>`. A system that no longer works
-rolls back whole by swapping `@` out, from a booted snapshot or the live
-ISO (unlock and mount the top level first, as in Disk Layout).
+### Rollbacks
+
+Two tools cover two failure sizes. A bad config change or one broken
+package reverts in place with `sudo snapper undochange <pre>..<post>`.
+A system that no longer works rolls back whole by swapping `@` out,
+either from a booted snapshot or from the live ISO after unlocking and
+mounting as in Disk Layout.
 
 ```bash
 sudo mount -o subvolid=5 /dev/mapper/cryptroot /mnt
@@ -516,7 +528,8 @@ reboot
 
 Kernels live outside btrfs, so after a full rollback
 `sudo pacman -S linux linux-lts` resyncs `/boot` with the rolled-back
-modules. Delete `@.broken` once the system proves out.
+modules. Delete `@.broken` once the rolled-back system is confirmed
+working.
 
 ## Swap
 
