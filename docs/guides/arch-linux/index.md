@@ -18,10 +18,19 @@ in one command.
 
 ## ISO and USB
 
+Download the ISO with its detached signature and verify authenticity,
+not integrity alone. A checksum from the same mirror as the ISO proves
+only that the download is intact, since a compromised mirror serves
+matching sums. The signature check instead retrieves the release
+signing key over WKD from the archlinux.org domain, which no mirror can
+substitute, and the verify must report a good signature from
+`pierre@archlinux.org`.
+
 ```bash
 curl -LO https://geo.mirror.pkgbuild.com/iso/latest/archlinux-x86_64.iso
-curl -LO https://geo.mirror.pkgbuild.com/iso/latest/sha256sums.txt
-sha256sum -c --ignore-missing sha256sums.txt
+curl -LO https://geo.mirror.pkgbuild.com/iso/latest/archlinux-x86_64.iso.sig
+gpg --auto-key-locate clear,wkd --locate-external-key pierre@archlinux.org
+gpg --verify archlinux-x86_64.iso.sig
 ```
 
 ```bash
@@ -102,9 +111,12 @@ Format the two plain partitions, then create and open the encrypted
 container. `luksFormat` asks for an uppercase `YES` as confirmation and
 reads the passphrase twice without echo. This passphrase unlocks the
 disk at every boot. The defaults give LUKS2 with argon2id, a memory-hard
-key derivation function, and they need no adjustment here because
-`/boot` sits outside the container and the bootloader never has to open
-it. `open` maps the decrypted view of the partition to
+key derivation function, and they stand unchanged. Keeping `/boot`
+outside the container is a deliberate trade-off. The bootloader never
+handles the encryption, so boot stays fast with a single passphrase
+prompt and recovery from the ISO stays simple, while the kernel and
+initramfs sit unencrypted, open to tampering by anyone with physical
+access to the disk. `open` maps the decrypted view of the partition to
 `/dev/mapper/cryptroot`, the device that every following step operates
 on.
 
@@ -331,10 +343,11 @@ grub-mkconfig -o /boot/grub/grub.cfg
 ```
 
 `grub-install` must end with `Installation finished. No error
-reported`. `grub-mkconfig` prints a Found line for each kernel,
-prepends `intel-ucode.img` to every initrd so the microcode loads
-first, warns that os-prober will not run, which is correct on a
-single-OS disk, and ends with `done`.
+reported`. `grub-mkconfig` prints a Found line for each kernel and
+lists `intel-ucode.img` beside each initramfs. That entry duplicates
+the microcode the `microcode` hook already embedded and loads it
+harmlessly twice. The run also warns that os-prober will not run, which
+is correct on a single-OS disk, and ends with `done`.
 
 ### Services
 
@@ -390,6 +403,22 @@ at zero until the Swap section. `findmnt /` must show root mounted from
 `/dev/mapper/cryptroot` with `subvol=/@` and `compress=zstd`, and its
 `discard=async` option is `allow-discards` from the kernel command line
 arriving at the filesystem.
+
+### Header Backup
+
+The LUKS header at the start of the partition holds the key material
+that turns the passphrase into the disk. If it is damaged, the data is
+unrecoverable with or without the passphrase, and no snapshot can help,
+since snapshots live inside the container. Back the header up once and
+store the file away from this disk.
+
+```bash
+sudo cryptsetup luksHeaderBackup /dev/nvme0n1p3 --header-backup-file luks-header.img
+```
+
+`luksHeaderRestore` writes it back should the header ever corrupt. A
+restored header accepts the passphrases that existed when the backup
+was made, so refresh the backup after any passphrase change.
 
 ### Recovery
 
