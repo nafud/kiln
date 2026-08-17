@@ -34,27 +34,31 @@ Del at power-on); the Arch ISO is unsigned and the firmware refuses it
 otherwise. Then boot the target machine through its boot menu (commonly
 F12).
 
-## Remote Session
+## Network
 
-The install runs over SSH for copy-paste, scrollback, and documentation in
-a browser. Only this bootstrap and the LUKS passphrase ever need the target
-machine's own keyboard. The live ISO already runs sshd, but root's password
-is empty and SSH refuses empty passwords, so at the target's console set
-one, join the network, and note the address.
+The installation requires a network connection. Ethernet with DHCP works
+without configuration; Wi-Fi authenticates through iwd. `device list`
+inside iwctl prints the interface name when it is not `wlan0`.
 
 ```console
-# passwd
 # iwctl
 [iwd]# station wlan0 connect "SSID"
 [iwd]# exit
-# ip -br addr
+# ping -c1 archlinux.org
 ```
 
-Ethernet needs none of the iwctl part, and `device list` inside iwctl
-names the interface when it is not `wlan0`. From the second machine,
-connect and open a multiplexer immediately; a Wi-Fi hiccup then suspends
-the SSH session without killing a package transaction mid-write, and
-`tmux attach` resumes it.
+## Remote Session (Optional)
+
+The remaining steps can run over SSH from another machine. sshd is
+running on the live ISO; root's password is empty, and SSH rejects empty
+passwords. Set a password, read the address, and connect. tmux keeps the
+installation alive across a dropped connection, and `tmux attach` resumes
+it.
+
+```console
+# passwd
+# ip -br addr
+```
 
 ```bash
 ssh root@<ip>
@@ -334,13 +338,13 @@ cryptsetup close cryptroot
 reboot                          # remove the USB stick when the screen blanks
 ```
 
-The SSH session dies with the reboot, and the LUKS passphrase is a
-pre-boot prompt that only the physical keyboard can answer. The expected
-sequence on screen, in order. The GRUB menu with entries for both `linux`
+The LUKS passphrase is a pre-boot prompt, answered at the console. The
+expected sequence, in order. The GRUB menu with entries for both `linux`
 and `linux-lts`; the passphrase prompt from the initramfs; a console
-login. Log in as the user, join the network with `nmtui`, and the rest of
-the work can return to SSH (as the user; root logins are refused, and the
-address may have changed).
+login. Log in as the user and join the network with `nmtui`. An SSH
+session from the optional section ended with the reboot; reconnect as the
+user once the network is up (root logins are refused, and the address may
+have changed).
 
 ```bash
 ping -c3 archlinux.org
