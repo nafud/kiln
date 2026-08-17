@@ -176,9 +176,12 @@ plus `/boot` and `/boot/efi`.
 
 pacstrap installs packages into the mounted target at `/mnt`, and it
 downloads from the mirrors the live ISO ranked with reflector when the
-network came up. `head /etc/pacman.d/mirrorlist` shows the result, and
-a stale or empty list is fixed with a fresh `reflector` run before
-pacstrap rather than after a failed one. One call covers the kernel,
+network came up. `head /etc/pacman.d/mirrorlist` shows the result. A
+stale or empty list is rewritten with
+`reflector --latest 10 --protocol https --sort rate --save /etc/pacman.d/mirrorlist`
+before pacstrap rather than after a failed one, since a bare
+`reflector` only prints its ranking and writes nothing. One call
+covers the kernel,
 firmware, filesystem tools, bootloader, and the utilities the first
 boot depends on. Type it as one continuous line.
 
