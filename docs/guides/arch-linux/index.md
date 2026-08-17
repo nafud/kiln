@@ -68,25 +68,23 @@ tmux
 ## Disk Layout
 
 !!! warning "Full wipe"
-    Everything from `fdisk` on destroys the previous contents of
-    `/dev/nvme0n1`, the outgoing OS included.
+    Partitioning destroys the previous contents of the disk, the
+    outgoing OS included.
 
-Confirm UEFI mode and the target disk first.
+Confirm UEFI mode and identify the target disk.
 
 ```bash
-cat /sys/firmware/efi/fw_platform_size    # must print 64
-lsblk -d -o NAME,SIZE,MODEL               # confirm nvme0n1 is the target
+cat /sys/firmware/efi/fw_platform_size    # 64 on UEFI
+lsblk -d -o NAME,SIZE,MODEL
 ```
 
-`fdisk /dev/nvme0n1` drives the whole table. `g` writes a fresh GPT label,
-`n` three times creates the partitions sized as below, `t` sets the first
-partition's type to `1` (EFI System), and `w` writes it out. `n` asks
-three questions per partition, and the rhythm matters. Partition number
-and first sector both take their defaults with a plain Enter; only the
-last-sector answer carries a size (`+1G`), and a size typed at the
-first-sector prompt bounces with "Value out of range". When a partition
-lands where the outgoing OS kept a filesystem, fdisk offers to remove the
-old signature; answer `Y`, it is the previous system's metadata.
+Partition with `fdisk /dev/nvme0n1`. `g` writes a new GPT label, `n`
+creates each partition, `t` sets the first partition's type to `1`
+(EFI System), and `w` writes the result. For each partition, the number
+and first-sector prompts take their defaults with Enter, and the size
+belongs to the last-sector prompt (`+1G`). Where a new partition overlaps
+an old filesystem, fdisk offers to wipe the leftover signature, and `Y`
+accepts.
 
 | Partition | Size | Type | Purpose |
 | --- | --- | --- | --- |
@@ -94,10 +92,10 @@ old signature; answer `Y`, it is the previous system's metadata.
 | `nvme0n1p2` | 1G | Linux | `/boot`, unencrypted ext4 |
 | `nvme0n1p3` | rest of the disk | Linux | LUKS2 container |
 
-Format the plain partitions, then create the encrypted container. The
-`cryptsetup` defaults already mean LUKS2 with argon2id, and since `/boot`
-lives outside the container, GRUB never needs to read through the
-encryption and the defaults stand.
+Format the two plain partitions, then create and open the encrypted
+container. The cryptsetup defaults produce LUKS2 with argon2id, and they
+stand because `/boot` lives outside the container, so GRUB never reads
+through the encryption.
 
 ```bash
 mkfs.fat -F32 /dev/nvme0n1p1
@@ -107,12 +105,12 @@ cryptsetup luksFormat /dev/nvme0n1p3
 cryptsetup open /dev/nvme0n1p3 cryptroot
 ```
 
-btrfs goes directly on the mapper device. Five subvolumes carve up the
-pool. `@` and `@home` split system from data without fixing either one's
-size. `@log` and `@pkg` exist to be excluded from snapshots, so a rollback
-never reverts the logs that explain what went wrong and never re-downloads
-the package cache. `@snapshots` is where snapper will live, kept top-level
-so a root rollback cannot take the snapshots down with itself.
+btrfs goes directly on the mapper device, carved into five subvolumes.
+`@` and `@home` separate system from data without fixing either size.
+`@log` and `@pkg` stay out of snapshots, so a rollback neither reverts
+the logs that explain what went wrong nor re-downloads the package
+cache. `@snapshots` sits at the top level, where a root rollback cannot
+take the snapshots down with it.
 
 ```bash
 mkfs.btrfs -L arch /dev/mapper/cryptroot
@@ -126,9 +124,8 @@ btrfs subvolume create /mnt/@snapshots   # /.snapshots
 umount /mnt
 ```
 
-Mount the tree. `compress=zstd` is transparent compression, typically a
-30 to 50 percent saving on system files at negligible CPU cost on modern
-hardware.
+Mount the tree. `compress=zstd` enables transparent compression, which
+typically saves 30 to 50 percent on system files at negligible CPU cost.
 
 ```bash
 o=compress=zstd,noatime
