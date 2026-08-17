@@ -264,7 +264,7 @@ skips, and the grant itself is one uncomment. Find the
 `# `, and save. `groups <user>` must then list `wheel`, and
 `grep '^%wheel' /etc/sudoers` must print the uncommented line.
 
-## Graphics
+### Graphics
 
 On Intel graphics, mesa provides OpenGL, `vulkan-intel`
 provides Vulkan, and `intel-media-driver` provides VA-API hardware
@@ -277,7 +277,7 @@ since a Wayland compositor reaches the kernel driver through mesa.
 pacman -S mesa vulkan-intel intel-media-driver
 ```
 
-## Initramfs
+### Initramfs
 
 The initramfs prompts for the LUKS passphrase at boot,
 and the `encrypt` hook is what gives it that ability. Order matters in
@@ -303,7 +303,7 @@ that no font is configured because `/etc/vconsole.conf` sets only the
 keymap, and the missing-firmware warnings repeat what pacstrap already
 showed.
 
-## GRUB
+### GRUB
 
 The kernel command line tells the initramfs which device to
 unlock and what to name the mapping. The UUID belongs to the raw
@@ -336,7 +336,7 @@ prepends `intel-ucode.img` to every initrd so the microcode loads
 first, warns that os-prober will not run, which is correct on a
 single-OS disk, and ends with `done`.
 
-## Services
+### Services
 
 Enable the units the first boot relies on. NetworkManager
 brings the network up, `fstrim.timer` runs a weekly TRIM pass over the
