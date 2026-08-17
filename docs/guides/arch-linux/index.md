@@ -1,37 +1,32 @@
 # Arch Linux
 
-A manual Arch Linux installation, run over SSH from a second machine. The
-result is a LUKS2-encrypted btrfs system with automatic snapshots and the
-niri workspace from
+A manual Arch Linux installation. The result is a LUKS2-encrypted btrfs
+system with automatic snapshots and the niri workspace from
 [dotfiles](https://github.com/nafud/dotfiles){ .external-link } deployed
-in one command. Verified end to end on real hardware; angle-bracket
-placeholders (`<hostname>`, `<user>`, `<Region/City>`) take your values,
-and device names like `nvme0n1` match a single-NVMe UEFI machine.
+in one command. Angle-bracket placeholders take your values; `nvme0n1` is
+the example disk on a UEFI machine.
 
 ## Decisions
 
-These were settled before the first command, since the whole disk layout
-follows from them.
-
 | Topic | Choice | Rationale |
 | --- | --- | --- |
-| Filesystem | btrfs on LUKS2, no LVM | Subvolumes share one pool with no fixed sizes; snapper makes upgrades reversible |
-| Bootloader | GRUB | grub-btrfs generates boot entries for snapshots; systemd-boot has no equivalent |
-| `/boot` | Separate unencrypted ext4 | GRUB never unlocks LUKS, so the LUKS2 argon2id defaults stay |
-| Kernels | `linux` and `linux-lts` | Snapshots do not cover `/boot`; the LTS entry answers a broken kernel |
-| Swap | zram only | Compressed swap in RAM; no partition, no swapfile, no hibernation |
-| Secure Boot | Off, before and after | The Arch ISO is unsigned; re-enabling with `sbctl` is out of scope |
+| Filesystem | btrfs on LUKS2 | Subvolumes share one pool; snapper makes upgrades reversible |
+| Bootloader | GRUB | grub-btrfs generates boot entries for snapshots |
+| `/boot` | Unencrypted ext4 | GRUB never unlocks LUKS; the LUKS2 argon2id defaults stay |
+| Kernels | `linux`, `linux-lts` | Snapshots do not cover `/boot`; LTS answers a broken kernel |
+| Swap | zram | Compressed swap in RAM; no partition, no hibernation |
+| Secure Boot | Off | The Arch ISO is unsigned |
 
 ## ISO and USB
 
-Download `archlinux-x86_64.iso` and its checksum file from the
-[Arch download page](https://archlinux.org/download/){ .external-link },
-then verify and write the stick.
+```bash
+curl -LO https://geo.mirror.pkgbuild.com/iso/latest/archlinux-x86_64.iso
+curl -LO https://geo.mirror.pkgbuild.com/iso/latest/sha256sums.txt
+sha256sum -c --ignore-missing sha256sums.txt
+```
 
 ```bash
-sha256sum -c --ignore-missing sha256sums.txt
-
-lsblk -d -o NAME,SIZE,MODEL     # identify the stick, not a hard disk
+lsblk -d -o NAME,SIZE,MODEL
 sudo dd if=archlinux-x86_64.iso of=/dev/sdX bs=4M status=progress conv=fsync
 ```
 
