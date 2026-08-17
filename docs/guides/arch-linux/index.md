@@ -531,16 +531,17 @@ working.
 
 ## Swap
 
-zram is compressed swap in RAM, no partition and no swapfile. The
-half-of-RAM device costs about a sixth of total memory when completely
-full (zstd holds roughly 3 to 1 on swapped pages) and nothing at rest,
-while extending effective memory well past physical.
+zram is compressed swap in RAM, with no partition and no swapfile. A
+device sized at half of RAM costs nothing at rest and about a sixth of
+total memory when completely full, since zstd holds roughly a 3 to 1
+ratio on swapped pages, while extending effective memory well past
+physical.
 
 ```bash
 sudo pacman -S zram-generator
 ```
 
-`/etc/systemd/zram-generator.conf`
+Write the device definition to `/etc/systemd/zram-generator.conf`.
 
 ```text
 [zram0]
@@ -548,11 +549,14 @@ zram-size = ram / 2
 compression-algorithm = zstd
 ```
 
-zram inverts the usual swap cost model. Swapping to it is nearly free and
-readahead is pointless, so the stock VM defaults point the wrong way.
-`/etc/sysctl.d/99-vm-zram.conf` carries the documented values; swappiness
-above 100 deliberately prefers moving cold anonymous pages to zram over
-dropping file cache, and `page-cluster = 0` disables swap readahead.
+zram inverts the usual swap cost model, since swapping to it is nearly
+free and readahead is pointless, so the stock VM defaults pull in the
+wrong direction. `/etc/sysctl.d/99-vm-zram.conf` carries the corrected
+values. A swappiness above 100 prefers moving cold anonymous pages to
+zram over dropping file cache, `page-cluster = 0` disables swap
+readahead, `watermark_scale_factor = 125` starts background reclaim
+earlier, and `watermark_boost_factor = 0` disables a reclaim boost that
+only pays off on disk-backed swap.
 
 ```text
 vm.swappiness = 180
@@ -561,16 +565,21 @@ vm.watermark_scale_factor = 125
 vm.page-cluster = 0
 ```
 
-The generator creates the device from the config on every boot; nothing to
-enable.
+The generator creates the device from the config at every boot, so
+there is no unit to enable. Start it once by hand and apply the sysctl
+values.
 
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl start systemd-zram-setup@zram0.service
 sudo sysctl --system
-zramctl                         # zram0, zstd, half of RAM, near-zero used
-swapon --show                   # /dev/zram0 active, priority 100
+zramctl
+swapon --show
 ```
+
+`zramctl` must show `zram0` with zstd compression, half of RAM in size,
+and near-zero use. `swapon --show` must list `/dev/zram0` active at
+priority 100.
 
 ## Workspace
 
