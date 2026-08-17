@@ -11,10 +11,10 @@ in one command.
 | --- | --- | --- |
 | Filesystem | btrfs on LUKS2 | Subvolumes share one pool, and snapper makes upgrades reversible |
 | Bootloader | GRUB | grub-btrfs generates boot entries for snapshots |
-| `/boot` | Unencrypted ext4 | GRUB never unlocks LUKS, so the LUKS2 argon2id defaults stay |
+| `/boot` | Unencrypted ext4 | A single passphrase prompt and simple ISO recovery, traded against tamperable boot files |
 | Kernels | `linux`, `linux-lts` | Snapshots do not cover `/boot`, so the LTS kernel answers a broken one |
 | Swap | zram | Compressed swap in RAM, with no partition and no hibernation |
-| Secure Boot | Off | The Arch ISO is unsigned |
+| Secure Boot | Off for the install | The ISO is unsigned, and re-enabling with custom keys is a post-install option |
 
 ## ISO and USB
 
@@ -632,3 +632,24 @@ A reboot lands in tuigreet, where the `niri` session is picked.
 Exercise the session once, the bar, notifications, launcher, terminal,
 lock, audio, and screenshots, and `bash ~/dotfiles/setup.sh summary`
 must report every row green.
+
+## Secure Boot
+
+Secure Boot stays off for the installation because the ISO is
+unsigned, and it does not have to stay off. Two measures raise the bar
+against boot-chain tampering, in increasing order of effort.
+
+A firmware administrator password is the first and costs nothing to
+maintain. It locks firmware setup and the boot menu, so boot order,
+the Secure Boot state, and USB booting cannot be changed without it.
+
+Re-enabling Secure Boot with custom keys is the second and is a
+self-contained project on the installed system. `sbctl` generates and
+enrolls a personal key set while the firmware is in Setup Mode, signs
+the bootloader and kernels, and re-signs them from a pacman hook on
+every update. Microsoft's vendor keys stay enrolled alongside, since
+firmware capsules and GPU option ROMs may be signed by them. The
+result verifies GRUB and the kernels, while the initramfs stays
+outside the signed set, a limit of pairing Secure Boot with this
+bootloader. Enrollment writes to the firmware's key stores, so read
+the sbctl documentation in full before starting.
