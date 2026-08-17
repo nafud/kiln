@@ -4,8 +4,9 @@ A manual Arch Linux installation, run over SSH from a second machine. The
 result is a LUKS2-encrypted btrfs system with automatic snapshots and the
 niri workspace from
 [dotfiles](https://github.com/nafud/dotfiles){ .external-link } deployed
-in one command. Written on a Tiger Lake ThinkBook; the shape transfers to
-any UEFI machine.
+in one command. Verified end to end on real hardware; angle-bracket
+placeholders (`<hostname>`, `<user>`, `<Region/City>`) take your values,
+and device names like `nvme0n1` match a single-NVMe UEFI machine.
 
 ## Decisions
 
@@ -34,11 +35,12 @@ lsblk -d -o NAME,SIZE,MODEL     # identify the stick, not a hard disk
 sudo dd if=archlinux-x86_64.iso of=/dev/sdX bs=4M status=progress conv=fsync
 ```
 
-Secure Boot must be disabled first (firmware setup, F1 at power-on here);
-the Arch ISO is unsigned and the firmware refuses it otherwise. Then boot
-the target machine with F12 and pick the `UEFI:`-prefixed entry for the
-stick. A legacy entry may sit next to it in the menu, and booting that one
-lands in BIOS mode, which fails the first sanity check below.
+Secure Boot must be disabled first (firmware setup, commonly F1, F2, or
+Del at power-on); the Arch ISO is unsigned and the firmware refuses it
+otherwise. Then boot the target machine through its boot menu (commonly
+F12) and pick the `UEFI:`-prefixed entry for the stick. A legacy entry may
+sit next to it in the menu, and booting that one lands in BIOS mode, which
+fails the first sanity check below.
 
 ## Remote Session
 
@@ -56,10 +58,11 @@ one, join the network, and note the address.
 # ip -br addr
 ```
 
-Ethernet needs none of the iwctl part. From the second machine, connect and
-open a multiplexer immediately; a Wi-Fi hiccup then suspends the SSH
-session without killing a package transaction mid-write, and `tmux attach`
-resumes it.
+Ethernet needs none of the iwctl part, and `device list` inside iwctl
+names the interface when it is not `wlan0`. From the second machine,
+connect and open a multiplexer immediately; a Wi-Fi hiccup then suspends
+the SSH session without killing a package transaction mid-write, and
+`tmux attach` resumes it.
 
 ```bash
 ssh root@<ip>
@@ -81,13 +84,19 @@ lsblk -d -o NAME,SIZE,MODEL               # confirm nvme0n1 is the target
 
 `fdisk /dev/nvme0n1` drives the whole table. `g` writes a fresh GPT label,
 `n` three times creates the partitions sized as below, `t` sets the first
-partition's type to `1` (EFI System), and `w` writes it out.
+partition's type to `1` (EFI System), and `w` writes it out. `n` asks
+three questions per partition, and the rhythm matters. Partition number
+and first sector both take their defaults with a plain Enter; only the
+last-sector answer carries a size (`+1G`), and a size typed at the
+first-sector prompt bounces with "Value out of range". When a partition
+lands where the outgoing OS kept a filesystem, fdisk offers to remove the
+old signature; answer `Y`, it is the previous system's metadata.
 
 | Partition | Size | Type | Purpose |
 | --- | --- | --- | --- |
 | `nvme0n1p1` | 1G | EFI System | ESP, mounted at `/boot/efi` |
 | `nvme0n1p2` | 1G | Linux | `/boot`, unencrypted ext4 |
-| `nvme0n1p3` | rest (~475G) | Linux | LUKS2 container |
+| `nvme0n1p3` | rest of the disk | Linux | LUKS2 container |
 
 Format the plain partitions, then create the encrypted container. The
 `cryptsetup` defaults already mean LUKS2 with argon2id, and since `/boot`
@@ -122,7 +131,7 @@ umount /mnt
 ```
 
 Mount the tree. `compress=zstd` is transparent compression, typically a
-30 to 50 percent saving on system files at negligible CPU cost on this
+30 to 50 percent saving on system files at negligible CPU cost on modern
 hardware.
 
 ```bash
@@ -139,30 +148,61 @@ mount --mkdir /dev/nvme0n1p1 /mnt/boot/efi
 ## Base System
 
 One pacstrap call carries everything the installed system cannot live
-without once the live ISO is gone. `-K` initializes a fresh pacman keyring
-in the target instead of copying the ISO's.
+without once the live ISO is gone. Type it as one continuous line; a
+package list split across shell continuation lines is easy to lose, and
+pacstrap invoked with no packages silently installs bare `base` alone.
 
 ```bash
-pacstrap -K /mnt \
-  base linux linux-lts linux-firmware intel-ucode sof-firmware \
-  btrfs-progs cryptsetup e2fsprogs dosfstools \
-  grub efibootmgr \
-  networkmanager \
-  base-devel sudo vim git man-db man-pages openssh
+pacstrap -K /mnt base linux linux-lts linux-firmware intel-ucode sof-firmware btrfs-progs cryptsetup e2fsprogs dosfstools grub efibootmgr networkmanager base-devel sudo vim git man-db man-pages openssh
 ```
+
+`-K` initializes a fresh pacman keyring in the target. Two provider
+prompts appear mid-run (`iptables` and the initramfs generator); a plain
+Enter takes the correct default on both, `iptables` and `mkinitcpio`.
+Near the end, "Possibly missing firmware for module" warnings during
+initramfs generation name hardware the machine does not have and are
+expected noise.
 
 | Packages | Reason |
 | --- | --- |
 | `base linux linux-firmware` | The core system |
 | `linux-lts` | The fallback kernel from the decisions table |
-| `intel-ucode` | Microcode for the i7-1165G7; GRUB picks it up automatically |
-| `sof-firmware` | Tiger Lake audio runs Sound Open Firmware. Without this package the desktop works and the speakers stay silent |
+| `intel-ucode` | CPU microcode, picked up by GRUB automatically (`amd-ucode` on AMD) |
+| `sof-firmware` | Audio firmware for recent Intel laptops (Sound Open Firmware). Without it the desktop works and the speakers stay silent |
 | `btrfs-progs cryptsetup` | Root filesystem tools and the LUKS unlock inside the initramfs |
 | `e2fsprogs dosfstools` | fsck for the ext4 `/boot` and the FAT32 ESP |
 | `grub efibootmgr` | Bootloader, installed and configured in the chroot |
 | `networkmanager` | Network after the reboot |
 | `base-devel git` | `git` clones the workspace repository, `base-devel` builds its AUR set |
 | `sudo vim man-db man-pages openssh` | `base` alone ships no editor, no sudo, and no man pages |
+
+??? note "If pacstrap fails at checking keys"
+    A failure at "(N/N) checking keys in keyring" with `Public keyring
+    not found`, a wall of `keyring is not writable`, and `required key
+    missing from keyring` means the live ISO's own keyring was never
+    initialized. The archiso initializes it in a boot service
+    (`pacman-init`) ordered after time synchronization; on a network
+    that blocks NTP the sync never completes and the service sits
+    queued forever (`systemctl status pacman-init` shows `inactive
+    (dead)` with a pending `Job:`, and `timedatectl` shows
+    `System clock synchronized: no` under an otherwise correct clock).
+    Do the service's work by hand, refresh the keys, and rerun without
+    `-K`, so the now-working host keyring is copied into the target.
+
+    ```bash
+    systemctl cancel
+    pacman-key --init
+    pacman-key --populate
+    pacman -Sy archlinux-keyring
+    rm -rf /mnt/etc/pacman.d/gnupg
+    pacstrap /mnt <the same package list>
+    ```
+
+    The failed run already downloaded every package into the target's
+    own cache (the `@pkg` subvolume), so the retry re-verifies from
+    disk and is fast. `/etc/pacman.d/gnupg` on the live ISO is a
+    pre-mounted ramdisk; it cannot be removed, only initialized in
+    place, which is why the fix never `rm`s it.
 
 Generate fstab and read it before moving on. Everything about how the
 system mounts at boot flows from this file, and this is the cheapest moment
@@ -173,40 +213,49 @@ genfstab -U /mnt >> /mnt/etc/fstab
 cat /mnt/etc/fstab
 ```
 
-Three things must hold. Root is `/dev/mapper/cryptroot` with `subvol=/@`;
-the four other subvolume mounts are present and carry `compress=zstd` and
-`noatime`; `/boot` (ext4) and `/boot/efi` (vfat) both appear.
+Three things must hold. Root is the btrfs filesystem's UUID with
+`subvol=/@` (all five btrfs entries share that one UUID, one filesystem
+seen through five subvolumes, resolved through the unlocked mapper at
+boot); the four other subvolume mounts are present and carry
+`compress=zstd` and `noatime`; `/boot` (ext4) and `/boot/efi` (vfat) both
+appear.
 
 ## System Configuration
 
-`arch-chroot /mnt` enters the new system. Identity and accounts first.
+`arch-chroot /mnt` enters the new system (the prompt changes). Identity
+and accounts first. The `filesystem` package already ships the
+`localhost` entries in `/etc/hosts`, so only the machine's own line is
+appended.
 
 ```bash
-ln -sf /usr/share/zoneinfo/Asia/Baku /etc/localtime
+ln -sf /usr/share/zoneinfo/<Region/City> /etc/localtime
 hwclock --systohc
 sed -i 's/^#en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen
 locale-gen
 echo 'LANG=en_US.UTF-8' > /etc/locale.conf
 echo 'KEYMAP=us' > /etc/vconsole.conf
 
-echo 'thinkbook' > /etc/hostname
-cat >> /etc/hosts <<'EOF'
-127.0.0.1   localhost
-::1         localhost
-127.0.1.1   thinkbook
-EOF
+echo '<hostname>' > /etc/hostname
+echo '127.0.1.1 <hostname>' >> /etc/hosts
 
 passwd                          # root password
-useradd -m -G wheel nafud
-passwd nafud
-EDITOR=vim visudo               # uncomment  %wheel ALL=(ALL:ALL) ALL
+useradd -m -G wheel <user>
+passwd <user>
+EDITOR=vim visudo
 ```
 
-**Graphics.** Iris Xe needs mesa for OpenGL, `vulkan-intel` for Vulkan,
-and `intel-media-driver` for VA-API hardware video decode, which is what
-keeps video playback off the CPU and the battery alive. `xf86-video-intel`
-is a deprecated Xorg driver and stays uninstalled; a Wayland compositor
-talks to the kernel driver through mesa.
+In visudo, the sudo grant is one uncomment. Find the
+`%wheel ALL=(ALL:ALL) ALL` line without `NOPASSWD` (`/wheel` searches)
+and delete its leading `# `, then save. Verify the round with
+`groups <user>` (must list `wheel`) and
+`grep '^%wheel' /etc/sudoers` (must print the uncommented line).
+
+**Graphics.** For Intel graphics, mesa carries OpenGL, `vulkan-intel`
+Vulkan, and `intel-media-driver` VA-API hardware video decode, which is
+what keeps video playback off the CPU and the battery alive (another GPU
+vendor swaps in its own Vulkan and VA-API packages; mesa stays).
+`xf86-video-intel` is a deprecated Xorg driver and stays uninstalled; a
+Wayland compositor talks to the kernel driver through mesa.
 
 ```bash
 pacman -S mesa vulkan-intel intel-media-driver
@@ -216,8 +265,9 @@ pacman -S mesa vulkan-intel intel-media-driver
 boot, and it only learns how from the `encrypt` hook. Order matters twice
 in the hook list. The keyboard hooks precede `encrypt` so the passphrase
 prompt has a working keyboard, and `microcode` embeds the CPU microcode
-into the image. `kms` brings `i915` up early for a proper console. Edit
-`/etc/mkinitcpio.conf` to read
+into the image. `kms` brings the GPU driver up early for a proper
+console. Edit `/etc/mkinitcpio.conf`, replacing the whole existing
+`HOOKS=` line with
 
 ```text
 HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont block encrypt filesystems fsck)
@@ -229,29 +279,41 @@ and regenerate for both kernels.
 mkinitcpio -P
 ```
 
+In each build's hook scroll, `[encrypt]` must appear between `[block]`
+and `[filesystems]`. A `consolefont: no font found in configuration`
+warning is expected (`/etc/vconsole.conf` sets only the keymap; the
+kernel's default font stands), as is the missing-firmware noise from
+pacstrap.
+
 **GRUB.** The kernel command line tells the initramfs which device to
 unlock and what to call it. The UUID is the raw partition's
 (`nvme0n1p3`), never the mapper device's, a classic mix-up.
-`allow-discards` passes TRIM through the encryption layer.
+`allow-discards` passes TRIM through the encryption layer. A 36-character
+UUID invites transcription errors, so capture it in a variable and let
+`sed` write the line; the anchored pattern replaces only
+`GRUB_CMDLINE_LINUX` and leaves `GRUB_CMDLINE_LINUX_DEFAULT` alone.
 
 ```bash
-blkid -s UUID -o value /dev/nvme0n1p3
+UUID=$(blkid -s UUID -o value /dev/nvme0n1p3)
+echo $UUID                      # must print the UUID; stop if empty
+sed -i "s|^GRUB_CMDLINE_LINUX=.*|GRUB_CMDLINE_LINUX=\"cryptdevice=UUID=$UUID:cryptroot:allow-discards root=/dev/mapper/cryptroot\"|" /etc/default/grub
+grep ^GRUB_CMDLINE_LINUX /etc/default/grub
 ```
 
-Edit `/etc/default/grub` so the line reads
-
-```text
-GRUB_CMDLINE_LINUX="cryptdevice=UUID=<that-uuid>:cryptroot:allow-discards root=/dev/mapper/cryptroot"
-```
-
-then install and generate. The generated config picks up both kernels, so
-the LTS fallback entry from the decisions table materializes here at no
-extra cost.
+The grep must show the full line with the real UUID embedded. Then
+install and generate. The generated config picks up both kernels, so the
+LTS fallback entry from the decisions table materializes here at no extra
+cost.
 
 ```bash
 grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB --recheck
 grub-mkconfig -o /boot/grub/grub.cfg
 ```
+
+`grub-install` must end "Installation finished. No error reported."
+`grub-mkconfig` prints a Found line for each kernel with `intel-ucode.img`
+prepended to every initrd (the microcode loading), warns that os-prober
+will not run (correct, there is no other OS), and ends "done".
 
 **Services.**
 
@@ -290,10 +352,13 @@ address may have changed).
 
 ```bash
 ping -c3 archlinux.org
-timedatectl                     # NTP synced
-free -h                         # 24 GB visible
+timedatectl                     # NTP synced, chosen timezone applied
+free -h                         # full RAM visible; swap 0B until the Swap section
 findmnt /                       # /dev/mapper/cryptroot, subvol=/@, compress=zstd
 ```
+
+`findmnt` also shows `discard=async`; that is `allow-discards` from the
+kernel command line arriving at the filesystem.
 
 **If it does not boot.** A bare `grub>` prompt or a rescue shell means the
 initramfs hooks or the `cryptdevice=` line went wrong. The fix is never a
@@ -301,10 +366,11 @@ reinstall. Boot the ISO again, unlock and remount everything as in Disk
 Layout, `arch-chroot /mnt`, correct the mistake, regenerate
 (`mkinitcpio -P`, `grub-mkconfig`), and reboot.
 
-**Standby.** The firmware defaults to `s2idle` and also advertises `deep`
-(S3). If standby drain ever becomes noticeable, append
-`mem_sleep_default=deep` to `GRUB_CMDLINE_LINUX` and test; until then the
-default stands.
+**Standby.** `cat /sys/power/mem_sleep` shows the firmware's suspend
+modes, the bracketed one active. Where `deep` (S3) is offered alongside a
+default `s2idle` and standby drain ever becomes noticeable, appending
+`mem_sleep_default=deep` to `GRUB_CMDLINE_LINUX` is the test; until then
+the default stands.
 
 ## Snapshots
 
@@ -356,21 +422,29 @@ NUMBER_LIMIT="20"
 NUMBER_LIMIT_IMPORTANT="10"
 ```
 
-**Services and boot entries.** Snapper snapshots are read-only, and
-booting one cleanly needs a tmpfs overlay on top, provided by the
-`grub-btrfs-overlayfs` initramfs hook. Append it to the end of the HOOKS
-line from System Configuration, regenerate, and refresh GRUB once; the
-daemon keeps the snapshot submenu current from then on. A booted snapshot
-is an inspection environment. Changes made inside it evaporate on reboot.
+**Services and boot entries.** The snapper package ships
+`snapper-timeline.timer` enabled; under the transaction-only policy it is
+disabled outright, and any timeline snapshot it fired off before the
+config edit (`snapper list` shows it with cleanup `timeline`) is deleted
+by number. Snapper snapshots are read-only, and booting one cleanly needs
+a tmpfs overlay on top, provided by the `grub-btrfs-overlayfs` initramfs
+hook. Append it to the end of the HOOKS line from System Configuration,
+regenerate, and refresh GRUB once; the daemon keeps the snapshot submenu
+current from then on. A booted snapshot is an inspection environment.
+Changes made inside it evaporate on reboot.
 
 ```bash
+sudo systemctl disable --now snapper-timeline.timer
 sudo systemctl enable --now snapper-cleanup.timer   # prunes per NUMBER_LIMIT
 sudo systemctl enable --now grub-btrfsd             # watches /.snapshots
 
-# append grub-btrfs-overlayfs to HOOKS in /etc/mkinitcpio.conf, then
+# append grub-btrfs-overlayfs to the end of HOOKS in /etc/mkinitcpio.conf, then
 sudo mkinitcpio -P
 sudo grub-mkconfig -o /boot/grub/grub.cfg
 ```
+
+The `grub-mkconfig` run now also prints "Detecting snapshots" and lists
+what it found; that is grub-btrfs generating the submenu.
 
 **Scrub.** Snapshots answer bad changes; scrubbing answers bad disks. A
 monthly scrub reads everything and verifies btrfs checksums, surfacing
@@ -380,8 +454,10 @@ silent corruption instead of waiting for a read to stumble over it.
 sudo systemctl enable --now btrfs-scrub@-.timer     # "-" escapes the path /
 ```
 
-**Verify.** Install any small package and `snapper list` should show a
-pre/post pair carrying that pacman command as its description; after a
+**Verify.** Install any small package. The transaction itself announces
+the machinery ("Performing snapper pre snapshots" before the install,
+"post snapshots" after), and `snapper list` then shows the pre/post pair
+with cleanup `number` and the pacman command as its description; after a
 reboot the GRUB menu carries an Arch Linux snapshots submenu.
 
 ```bash
@@ -409,10 +485,10 @@ modules. Delete `@.broken` once the system proves out.
 
 ## Swap
 
-zram is compressed swap in RAM, no partition and no swapfile. At 24 GB the
-half-of-RAM device costs about 4 GB of memory when completely full (zstd
-holds roughly 3 to 1 on swapped pages) while extending effective memory
-well past physical.
+zram is compressed swap in RAM, no partition and no swapfile. The
+half-of-RAM device costs about a sixth of total memory when completely
+full (zstd holds roughly 3 to 1 on swapped pages) and nothing at rest,
+while extending effective memory well past physical.
 
 ```bash
 sudo pacman -S zram-generator
@@ -446,8 +522,8 @@ enable.
 sudo systemctl daemon-reload
 sudo systemctl start systemd-zram-setup@zram0.service
 sudo sysctl --system
-zramctl                         # zram0, zstd, 12G
-swapon --show                   # /dev/zram0 active
+zramctl                         # zram0, zstd, half of RAM, near-zero used
+swapon --show                   # /dev/zram0 active, priority 100
 ```
 
 ## Workspace
