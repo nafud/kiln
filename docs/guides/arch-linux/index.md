@@ -356,10 +356,10 @@ prompt on the console.
 
 ## First Boot
 
-Leave the chroot and tear down in order. The explicit `cryptsetup close` is
-a cheap verification that nothing still holds the filesystem open; a
-"device busy" here is worth understanding before the reboot rather than
-after.
+Leave the chroot and tear down the mounts in order. The explicit
+`cryptsetup close` verifies that nothing still holds the filesystem
+open, and a device-busy error here is easier to investigate before the
+reboot than after it.
 
 ```bash
 exit
@@ -368,35 +368,44 @@ cryptsetup close cryptroot
 reboot                          # remove the USB stick when the screen blanks
 ```
 
-The LUKS passphrase is a pre-boot prompt, answered at the console. The
-expected sequence, in order. The GRUB menu with entries for both `linux`
-and `linux-lts`; the passphrase prompt from the initramfs; a console
-login. Log in as the user and join the network with `nmtui`. An SSH
-session from the optional section ended with the reboot; reconnect as the
-user once the network is up (root logins are refused, and the address may
-have changed).
+The machine now boots in three stages. GRUB shows a menu with entries
+for both `linux` and `linux-lts`, the initramfs prompts for the LUKS
+passphrase, and a console login follows. Log in as the user and join
+the network with `nmtui`. Any SSH session from the optional section
+ended with the reboot, so reconnect as the user once the network is up,
+since root logins are refused and the address may have changed.
+
+Four checks confirm the installed system.
 
 ```bash
 ping -c3 archlinux.org
-timedatectl                     # NTP synced, chosen timezone applied
-free -h                         # full RAM visible; swap 0B until the Swap section
-findmnt /                       # /dev/mapper/cryptroot, subvol=/@, compress=zstd
+timedatectl
+free -h
+findmnt /
 ```
 
-`findmnt` also shows `discard=async`; that is `allow-discards` from the
-kernel command line arriving at the filesystem.
+`ping` proves the network. `timedatectl` must show NTP synchronized and
+the chosen timezone. `free -h` must show the full RAM, and swap stays
+at zero until the Swap section. `findmnt /` must show root mounted from
+`/dev/mapper/cryptroot` with `subvol=/@` and `compress=zstd`, and its
+`discard=async` option is `allow-discards` from the kernel command line
+arriving at the filesystem.
 
-**If it does not boot.** A bare `grub>` prompt or a rescue shell means the
-initramfs hooks or the `cryptdevice=` line went wrong. The fix is never a
-reinstall. Boot the ISO again, unlock and remount everything as in Disk
-Layout, `arch-chroot /mnt`, correct the mistake, regenerate
-(`mkinitcpio -P`, `grub-mkconfig`), and reboot.
+### Recovery
 
-**Standby.** `cat /sys/power/mem_sleep` shows the firmware's suspend
-modes, the bracketed one active. Where `deep` (S3) is offered alongside a
-default `s2idle` and standby drain ever becomes noticeable, appending
-`mem_sleep_default=deep` to `GRUB_CMDLINE_LINUX` is the test; until then
-the default stands.
+A bare `grub>` prompt or a rescue shell in place of the login means the
+initramfs hooks or the `cryptdevice=` line went wrong, and no reinstall
+is needed. Boot the ISO again, unlock and remount everything as in Disk
+Layout, enter the chroot, correct the mistake, rerun `mkinitcpio -P`
+and `grub-mkconfig -o /boot/grub/grub.cfg`, and reboot.
+
+### Standby
+
+`cat /sys/power/mem_sleep` lists the suspend modes the firmware offers
+and brackets the active one. `s2idle` is the usual default. When the
+list also contains `deep`, appending `mem_sleep_default=deep` to
+`GRUB_CMDLINE_LINUX` selects the deeper S3 state, a change worth making
+only if standby drain becomes noticeable.
 
 ## Snapshots
 
