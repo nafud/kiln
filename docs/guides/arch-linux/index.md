@@ -235,10 +235,11 @@ as ext4 and `/boot/efi` as vfat, each under its own UUID.
 
 ## System Configuration
 
-`arch-chroot /mnt` enters the new system (the prompt changes). Identity
-and accounts first. The `filesystem` package already ships the
-`localhost` entries in `/etc/hosts`, so only the machine's own line is
-appended.
+`arch-chroot /mnt` enters the new system, and every command from here
+on runs inside it. The first block sets time, locale, identity, and
+accounts. The `filesystem` package already ships the `localhost`
+entries in `/etc/hosts`, so the machine's own line is the only
+addition.
 
 ```bash
 ln -sf /usr/share/zoneinfo/<Region/City> /etc/localtime
@@ -257,30 +258,30 @@ passwd <user>
 EDITOR=vim visudo
 ```
 
-In visudo, the sudo grant is one uncomment. Find the
-`%wheel ALL=(ALL:ALL) ALL` line without `NOPASSWD` (`/wheel` searches)
-and delete its leading `# `, then save. Verify the round with
-`groups <user>` (must list `wheel`) and
-`grep '^%wheel' /etc/sudoers` (must print the uncommented line).
+visudo opens the sudoers file behind a syntax check that a plain editor
+skips, and the grant itself is one uncomment. Find the
+`%wheel ALL=(ALL:ALL) ALL` line without `NOPASSWD`, remove its leading
+`# `, and save. `groups <user>` must then list `wheel`, and
+`grep '^%wheel' /etc/sudoers` must print the uncommented line.
 
-**Graphics.** For Intel graphics, mesa carries OpenGL, `vulkan-intel`
-Vulkan, and `intel-media-driver` VA-API hardware video decode, which is
-what keeps video playback off the CPU and the battery alive (another GPU
-vendor swaps in its own Vulkan and VA-API packages; mesa stays).
-`xf86-video-intel` is a deprecated Xorg driver and stays uninstalled; a
-Wayland compositor talks to the kernel driver through mesa.
+**Graphics.** On Intel graphics, mesa provides OpenGL, `vulkan-intel`
+provides Vulkan, and `intel-media-driver` provides VA-API hardware
+video decode, which moves video playback off the CPU. Another GPU
+vendor swaps in its own Vulkan and VA-API packages while mesa stays.
+`xf86-video-intel` is a deprecated Xorg driver and stays uninstalled,
+since a Wayland compositor reaches the kernel driver through mesa.
 
 ```bash
 pacman -S mesa vulkan-intel intel-media-driver
 ```
 
-**Initramfs.** The initramfs is what prompts for the LUKS passphrase at
-boot, and it only learns how from the `encrypt` hook. Order matters twice
-in the hook list. The keyboard hooks precede `encrypt` so the passphrase
-prompt has a working keyboard, and `microcode` embeds the CPU microcode
-into the image. `kms` brings the GPU driver up early for a proper
-console. Edit `/etc/mkinitcpio.conf`, replacing the whole existing
-`HOOKS=` line with
+**Initramfs.** The initramfs prompts for the LUKS passphrase at boot,
+and the `encrypt` hook is what gives it that ability. Order matters in
+the hook list. The keyboard hooks precede `encrypt` so the passphrase
+prompt has a working keyboard, `microcode` embeds the CPU microcode
+into the image, and `kms` brings the GPU driver up early for a
+native-resolution console. Edit `/etc/mkinitcpio.conf` and replace the
+whole existing `HOOKS=` line with
 
 ```text
 HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont block encrypt filesystems fsck)
@@ -292,54 +293,58 @@ and regenerate for both kernels.
 mkinitcpio -P
 ```
 
-In each build's hook scroll, `[encrypt]` must appear between `[block]`
-and `[filesystems]`. A `consolefont: no font found in configuration`
-warning is expected (`/etc/vconsole.conf` sets only the keymap; the
-kernel's default font stands), as is the missing-firmware noise from
-pacstrap.
+In each build's hook list, `[encrypt]` must appear between `[block]`
+and `[filesystems]`. Two warnings are expected. `consolefont` reports
+that no font is configured because `/etc/vconsole.conf` sets only the
+keymap, and the missing-firmware warnings repeat what pacstrap already
+showed.
 
 **GRUB.** The kernel command line tells the initramfs which device to
-unlock and what to call it. The UUID is the raw partition's
-(`nvme0n1p3`), never the mapper device's, a classic mix-up.
-`allow-discards` passes TRIM through the encryption layer. A 36-character
-UUID invites transcription errors, so capture it in a variable and let
-`sed` write the line; the anchored pattern replaces only
-`GRUB_CMDLINE_LINUX` and leaves `GRUB_CMDLINE_LINUX_DEFAULT` alone.
+unlock and what to name the mapping. The UUID belongs to the raw
+partition, never to the mapper device it opens into, and
+`allow-discards` passes TRIM through the encryption layer. A
+36-character UUID invites transcription errors, so capture it in a
+variable and let `sed` write the line. The anchored pattern replaces
+only `GRUB_CMDLINE_LINUX` and leaves `GRUB_CMDLINE_LINUX_DEFAULT`
+untouched.
 
 ```bash
 UUID=$(blkid -s UUID -o value /dev/nvme0n1p3)
-echo $UUID                      # must print the UUID; stop if empty
+echo $UUID                      # stop if this prints nothing
 sed -i "s|^GRUB_CMDLINE_LINUX=.*|GRUB_CMDLINE_LINUX=\"cryptdevice=UUID=$UUID:cryptroot:allow-discards root=/dev/mapper/cryptroot\"|" /etc/default/grub
 grep ^GRUB_CMDLINE_LINUX /etc/default/grub
 ```
 
-The grep must show the full line with the real UUID embedded. Then
-install and generate. The generated config picks up both kernels, so the
-LTS fallback entry from the decisions table materializes here at no extra
-cost.
+The grep must print the full line with the real UUID embedded. Install
+GRUB and generate its config. The config generator picks up both
+kernels, so the LTS fallback entry appears without further work.
 
 ```bash
 grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB --recheck
 grub-mkconfig -o /boot/grub/grub.cfg
 ```
 
-`grub-install` must end "Installation finished. No error reported."
-`grub-mkconfig` prints a Found line for each kernel with `intel-ucode.img`
-prepended to every initrd (the microcode loading), warns that os-prober
-will not run (correct, there is no other OS), and ends "done".
+`grub-install` must end with `Installation finished. No error
+reported`. `grub-mkconfig` prints a Found line for each kernel,
+prepends `intel-ucode.img` to every initrd so the microcode loads
+first, warns that os-prober will not run, which is correct on a
+single-OS disk, and ends with `done`.
 
-**Services.**
+**Services.** Enable the units the first boot relies on. NetworkManager
+brings the network up, `fstrim.timer` runs a weekly TRIM pass over the
+SSD, `systemd-timesyncd` keeps the clock synchronized, and `sshd` is
+optional for working over SSH after the reboot.
 
 ```bash
 systemctl enable NetworkManager
-systemctl enable fstrim.timer            # weekly SSD TRIM
+systemctl enable fstrim.timer
 systemctl enable systemd-timesyncd
-systemctl enable sshd                    # optional; post-install work over SSH
+systemctl enable sshd
 ```
 
-No display manager is enabled here. The workspace bootstrap installs and
-configures greetd later, and a login prompt on the console is all the next
-section needs.
+No display manager is enabled here. The workspace bootstrap installs
+and configures greetd later, and the next section only needs a login
+prompt on the console.
 
 ## First Boot
 
