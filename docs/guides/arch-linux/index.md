@@ -38,8 +38,9 @@ lsblk -d -o NAME,SIZE,MODEL
 sudo dd if=archlinux-x86_64.iso of=/dev/sdX bs=4M status=progress conv=fsync
 ```
 
-The Arch ISO is unsigned, so Secure Boot must be disabled in firmware
-setup (commonly F1, F2, or Del at power-on) before the stick will boot.
+The ISO's bootloader carries no Secure Boot signature, so Secure Boot
+must be disabled in firmware setup (commonly F1, F2, or Del at
+power-on) before the stick will boot.
 Boot the target machine through its boot menu, commonly F12.
 
 ## Network
@@ -173,11 +174,17 @@ plus `/boot` and `/boot/efi`.
 
 ## Base System
 
-pacstrap installs packages into the mounted target at `/mnt`. One call
-covers the kernel, firmware, filesystem tools, bootloader, and the
-utilities the first boot depends on. Type it as one continuous line.
+pacstrap installs packages into the mounted target at `/mnt`, and it
+downloads from the mirrors the live ISO ranked with reflector when the
+network came up. `head /etc/pacman.d/mirrorlist` shows the result, and
+a stale or empty list is fixed with a fresh `reflector` run before
+pacstrap rather than after a failed one. One call covers the kernel,
+firmware, filesystem tools, bootloader, and the utilities the first
+boot depends on. Type it as one continuous line.
 
 ```bash
+head /etc/pacman.d/mirrorlist
+
 pacstrap -K /mnt base linux linux-lts linux-firmware intel-ucode sof-firmware btrfs-progs cryptsetup e2fsprogs dosfstools grub efibootmgr networkmanager base-devel sudo vim git man-db man-pages openssh
 ```
 
@@ -446,8 +453,11 @@ one transaction because partial upgrades are unsupported, so no line
 separates minor updates from major ones, and whether an upgrade was
 risky becomes clear only in hindsight. Bracketing every pacman
 transaction instead makes the revert point exist by construction, and
-the snapshot list stays a clean history of system changes. An ad-hoc
-point before a risky experiment remains one command away with
+the snapshot list stays a clean history of system changes. The scope
+is the system alone, since `@home` sits outside every snapshot, and a
+second snapper config for `/home` extends the same machinery to user
+data if that is ever wanted. An ad-hoc point before a risky experiment
+remains one command away with
 `snapper create --description "before X"`.
 
 ```bash
@@ -592,11 +602,14 @@ only pays off on disk-backed swap.
 The kernel also boots with zswap on, a compressed cache that sits in
 front of every swap device and intercepts pages before they reach
 zram, leaving the device idle and its statistics misleading. Turn it
-off now through sysfs and permanently on the kernel command line.
+off now through sysfs and permanently on the kernel command line. The
+guarded `sed` changes nothing on a rerun, and the grep must show
+`zswap.enabled=0` inside the quoted line.
 
 ```bash
 echo 0 | sudo tee /sys/module/zswap/parameters/enabled
-sudo sed -i 's|^GRUB_CMDLINE_LINUX="\(.*\)"|GRUB_CMDLINE_LINUX="\1 zswap.enabled=0"|' /etc/default/grub
+sudo sed -i '/zswap.enabled/! s|^GRUB_CMDLINE_LINUX="\(.*\)"|GRUB_CMDLINE_LINUX="\1 zswap.enabled=0"|' /etc/default/grub
+grep ^GRUB_CMDLINE_LINUX /etc/default/grub
 sudo grub-mkconfig -o /boot/grub/grub.cfg
 ```
 
