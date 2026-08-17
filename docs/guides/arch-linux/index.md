@@ -652,9 +652,10 @@ The bootstrap clones the repository into `~/dotfiles` over HTTPS, so
 receiving needs no SSH key, and sets the push URL to SSH for
 authenticated pushes later. It then hands off to `setup.sh`, which is
 idempotent end to end. One run installs the full package set from the
-official repositories, bootstraps paru and installs the AUR set,
-installs and enables greetd with tuigreet, enables the maintenance
-timers, links `config/` into `~/.config` and `bin/` into
+official repositories and bootstraps paru for AUR work later, though
+the script itself installs nothing from the AUR. It also installs and
+enables greetd with tuigreet, enables the maintenance timers, links
+`config/` into `~/.config` and `bin/` into
 `~/.local/bin`, writes the managed shell block and system defaults,
 validates the niri config, and prints a probed component summary.
 
