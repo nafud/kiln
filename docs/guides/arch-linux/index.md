@@ -12,7 +12,7 @@ in one command.
 | Filesystem | btrfs on LUKS2 | Subvolumes share one pool, and snapper makes upgrades reversible |
 | Bootloader | GRUB | grub-btrfs generates boot entries for snapshots |
 | `/boot` | Unencrypted ext4 | A single passphrase prompt and simple ISO recovery, traded against tamperable boot files |
-| Kernels | `linux`, `linux-lts` | Snapshots do not cover `/boot`, so the LTS kernel answers a broken one |
+| Kernels | `linux`, `linux-lts` | Snapshots do not cover `/boot`, so the LTS kernel answers a broken one. GRUB boots the mainline by default |
 | Swap | zram | Compressed swap in RAM, with no partition and no hibernation |
 | Secure Boot | Off for the install | The ISO is unsigned, and re-enabling with custom keys is a post-install option |
 
@@ -24,7 +24,11 @@ only that the download is intact, since a compromised mirror serves
 matching sums. The signature check instead retrieves the release
 signing key over WKD from the archlinux.org domain, which no mirror can
 substitute, and the verify must report a good signature from
-`pierre@archlinux.org`.
+`pierre@archlinux.org`. Two warnings accompany a good signature, the
+key shows as `[unknown]` and not certified, which is expected since
+WKD established the trust rather than a local signature. The key's
+fingerprint can be cross-checked against the one printed on the
+archlinux.org download page.
 
 ```bash
 curl -LO https://geo.mirror.pkgbuild.com/iso/latest/archlinux-x86_64.iso
@@ -48,10 +52,13 @@ Boot the target machine through its boot menu, commonly F12.
 The installation requires a network connection. A wired connection with
 DHCP works without configuration, and Wi-Fi authenticates through iwd.
 If the wireless interface is not named `wlan0`, `device list` inside
-iwctl prints the actual name.
+iwctl prints the actual name. `get-networks` lists the SSIDs in range,
+and `connect` tab-completes them.
 
 ```console
 # iwctl
+[iwd]# station wlan0 scan
+[iwd]# station wlan0 get-networks
 [iwd]# station wlan0 connect "SSID"
 [iwd]# exit
 # ping -c1 archlinux.org
@@ -97,7 +104,12 @@ partition by its partition type rather than by name or position.
 | `g` | New GPT disklabel |
 | `n` | New partition. The number and first-sector prompts take their defaults, and the last-sector prompt takes the size, `+1G` for the first two partitions and the default for the third |
 | `t` | Partition type. Partition `1` becomes type `1`, EFI System |
+| `p` | Print the pending table, a free check before committing |
 | `w` | Write the table and exit |
+
+On a disk that held a previous system, the `n` prompts end by offering
+to remove an old filesystem signature. Answering `Y` clears metadata
+the formats below would overwrite anyway.
 
 | Partition | Size | Type | Purpose |
 | --- | --- | --- | --- |
@@ -180,13 +192,16 @@ network came up. `head /etc/pacman.d/mirrorlist` shows the result. A
 stale or empty list is rewritten with
 `reflector --latest 10 --protocol https --sort rate --save /etc/pacman.d/mirrorlist`
 before pacstrap rather than after a failed one, since a bare
-`reflector` only prints its ranking and writes nothing. One call
-covers the kernel,
-firmware, filesystem tools, bootloader, and the utilities the first
-boot depends on. Type it as one continuous line.
+`reflector` only prints its ranking and writes nothing. `timedatectl`
+joins the pre-flight because a clock that reports unsynchronized on an
+NTP-blocking network predicts the keyring failure the note below walks
+through. One call covers the kernel, firmware, filesystem tools,
+bootloader, and the utilities the first boot depends on. Type it as
+one continuous line.
 
 ```bash
 head /etc/pacman.d/mirrorlist
+timedatectl
 
 pacstrap -K /mnt base linux linux-lts linux-firmware intel-ucode sof-firmware btrfs-progs cryptsetup e2fsprogs dosfstools grub efibootmgr networkmanager base-devel sudo vim git man-db man-pages openssh
 ```
@@ -260,13 +275,20 @@ carries `compress=zstd` and `noatime`. `/boot` appears as ext4 and
 ## System Configuration
 
 `arch-chroot /mnt` enters the new system, and every command from here
-on runs inside it. The first block sets time, locale, identity, and
-accounts. The `filesystem` package already ships the `localhost`
+on runs inside it. The prompt marks the boundary, `root@archiso ~ #`
+on the live ISO gives way to `[root@archiso /]#` inside the chroot,
+and identity work done on the wrong side of it evaporates at reboot.
+The first block sets time, locale, identity, and accounts. The
+timezone placeholder is an IANA `Region/City` name as listed under
+`/usr/share/zoneinfo`, not a country name, and `ln -sf` succeeds even
+against a target that does not exist, so the `ls` check must resolve
+to a real file. The `filesystem` package already ships the `localhost`
 entries in `/etc/hosts`, so the machine's own line is the only
 addition.
 
 ```bash
 ln -sf /usr/share/zoneinfo/<Region/City> /etc/localtime
+ls -l /etc/localtime
 hwclock --systohc
 sed -i 's/^#en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen
 locale-gen
@@ -279,14 +301,16 @@ echo '127.0.1.1 <hostname>' >> /etc/hosts
 passwd                          # root password
 useradd -m -G wheel <user>
 passwd <user>
-EDITOR=vim visudo
+
+echo '%wheel ALL=(ALL:ALL) ALL' > /etc/sudoers.d/wheel
+chmod 440 /etc/sudoers.d/wheel
+visudo -c
 ```
 
-visudo opens the sudoers file behind a syntax check that a plain editor
-skips, and the grant itself is one uncomment. Find the
-`%wheel ALL=(ALL:ALL) ALL` line without `NOPASSWD`, remove its leading
-`# `, and save. `groups <user>` must then list `wheel`, and
-`grep '^%wheel' /etc/sudoers` must print the uncommented line.
+The sudo grant is a drop-in under `/etc/sudoers.d`, which sudo reads
+alongside the stock file, so the stock file stays pristine and no
+editor session is needed. `visudo -c` parses both files and must
+report each OK, and `groups <user>` must list `wheel`.
 
 ### Graphics
 
@@ -308,16 +332,14 @@ and the `encrypt` hook is what gives it that ability. Order matters in
 the hook list. The keyboard hooks precede `encrypt` so the passphrase
 prompt has a working keyboard, `microcode` embeds the CPU microcode
 into the image, and `kms` brings the GPU driver up early for a
-native-resolution console. Edit `/etc/mkinitcpio.conf` and replace the
-whole existing `HOOKS=` line with
-
-```text
-HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont block encrypt filesystems fsck)
-```
-
-and regenerate for both kernels.
+native-resolution console. An anchored `sed` replaces the whole
+existing `HOOKS=` line, the same pattern the GRUB section uses, the
+grep must print the new list, and `mkinitcpio -P` regenerates the
+image for both kernels.
 
 ```bash
+sed -i 's/^HOOKS=.*/HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont block encrypt filesystems fsck)/' /etc/mkinitcpio.conf
+grep ^HOOKS /etc/mkinitcpio.conf
 mkinitcpio -P
 ```
 
@@ -347,15 +369,22 @@ grep ^GRUB_CMDLINE_LINUX /etc/default/grub
 
 The grep must print the full line with the real UUID embedded. Install
 GRUB and generate its config. The config generator picks up both
-kernels, so the LTS fallback entry appears without further work.
+kernels, so the LTS fallback entry appears without further work, but
+its version sort can list the LTS kernel first, which would silently
+make the fallback the default boot. `GRUB_TOP_LEVEL` pins the mainline
+image to the top entry and keeps the roles from the Objectives table.
 
 ```bash
+echo 'GRUB_TOP_LEVEL="/boot/vmlinuz-linux"' >> /etc/default/grub
+
 grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB --recheck
 grub-mkconfig -o /boot/grub/grub.cfg
 ```
 
 `grub-install` must end with `Installation finished. No error
-reported`. `grub-mkconfig` prints a Found line for each kernel and
+reported`. In the `grub-mkconfig` output, the first `Found linux
+image` line must name `vmlinuz-linux`, proof the pin took. The run
+prints a Found line for each kernel and
 lists `intel-ucode.img` beside each initramfs. That entry duplicates
 the microcode the `microcode` hook already embedded and loads it
 harmlessly twice. The run also warns that os-prober will not run, which
@@ -395,34 +424,53 @@ reboot                          # remove the USB stick when the screen blanks
 
 The machine now boots in three stages. GRUB shows a menu with entries
 for both `linux` and `linux-lts`, the initramfs prompts for the LUKS
-passphrase, and a console login follows. Log in as the user and join
-the network with `nmtui`. Any SSH session from the optional section
-ended with the reboot, so reconnect as the user once the network is up,
-since root logins are refused and the address may have changed.
+passphrase, and a console login follows. Wait for the passphrase
+prompt before typing. Keystrokes ahead of it are echoed to the console
+and lost from the passphrase, which then fails exactly like a wrong
+password, and the pause of several seconds after Enter is argon2id at
+work, not a hang. A passphrase that was set over SSH obeyed that
+keyboard's layout, so symbol characters can land differently on the
+console's `us` keymap.
 
-Four checks confirm the installed system.
+Log in as the user and join the network with `nmtui`. Any SSH session
+from the optional section ended with the reboot. The installed system
+presents a new host key behind the same address, so the reconnect
+fails with `REMOTE HOST IDENTIFICATION HAS CHANGED` until
+`ssh-keygen -R <ip>` clears the live ISO's entry, and it must be made
+as the user, since the installed sshd refuses root logins.
+
+Five checks confirm the installed system.
 
 ```bash
 ping -c3 archlinux.org
+uname -r
 timedatectl
 free -h
 findmnt /
 ```
 
-`ping` proves the network. `timedatectl` must show NTP synchronized and
-the chosen timezone. `free -h` must show the full RAM, and swap stays
+`ping` proves the network. `uname -r` must report the mainline kernel
+version, proof the GRUB default held across the reboot. `timedatectl`
+must show the chosen timezone and NTP synchronized, though a network
+that blocks NTP leaves the flag at no through no fault of the install,
+with the clock still correct from the hardware clock. `free -h` must
+show the full RAM, and swap stays
 at zero until the Swap section. `findmnt /` must show root mounted from
 `/dev/mapper/cryptroot` with `subvol=/@` and `compress=zstd`, and its
 `discard=async` option is `allow-discards` from the kernel command line
 arriving at the filesystem.
 
-### Header Backup
+### Header Backup (Optional)
 
 The LUKS header at the start of the partition holds the key material
 that turns the passphrase into the disk. If it is damaged, the data is
 unrecoverable with or without the passphrase, and no snapshot can help,
-since snapshots live inside the container. Back the header up once and
-store the file away from this disk.
+since snapshots live inside the container. When everything on the disk
+can be rebuilt from this guide and the dotfiles, a lost header costs a
+reinstall and the step can be skipped. Anything irreplaceable makes it
+thirty seconds of insurance. Back the header up once, move the file
+off this disk, and delete the local copy, since a backup stored on the
+disk it describes protects nothing.
 
 ```bash
 sudo cryptsetup luksHeaderBackup /dev/nvme0n1p3 --header-backup-file luks-header.img
@@ -491,13 +539,15 @@ sudo chmod 750 /.snapshots
 sudo chown :wheel /.snapshots
 ```
 
-Set four values in `/etc/snapper/configs/root`.
+Four values complete the config. `ALLOW_GROUPS` lets wheel members run
+snapper without sudo, `TIMELINE_CREATE` keeps the policy
+transaction-driven only, and the two limits bound how many snapshot
+pairs the cleanup timer keeps. The config itself is readable by root
+alone, so the verifying grep carries sudo.
 
-```text
-ALLOW_GROUPS="wheel"          # snapper list without sudo
-TIMELINE_CREATE="no"          # transaction-driven only
-NUMBER_LIMIT="20"
-NUMBER_LIMIT_IMPORTANT="10"
+```bash
+sudo sed -i 's/^ALLOW_GROUPS=.*/ALLOW_GROUPS="wheel"/; s/^TIMELINE_CREATE=.*/TIMELINE_CREATE="no"/; s/^NUMBER_LIMIT=.*/NUMBER_LIMIT="20"/; s/^NUMBER_LIMIT_IMPORTANT=.*/NUMBER_LIMIT_IMPORTANT="10"/' /etc/snapper/configs/root
+sudo grep -E '^(ALLOW_GROUPS|TIMELINE_CREATE|NUMBER_LIMIT|NUMBER_LIMIT_IMPORTANT)=' /etc/snapper/configs/root
 ```
 
 ### Services and Boot Entries
@@ -587,10 +637,8 @@ sudo pacman -S zram-generator
 
 Write the device definition to `/etc/systemd/zram-generator.conf`.
 
-```text
-[zram0]
-zram-size = ram / 2
-compression-algorithm = zstd
+```bash
+printf '[zram0]\nzram-size = ram / 2\ncompression-algorithm = zstd\n' | sudo tee /etc/systemd/zram-generator.conf
 ```
 
 zram inverts the usual swap cost model, since swapping to it is nearly
@@ -601,6 +649,10 @@ zram over dropping file cache, `page-cluster = 0` disables swap
 readahead, `watermark_scale_factor = 125` starts background reclaim
 earlier, and `watermark_boost_factor = 0` disables a reclaim boost that
 only pays off on disk-backed swap.
+
+```bash
+printf 'vm.swappiness = 180\nvm.watermark_boost_factor = 0\nvm.watermark_scale_factor = 125\nvm.page-cluster = 0\n' | sudo tee /etc/sysctl.d/99-vm-zram.conf
+```
 
 The kernel also boots with zswap on, a compressed cache that sits in
 front of every swap device and intercepts pages before they reach
@@ -614,13 +666,6 @@ echo 0 | sudo tee /sys/module/zswap/parameters/enabled
 sudo sed -i '/zswap.enabled/! s|^GRUB_CMDLINE_LINUX="\(.*\)"|GRUB_CMDLINE_LINUX="\1 zswap.enabled=0"|' /etc/default/grub
 grep ^GRUB_CMDLINE_LINUX /etc/default/grub
 sudo grub-mkconfig -o /boot/grub/grub.cfg
-```
-
-```text
-vm.swappiness = 180
-vm.watermark_boost_factor = 0
-vm.watermark_scale_factor = 125
-vm.page-cluster = 0
 ```
 
 The generator creates the device from the config at every boot, so
