@@ -12,7 +12,7 @@ in one command.
 | Filesystem | btrfs on LUKS2 | Subvolumes share one pool, and snapper makes upgrades reversible |
 | Bootloader | GRUB | grub-btrfs generates boot entries for snapshots |
 | `/boot` | Unencrypted ext4 | A single passphrase prompt and simple ISO recovery, traded against tamperable boot files |
-| Kernels | `linux`, `linux-lts` | Snapshots do not cover `/boot`, so the LTS kernel answers a broken one. GRUB boots the mainline by default |
+| Kernels | `linux`, `linux-lts` | Snapshots do not cover `/boot`, so the LTS kernel serves as recovery. GRUB boots the mainline by default |
 | Swap | zram | Compressed swap in RAM, with no partition and no hibernation |
 | Secure Boot | Off for the install | The ISO is unsigned, and re-enabling with custom keys is a post-install option |
 
@@ -38,7 +38,7 @@ gpg --verify archlinux-x86_64.iso.sig
 ```
 
 ```bash
-lsblk -d -o NAME,SIZE,MODEL
+lsblk
 sudo dd if=archlinux-x86_64.iso of=/dev/sdX bs=4M status=progress conv=fsync
 ```
 
@@ -92,7 +92,7 @@ Confirm UEFI mode and identify the target disk.
 
 ```bash
 cat /sys/firmware/efi/fw_platform_size    # 64 on UEFI
-lsblk -d -o NAME,SIZE,MODEL
+lsblk
 ```
 
 UEFI boots from GPT disks, and the firmware locates the EFI system
