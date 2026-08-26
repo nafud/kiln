@@ -12,8 +12,8 @@ in one command.
 | Filesystem | btrfs on LUKS2 | Subvolumes share one pool, and snapper makes upgrades reversible |
 | Bootloader | GRUB | grub-btrfs generates boot entries for snapshots |
 | `/boot` | Unencrypted ext4 | A single passphrase prompt and simple ISO recovery, traded against tamperable boot files |
-| Kernels | `linux`, `linux-lts` | Snapshots do not cover `/boot`, so the LTS kernel serves as recovery. GRUB boots the mainline by default |
-| Swap | zram | Compressed swap in RAM, with no partition and no hibernation |
+| Kernels | `linux`, `linux-lts` | The LTS kernel serves as recovery for a broken mainline kernel, and GRUB boots the mainline by default. Snapshots do not cover `/boot`, and the workspace closes that gap with pacman hooks that keep the outgoing kernel beside the current one |
+| Swap | zram | Compressed swap in RAM, with no partition and no hibernation. The workspace adds systemd-oomd, which stops a runaway process before the session stalls |
 | Secure Boot | Off for the install | The ISO is unsigned, and re-enabling with custom keys is a post-install option |
 
 ## ISO and USB
@@ -225,7 +225,7 @@ be ignored.
 | `e2fsprogs dosfstools` | fsck for the ext4 `/boot` and the FAT32 ESP |
 | `grub efibootmgr` | Bootloader, installed and configured in the chroot |
 | `networkmanager` | Network after the reboot |
-| `base-devel git` | `git` clones the workspace repository, `base-devel` builds its AUR set |
+| `base-devel git` | `git` clones the workspace repository, `base-devel` builds paru, the AUR helper the workspace bootstraps |
 | `sudo vim man-db man-pages openssh` | `base` alone ships no editor, no sudo, and no man pages |
 
 !!! note "If pacstrap fails at checking keys"
@@ -397,7 +397,10 @@ is correct on a single-OS disk, and ends with `done`.
 Enable the units the first boot relies on. NetworkManager
 brings the network up, `fstrim.timer` runs a weekly TRIM pass over the
 SSD, `systemd-timesyncd` keeps the clock synchronized, and `sshd` is
-optional for working over SSH after the reboot.
+optional for working over SSH after the reboot. The workspace later
+disables `sshd` and admits it from the local network alone whenever it
+is started by hand, so the unit serves the installation and nothing
+after it.
 
 ```bash
 systemctl enable NetworkManager
@@ -439,7 +442,8 @@ from the optional section ended with the reboot. The installed system
 presents a new host key behind the same address, so the reconnect
 fails with `REMOTE HOST IDENTIFICATION HAS CHANGED` until
 `ssh-keygen -R <ip>` clears the live ISO's entry, and it must be made
-as the user, since the installed sshd refuses root logins.
+as the user, since the installed sshd refuses password logins for
+root.
 
 Five checks confirm the installed system.
 
@@ -544,11 +548,13 @@ sudo chown :wheel /.snapshots
 Four values complete the config. `ALLOW_GROUPS` lets wheel members run
 snapper without sudo, `TIMELINE_CREATE` keeps the policy
 transaction-driven only, and the two limits bound how many snapshot
-pairs the cleanup timer keeps. The config itself is readable by root
+pairs the cleanup timer keeps. Ten pairs reach back through a week or
+two of ordinary upgrades, and a rollback rarely wants an older state
+than that. The config itself is readable by root
 alone, so the verifying grep carries sudo.
 
 ```bash
-sudo sed -i 's/^ALLOW_GROUPS=.*/ALLOW_GROUPS="wheel"/; s/^TIMELINE_CREATE=.*/TIMELINE_CREATE="no"/; s/^NUMBER_LIMIT=.*/NUMBER_LIMIT="20"/; s/^NUMBER_LIMIT_IMPORTANT=.*/NUMBER_LIMIT_IMPORTANT="10"/' /etc/snapper/configs/root
+sudo sed -i 's/^ALLOW_GROUPS=.*/ALLOW_GROUPS="wheel"/; s/^TIMELINE_CREATE=.*/TIMELINE_CREATE="no"/; s/^NUMBER_LIMIT=.*/NUMBER_LIMIT="10"/; s/^NUMBER_LIMIT_IMPORTANT=.*/NUMBER_LIMIT_IMPORTANT="10"/' /etc/snapper/configs/root
 sudo grep -E '^(ALLOW_GROUPS|TIMELINE_CREATE|NUMBER_LIMIT|NUMBER_LIMIT_IMPORTANT)=' /etc/snapper/configs/root
 ```
 
@@ -565,11 +571,20 @@ Configuration once, the grep must print the list with
 `grub-btrfs-overlayfs` last, and the initramfs and GRUB config are
 regenerated with the hook in place. A
 booted snapshot is an inspection environment, and changes made inside
-it evaporate on reboot. The entry pairs the current kernel from
-`/boot` with the snapshot's older modules, so inspection is dependable
-only while the two match and degrades once a kernel upgrade separates
-them. Recovery that must work goes through the LTS entry or the
-rollback below.
+it evaporate on reboot. The kernels live on `/boot`, outside the
+snapshot, so each entry pairs a snapshot's modules with a kernel from
+the live `/boot`. Once a kernel upgrade has replaced that kernel, a
+snapshot from before the upgrade holds modules for a kernel `/boot`
+no longer carries, and its entry fails to boot. The workspace closes
+this gap with pacman hooks that keep the outgoing kernel and its
+initramfs on `/boot` under version-suffixed names, which GRUB and
+grub-btrfs both pair without configuration, and every snapshot's
+submenu then lists the kernel its modules belong to beside the current
+ones. The same hooks mirror `/boot` into `/.bootbackup` on `@` ahead of
+every snapshot, which the rollback below uses. Until the workspace is
+deployed, a booted snapshot is dependable only while kernel and
+modules match, and recovery that must work goes through the LTS entry
+or the rollback.
 
 ```bash
 sudo systemctl enable --now snapper-cleanup.timer
@@ -624,10 +639,28 @@ sudo umount /mnt
 reboot
 ```
 
-Kernels live outside btrfs, so after a full rollback
-`sudo pacman -S linux linux-lts` resyncs `/boot` with the rolled-back
-modules. Delete `@.broken` once the rolled-back system is confirmed
-working.
+Kernels live outside btrfs, so `/boot` still holds the images of the
+system that was replaced, and the rolled-back `@` carries modules for
+older ones. The first boot after the swap picks the entry whose kernel
+version matches, one of the kept pairs the workspace hooks left on
+`/boot`, or the LTS entry when that kernel was not part of the upgrade.
+From there, two routes bring `/boot` back in step. The snapshot carries
+`/.bootbackup`, the mirror of `/boot` taken before its transaction, so
+for a pre snapshot copying it back restores the matching kernels
+together with the GRUB configuration.
+
+```bash
+sudo cp -a /.bootbackup/. /boot/
+sudo grub-mkconfig -o /boot/grub/grub.cfg
+```
+
+The mirror predates the transaction, so a post snapshot pairs with it
+no better than with the live `/boot`, and there the second route
+applies. `sudo pacman -S linux linux-lts` reinstalls both kernels from
+the rolled-back package database, which writes images matching the
+modules and regenerates the menu through the usual hooks. The route
+also serves a system without the workspace. Delete `@.broken` once the
+rolled-back system is confirmed working.
 
 ## Swap
 
@@ -691,6 +724,19 @@ and near-zero use. `swapon --show` must list `/dev/zram0` active at
 priority 100, and `cat /sys/module/zswap/parameters/enabled` must
 print `N`.
 
+zram also changes how running out of memory feels. Because the swap
+device is memory itself, a process that keeps growing rarely reaches
+the kernel's out-of-memory killer, and the system stalls instead, every
+page fault turning into a decompression while the desktop stays frozen
+for minutes. The workspace answers this with systemd-oomd on
+`user.slice`, which watches memory pressure rather than free memory.
+Once the session's processes have spent more than half of a
+twenty-second window stalled on memory, it kills the descendant control
+group with the most reclaim activity, which under niri is one
+application in its own scope, and the compositor, bar, and audio
+server under `system.slice` are never candidates. The drop-ins arrive
+with the Workspace section, and nothing here needs configuring.
+
 ## Workspace
 
 One command deploys the entire workspace.
@@ -699,21 +745,52 @@ One command deploys the entire workspace.
 curl -fsSL https://raw.githubusercontent.com/nafud/dotfiles/main/bootstrap.sh | bash
 ```
 
-The bootstrap clones the repository into `~/dotfiles` over HTTPS, so
-receiving needs no SSH key, and sets the push URL to SSH for
-authenticated pushes later. It then hands off to `setup.sh`, which is
-idempotent end to end. One run installs the full package set from the
-official repositories and bootstraps paru for AUR work later, though
-the script itself installs nothing from the AUR. It also installs and
-enables greetd with tuigreet, enables the maintenance timers, links
-`config/` into `~/.config` and `bin/` into
-`~/.local/bin`, writes the managed shell block and system defaults,
-validates the niri config, and prints a probed component summary.
+The bootstrap refuses to run as root, clones the repository into
+`~/dotfiles` over HTTPS, so receiving needs no SSH key, sets the push
+URL to SSH for authenticated pushes later, and hands off to `setup.sh`.
+The script is idempotent end to end, and a rerun changes only what
+drifted. It runs in two halves. The system half needs sudo and installs
+the full package set from the official repositories in one pacman
+transaction, bootstraps paru for AUR work later without installing
+anything from the AUR itself, and copies the repository's `system/`
+tree onto `/`, file by file, root-owned. That tree carries what the
+desktop needs below the user. Plymouth with its mono theme draws the
+passphrase prompt through a mkinitcpio drop-in that places the
+`plymouth` hook, a GRUB drop-in hides the menu behind a two-second
+window that Esc or Shift opens and adds `splash` to the kernel line,
+and greetd runs monogreet, the login page, inside a greeter niri. The
+same tree holds the machine's policy, each concern in one drop-in with
+its reason in the header. The pacman hooks from Snapshots keep the
+outgoing kernel and mirror `/boot`, and systemd-oomd guards
+`user.slice` as described under Swap. On the network side, nftables
+drops every inbound connection the machine did not ask for,
+systemd-resolved sends every query over TLS to a fixed resolver so no
+network's DHCP server ever answers one, and NetworkManager gives each
+network a stable random MAC and prefers IPv6 privacy addresses.
+faillock loosens to five attempts and a two-minute lockout, TLP caps
+the charge on laptops that expose a conservation mode, and bluez leaves
+the adapter off until asked. The half then enables the
+units these files feed, disables `sshd`, primes the kernel hooks so the
+current kernels are already kept, and restarts exactly the services
+whose files changed. The user half links `config/` into `~/.config` and
+`bin/` into `~/.local/bin`, enables the session units, hooks the
+repository's shell files into `~/.bashrc`, sets the MIME defaults and
+desktop preferences, validates the niri config, and prints a probed
+component summary.
 
-A reboot lands in tuigreet, where the `niri` session is picked.
-Exercise the session once, the bar, notifications, launcher, terminal,
-lock, audio, and screenshots, and `bash ~/dotfiles/setup.sh summary`
-must report every row green.
+The split between this guide and the repository is deliberate.
+Partitioning, encryption, snapper, and zram belong here, and the
+repository owns everything under `system/` and everything in the
+session, so the steps above must precede the bootstrap and are never
+repeated by it. `bash setup.sh system` reruns the system half alone,
+`bash setup.sh link` the user half, and `bash setup.sh summary` prints
+the component table.
+
+A reboot now shows the Plymouth prompt for the passphrase and lands in
+monogreet, where the password logs into the `niri` session. Exercise
+the session once, the bar, notifications, launcher, terminal, lock,
+audio, and screenshots, and `bash ~/dotfiles/setup.sh summary` must
+report every row green.
 
 ## Secure Boot
 
