@@ -117,8 +117,10 @@ the formats below would overwrite anyway.
 | `nvme0n1p2` | 1G | Linux filesystem | `/boot`, ext4, read by GRUB |
 | `nvme0n1p3` | rest of the disk | Linux filesystem | LUKS2 container |
 
-One gigabyte on `/boot` is sized for two kernels, each with a regular
-and a fallback initramfs image.
+One gigabyte on `/boot` is generous for two kernels. Current
+mkinitcpio builds a single initramfs image per kernel, its fallback
+preset shipped commented out, so the space also covers enabling that
+preset later.
 
 Format the two plain partitions, then create and open the encrypted
 container. `luksFormat` asks for an uppercase `YES` as confirmation and
@@ -558,8 +560,10 @@ changes.
 
 Snapper snapshots are read-only, and booting one cleanly needs a tmpfs
 overlay on top, which the `grub-btrfs-overlayfs` initramfs hook
-provides. Append it to the end of the HOOKS line from System
-Configuration, then regenerate the initramfs and the GRUB config. A
+provides. The guarded `sed` appends it to the HOOKS line from System
+Configuration once, the grep must print the list with
+`grub-btrfs-overlayfs` last, and the initramfs and GRUB config are
+regenerated with the hook in place. A
 booted snapshot is an inspection environment, and changes made inside
 it evaporate on reboot. The entry pairs the current kernel from
 `/boot` with the snapshot's older modules, so inspection is dependable
@@ -571,6 +575,8 @@ rollback below.
 sudo systemctl enable --now snapper-cleanup.timer
 sudo systemctl enable --now grub-btrfsd
 
+sudo sed -i '/grub-btrfs-overlayfs/! s/^HOOKS=(\(.*\))/HOOKS=(\1 grub-btrfs-overlayfs)/' /etc/mkinitcpio.conf
+grep ^HOOKS /etc/mkinitcpio.conf
 sudo mkinitcpio -P
 sudo grub-mkconfig -o /boot/grub/grub.cfg
 ```
