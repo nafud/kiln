@@ -792,6 +792,96 @@ the session once, the bar, notifications, launcher, terminal, lock,
 audio, and screenshots, and `bash ~/dotfiles/setup.sh summary` must
 report every row green.
 
+## System Hardening
+
+Arch ships every service as its upstream wrote it and adds no access
+control layer, so a daemon runs with the full rights of the user it
+starts as. For the root daemons that is everything, every capability,
+the whole filesystem, every device and system call. Ordinary
+permissions cannot narrow that, since the owner of a process is root
+either way. What narrows it is the scope systemd can declare per unit,
+enforced by the kernel through capability bounding sets, mount
+namespaces, device control groups and seccomp filters, the same
+primitives a mandatory access control system would use, without
+profiles to install or a policy engine to maintain. The exposure
+report lists what each unit declares and what it leaves open.
+
+```bash
+systemd-analyze security
+systemd-analyze security wpa_supplicant.service
+```
+
+The score counts unset directives and measures reach, not
+vulnerability. A high number means a bug in that daemon buys an
+attacker root, a low one means it buys what the daemon itself could
+do. Read the list by what runs and what it faces. On this installation
+the units that arrive unconfined and matter are `wpa_supplicant`,
+which parses frames from the air as root, `udisks2`, which mounts
+whatever filesystem a plugged device carries, `thermald`, which writes
+firmware knobs through sysfs, `grub-btrfsd`, which regenerates the boot
+menu on every snapshot, and a VPN daemon such as Mullvad's once one is
+installed, which configures routes, nftables and DNS. NetworkManager
+and bluez already carry the capability set and filesystem controls
+upstream can afford, and the remaining points on their reports are
+documented needs, modules, sysctls, resolv.conf, certificates in home
+directories. Some units cannot be confined at all. greetd, getty and
+the rescue targets spawn sessions, and every restriction on them is
+inherited by the session they start, `NoNewPrivileges` alone would
+break sudo for every user. udevd, the bus and the user manager are the
+machinery the rest runs on.
+
+A boundary is written as an allow list of what the daemon does, never
+as a deny list of what sounds dangerous. Read the unit's binary,
+configuration, logs and source for the capabilities it exercises, the
+paths it writes, the devices it opens, the socket families it creates
+and the programs it executes, then declare exactly those in a drop-in
+under `/etc/systemd/system/<unit>.service.d/`, leaving the package's
+own unit file untouched so an update can neither undo the boundary nor
+be undone by it. Two properties of systemd decide what a boundary may
+contain. Any directive that touches the filesystem view, `ProtectSystem`,
+`ProtectHome`, `PrivateTmp`, `ReadWritePaths`, the `Protect*` family
+and `PrivateNetwork`, places the unit in a private mount namespace
+whose mounts never propagate to the host, so a daemon that mounts for
+the system, `udisks2` here, gets no filesystem directive at all, and a
+helper that must mount something on the host must run outside any
+such namespace. And a `DeviceAllow` line, including the one
+`ProtectClock` implies, turns the device policy into an allow list, so
+a daemon that reaches block devices must name them or lose them.
+
+Roll a boundary out in two steps and measure each. The first installs
+the drop-in with `SystemCallLog=` in place of `SystemCallFilter=`,
+which makes the kernel log every system call outside the intended set
+instead of blocking it, while every other directive is already
+enforced and its failures show in the unit's journal. The kernel
+writes those records to its log even with auditd off. The second
+swaps the filter back in, restarts the unit, and reads the exposure
+report, the process's bounding set in `/proc/<pid>/status`, and the
+journal once more. A boot must follow before the next unit, since the
+ordering of anything that runs before the network only shows on a real
+boot. Rollback is the removal of the drop-in directory, a
+`daemon-reload` and a restart.
+
+```bash
+journalctl -k -b | grep 'type=1326'
+grep -E 'CapBnd|NoNewPrivs|Seccomp' /proc/$(systemctl show -p MainPID --value wpa_supplicant.service)/status
+```
+
+The workspace repository carries the boundaries for the units named
+above under `system/etc/systemd/system`, each with its reasoning in
+the header, installed and restarted by `bash setup.sh system`. Its
+`tools/sandbox-check` runs the same procedure end to end, `learn`
+installs the layer in the logging mode, `report` decodes the records
+and prints each unit's state, bounding set and score, and `score`
+checks the committed drop-ins offline against copies of the packages'
+unit files, which is how the test suite keeps a later edit from
+loosening one. Two limits stay. The score is not a security rating, a
+root daemon with access to the system bus can still ask the service
+manager for things its own unit forbids, so a boundary contains
+accidents and cuts off whole classes of exploit rather than confining a
+compromised root process outright, and the boundaries hold only for
+the daemons they name, so a new service arriving on the machine
+arrives unconfined until it gets one.
+
 ## Secure Boot
 
 Secure Boot stays off for the installation because the ISO is
