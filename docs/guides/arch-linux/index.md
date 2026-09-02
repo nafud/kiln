@@ -764,9 +764,10 @@ Swap, and bluez leaves the adapter off until asked. The half then
 enables the units those files feed, primes the kernel hooks so the
 current kernels are already kept, and restarts exactly the services
 whose files changed. The user half seeds the default wallpaper into
-`~/Pictures/wallpaper.jpg` when none is recorded there (the login
+`~/Pictures/wallpaper.png` when none is recorded there (the login
 page's background is rendered from the same file, and `wallset`
-replaces it), links `config/` into `~/.config` and `bin/` into
+replaces it, as a PNG whatever it is given), links `config/` into
+`~/.config` and `bin/` into
 `~/.local/bin`, enables the session units, hooks the repository's
 shell files into `~/.bashrc`, sets the MIME defaults and desktop
 preferences, validates the niri config, and prints a probed component
