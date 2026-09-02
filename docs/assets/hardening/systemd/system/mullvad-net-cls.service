@@ -1,0 +1,37 @@
+# mullvad-daemon's split tunnelling marks excluded processes through a
+# cgroup v1 net_cls hierarchy at /sys/fs/cgroup/net_cls, and the setuid
+# helper mullvad-exclude writes into it from the host. Left to itself
+# the daemon creates and mounts that hierarchy at startup, the one thing
+# in its sandbox that would need CAP_SYS_ADMIN and mount(2); when the
+# hierarchy is already mounted it reuses it (talpid-cgroup finds it in
+# /proc/mounts) and never calls mount. This unit does the daemon's two
+# steps once per boot: the directory is a cgroup2 child that the mount
+# then covers, exactly as the daemon creates it. The cgroup2 root
+# directory is mode 555 and root bypasses file modes only through
+# CAP_DAC_OVERRIDE, so the mkdir needs that capability besides
+# CAP_SYS_ADMIN for the mount. The exclusions cgroup inside the
+# hierarchy is the daemon's own and its drop-in creates it at every
+# start (ExecStartPre there). systemd refuses a .mount unit for a
+# path under the API file system /sys/fs/cgroup, hence a oneshot;
+# mullvad-daemon pulls it in through Wants=/After= in its own drop-in,
+# so nothing has to be enabled. It carries no mount namespace option,
+# and no PrivateNetwork (which implies one): systemd makes such
+# namespaces slave and a mount made inside would never reach the host.
+# Idempotent: it does not run when the hierarchy is mounted.
+[Unit]
+Description=cgroup v1 net_cls hierarchy for mullvad split tunnelling
+ConditionPathIsMountPoint=!/sys/fs/cgroup/net_cls
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/mkdir -p /sys/fs/cgroup/net_cls
+ExecStart=/usr/bin/mount -t cgroup -o net_cls net_cls /sys/fs/cgroup/net_cls
+CapabilityBoundingSet=CAP_SYS_ADMIN CAP_DAC_OVERRIDE
+NoNewPrivileges=yes
+RestrictAddressFamilies=none
+RestrictNamespaces=yes
+RestrictRealtime=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service @mount

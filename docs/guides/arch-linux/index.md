@@ -397,10 +397,9 @@ is correct on a single-OS disk, and ends with `done`.
 Enable the units the first boot relies on. NetworkManager
 brings the network up, `fstrim.timer` runs a weekly TRIM pass over the
 SSD, `systemd-timesyncd` keeps the clock synchronized, and `sshd` is
-optional for working over SSH after the reboot. The workspace later
-disables `sshd` and admits it from the local network alone whenever it
-is started by hand, so the unit serves the installation and nothing
-after it.
+optional for working over SSH after the reboot. The unit serves the
+installation and nothing after it, and the first step of System
+Hardening turns it off.
 
 ```bash
 systemctl enable NetworkManager
@@ -754,37 +753,38 @@ the full package set from the official repositories in one pacman
 transaction, bootstraps paru for AUR work later without installing
 anything from the AUR itself, and copies the repository's `system/`
 tree onto `/`, file by file, root-owned. That tree carries what the
-desktop needs below the user. Plymouth with its mono theme draws the
-passphrase prompt through a mkinitcpio drop-in that places the
-`plymouth` hook, a GRUB drop-in hides the menu behind a two-second
-window that Esc or Shift opens and adds `splash` to the kernel line,
-and greetd runs monogreet, the login page, inside a greeter niri. The
-same tree holds the machine's policy, each concern in one drop-in with
-its reason in the header. The pacman hooks from Snapshots keep the
-outgoing kernel and mirror `/boot`, and systemd-oomd guards
-`user.slice` as described under Swap. On the network side, nftables
-drops every inbound connection the machine did not ask for,
-systemd-resolved sends every query over TLS to a fixed resolver so no
-network's DHCP server ever answers one, and NetworkManager gives each
-network a stable random MAC and prefers IPv6 privacy addresses.
-faillock loosens to five attempts and a two-minute lockout, TLP caps
-the charge on laptops that expose a conservation mode, and bluez leaves
-the adapter off until asked. The half then enables the
-units these files feed, disables `sshd`, primes the kernel hooks so the
+desktop needs below the user and nothing else. Plymouth with its mono
+theme draws the passphrase prompt through a mkinitcpio drop-in that
+places the `plymouth` hook, a GRUB drop-in hides the menu behind a
+two-second window that Esc or Shift opens and adds `splash` to the
+kernel line, greetd runs monogreet, the login page, inside a greeter
+niri, the pacman hooks from Snapshots keep the outgoing kernel and
+mirror `/boot`, systemd-oomd guards `user.slice` as described under
+Swap, and bluez leaves the adapter off until asked. The half then
+enables the units those files feed, primes the kernel hooks so the
 current kernels are already kept, and restarts exactly the services
-whose files changed. The user half links `config/` into `~/.config` and
-`bin/` into `~/.local/bin`, enables the session units, hooks the
-repository's shell files into `~/.bashrc`, sets the MIME defaults and
-desktop preferences, validates the niri config, and prints a probed
-component summary.
+whose files changed. The user half seeds the default wallpaper into
+`~/Pictures/wallpaper.jpg` when none is recorded there (the login
+page's background is rendered from the same file, and `wallset`
+replaces it), links `config/` into `~/.config` and `bin/` into
+`~/.local/bin`, enables the session units, hooks the repository's
+shell files into `~/.bashrc`, sets the MIME defaults and desktop
+preferences, validates the niri config, and prints a probed component
+summary.
 
-The split between this guide and the repository is deliberate.
-Partitioning, encryption, snapper, and zram belong here, and the
-repository owns everything under `system/` and everything in the
-session, so the steps above must precede the bootstrap and are never
-repeated by it. `bash setup.sh system` reruns the system half alone,
-`bash setup.sh link` the user half, and `bash setup.sh summary` prints
-the component table.
+The split between this guide and the repository is deliberate, and it
+runs through four homes. The repository owns the workspace, which is
+everything in the session and the pieces of `system/` named above,
+machine-neutral and installable on any fresh Arch. This guide owns the
+base system, which is partitioning, encryption, snapper and zram from
+the chapters above, and the machine's policy, which is every step of
+System Hardening below. The policy is applied by hand on the machine
+and recorded there by etckeeper, described at the end of that chapter,
+so the steps above precede the bootstrap and are never repeated by it,
+and the steps below follow it and never enter the repository.
+`bash setup.sh system` reruns the system half alone, `bash setup.sh
+link` the user half, and `bash setup.sh summary` prints the component
+table.
 
 A reboot now shows the Plymouth prompt for the passphrase and lands in
 monogreet, where the password logs into the `niri` session. Exercise
@@ -795,16 +795,339 @@ report every row green.
 ## System Hardening
 
 Arch ships every service as its upstream wrote it and adds no access
-control layer, so a daemon runs with the full rights of the user it
-starts as. For the root daemons that is everything, every capability,
-the whole filesystem, every device and system call. Ordinary
-permissions cannot narrow that, since the owner of a process is root
-either way. What narrows it is the scope systemd can declare per unit,
-enforced by the kernel through capability bounding sets, mount
-namespaces, device control groups and seccomp filters, the same
-primitives a mandatory access control system would use, without
-profiles to install or a policy engine to maintain. The exposure
-report lists what each unit declares and what it leaves open.
+control layer, so what the installed system exposes is what its
+packages expose. The steps below narrow that, from the network inward.
+Every file lands under `/etc` by hand, each with its reason here, and
+the last section records them, so a change made months later still
+has a date and a message. Nothing in this chapter enters the workspace
+repository, and the order matters only where a step says so.
+
+### Remote Access
+
+The installation's `sshd` has done its work, and no service on this
+machine is reached from the network. Turn it off, then list what
+still listens. Nothing on a non-loopback address should remain, apart
+from libvirt's dnsmasq on its virtual bridge once libvirt is
+installed; the stub resolver that Network Privacy below enables
+answers on loopback alone. Anything else is a service to account for.
+
+```bash
+sudo systemctl disable --now sshd
+ss -lpntu
+```
+
+### Firewall
+
+The stock kernel has nftables and the `nftables` package ships a
+ruleset that admits ssh from anywhere. This one replaces it. The input
+chain drops everything the machine did not ask for and accepts only
+what a client needs, established connections, loopback, ICMP of both
+families, and DHCPv6 replies, which arrive unicast from the router's
+link-local address and are not always tracked as related. The two
+`virbr0` rules serve a libvirt default network, whose dnsmasq on the
+bridge hands the virtual machines their addresses and names and whose
+traffic is forwarded to the world by NAT. They match nothing on a
+machine without that bridge and cost nothing there. The file rebuilds
+its own table alone rather than flushing the ruleset, because a VPN
+daemon such as Mullvad's keeps a table of its own for the tunnel's leak
+protection and libvirt keeps one for its NAT, and a flush would take
+both down under the running daemons. A packet must be accepted by
+every table's chain on a hook, which is why the bridge rules stand
+here as well as in libvirt's table.
+
+```bash
+sudo pacman -S nftables
+sudo tee /etc/nftables.conf > /dev/null <<'EOF'
+#!/usr/bin/nft -f
+# The host firewall: nothing comes in that this machine did not ask
+# for. Only this table is rebuilt on a reload; a VPN daemon's and
+# libvirt's tables survive it. A packet must pass every table on a
+# hook, so the libvirt bridge is admitted here as well.
+destroy table inet filter
+table inet filter {
+  chain input {
+    type filter hook input priority filter; policy drop;
+
+    ct state invalid drop
+    ct state { established, related } accept
+    iif lo accept
+    meta l4proto icmp accept
+    meta l4proto ipv6-icmp accept
+    ip6 saddr fe80::/10 udp dport 546 accept
+    iifname "virbr0" meta l4proto { tcp, udp } th dport { 53, 67 } accept
+    pkttype host limit rate 5/second counter reject with icmpx type admin-prohibited
+    counter
+  }
+  chain forward {
+    type filter hook forward priority filter; policy drop;
+
+    ct state { established, related } accept
+    iifname "virbr0" accept
+    oifname "virbr0" accept
+  }
+}
+EOF
+sudo nft -c -f /etc/nftables.conf
+sudo systemctl enable --now nftables
+sudo nft list ruleset
+```
+
+`nft -c` parses the file without loading it, so a typo fails there and
+not at the next boot. The ruleset listing must show the `inet filter`
+table with both chains at `policy drop`, and with a VPN daemon running,
+its own table beside it, untouched.
+
+### Kernel Parameters
+
+The sysctls below are the ones the Arch Wiki's Security and Sysctl
+pages recommend and the shipped defaults leave open on this kernel.
+`kptr_restrict` hides kernel pointers from unprivileged readers of
+`/proc`, `kexec_load_disabled` refuses a replacement kernel until the
+next boot and is the one switch here that cannot be undone at runtime,
+`ldisc_autoload` stops an unprivileged process from loading a TTY line
+discipline module, the two `protected` keys refuse FIFOs and regular
+files in world-writable sticky directories unless the owner matches,
+`bpf_jit_harden` blinds constants in JIT-compiled filters loaded
+without `CAP_BPF`, `mmap_rnd_bits` at 32 is the most address space
+randomisation x86-64 offers, and `tcp_rfc1337` protects sockets in
+TIME-WAIT from a premature close. ICMP redirects are neither accepted
+nor sent. For IPv4 the kernel accepts a redirect when either `all` or
+the interface allows it, so `all`, `default` and every interface are
+set, and the `default` keys cover interfaces that appear later. For
+IPv6 the kernel reads the interface value alone, so `all` is excluded
+with the leading dash, the same notation systemd's own defaults use to
+keep a key out of a glob's reach.
+
+What stays out has a reason each. `kernel.unprivileged_userns_clone`
+stays at 1 because Firefox, Chromium, flatpak and bubblewrap build
+their sandboxes from user namespaces. `kernel.yama.ptrace_scope` stays
+at 1 because 2 would put sudo in front of every debugger attach.
+`kernel.sysrq` stays at systemd's 16, sync only. `tcp_timestamps` stays
+on, as the wiki advises, `log_martians` is a testing aid, and strict
+reverse path filtering waits for a live test with the VPN and a
+virtual machine up. `mmap_rnd_bits` at 32 is the one value with a
+known cost, since sanitizer builds and Go's race detector map fixed
+shadow regions and want 28.
+
+```bash
+sudo tee /etc/sysctl.d/50-hardening.conf > /dev/null <<'EOF'
+kernel.kptr_restrict = 1
+kernel.kexec_load_disabled = 1
+dev.tty.ldisc_autoload = 0
+fs.protected_fifos = 2
+fs.protected_regular = 2
+net.core.bpf_jit_harden = 1
+vm.mmap_rnd_bits = 32
+vm.mmap_rnd_compat_bits = 16
+net.ipv4.tcp_rfc1337 = 1
+net.ipv4.conf.all.accept_redirects = 0
+net.ipv4.conf.default.accept_redirects = 0
+net.ipv4.conf.*.accept_redirects = 0
+net.ipv4.conf.all.secure_redirects = 0
+net.ipv4.conf.default.secure_redirects = 0
+net.ipv4.conf.*.secure_redirects = 0
+net.ipv4.conf.all.send_redirects = 0
+net.ipv4.conf.default.send_redirects = 0
+net.ipv4.conf.*.send_redirects = 0
+net.ipv6.conf.default.accept_redirects = 0
+net.ipv6.conf.*.accept_redirects = 0
+-net.ipv6.conf.all.accept_redirects
+EOF
+sudo sysctl --system
+sysctl kernel.kptr_restrict fs.protected_regular net.ipv4.conf.all.accept_redirects
+```
+
+`sysctl --system` applies every file under `sysctl.d` and reports each
+key it sets, with no error line among them, and the three values must
+read 1, 2 and 0.
+
+### Kernel Modules
+
+Two strengths keep a module from loading, as the wiki's Kernel module
+page distinguishes them. `install <name> /bin/false` refuses the module
+by any means, also as a dependency, and `blacklist <name>` only stops
+automatic loading, so an explicit `modprobe` by root still works. The
+first is for protocols and drivers with no use on a laptop, the SCTP,
+RDS and TIPC transports, the ATM and CAN stacks, FireWire, the floppy
+driver, the vivid test camera and the GFS2, cramfs, JFFS2 and HFS
+filesystems. The second is for filesystems a desktop may one day need
+for a disc or a share. Not listed, on purpose, are thunderbolt, whose
+ports are real and DMA-protected by the IOMMU, bluetooth and its USB
+driver, and USB storage. Not listed either is `ksmbd`, the in-kernel
+SMB server, because it declares soft dependencies of its own and
+`modprobe.d(5)` gives a softdep precedence over an install command for
+the same module, so the rule would be ignored; the kernel's
+`module_blacklist=` parameter is the refusal that works for it. The
+`modconf` initramfs hook packs the directory into both images, so the
+rules hold there as well, which is what the rebuild is for.
+
+```bash
+sudo tee /etc/modprobe.d/hardening.conf > /dev/null <<'EOF'
+install sctp /bin/false
+install rds /bin/false
+install tipc /bin/false
+install n-hdlc /bin/false
+install atm /bin/false
+install can /bin/false
+install firewire-core /bin/false
+install floppy /bin/false
+install vivid /bin/false
+install gfs2 /bin/false
+install cramfs /bin/false
+install jffs2 /bin/false
+install hfs /bin/false
+install hfsplus /bin/false
+blacklist squashfs
+blacklist udf
+blacklist cifs
+blacklist nfs
+blacklist nfsv3
+blacklist nfsv4
+EOF
+sudo mkinitcpio -P
+modprobe -n -v sctp
+modprobe -n -v udf
+```
+
+The dry runs show the two strengths. `sctp` ends in
+`install /bin/false`, and `udf` in the `insmod` of the module itself,
+since a blacklist leaves an explicit load alone.
+
+### Core Dumps, the Journal and the Boot Files
+
+A core dump is a process's memory, secrets included, written to disk.
+With `Storage=none` systemd-coredump still receives the core, extracts
+the backtrace into the journal, and keeps nothing; `ProcessSizeMax=0`
+would skip the core and the backtrace with it. The journal is capped
+at one gigabyte, since without a cap it grows to a tenth of the
+filesystem and this root is snapshotted, so old logs would live on in
+every snapshot. `/boot` holds the kernel, the initramfs and a GRUB
+configuration that names the LUKS devices, on an unencrypted
+partition; the filesystem package creates it world-readable, and the
+tmpfiles `z` line makes it root-only without creating anything, which
+pacman only warns about on a filesystem package upgrade. Everything
+that reads `/boot` runs as root.
+
+```bash
+printf '[Coredump]\nStorage=none\n' | sudo tee /etc/systemd/coredump.conf.d/10-storage.conf
+printf '[Journal]\nSystemMaxUse=1G\n' | sudo tee /etc/systemd/journald.conf.d/10-size.conf
+printf 'z /boot 0700 root root -\n' | sudo tee /etc/tmpfiles.d/boot.conf
+sudo systemctl restart systemd-journald
+sudo systemd-tmpfiles --create /etc/tmpfiles.d/boot.conf
+stat -c %a /boot
+```
+
+The mode must read `700`. `ls /boot` as the user is refused from now
+on, which is the intended effect, and the coredump drop-in needs no
+restart, since systemd-coredump reads it at each crash.
+
+### sudo and Failed Logins
+
+Arch builds sudo with `env_editor`, so `visudo` and `sudoedit` run
+whatever `$EDITOR` names, chosen by the unprivileged caller.
+`!env_editor` pins them to a fixed list. A sudoers file that does not
+parse locks sudo out, and one with the wrong mode is refused, so the
+file is checked by `visudo -c` before it lands and installed at 0440.
+
+```bash
+printf 'Defaults !env_editor\nDefaults editor=/usr/bin/micro:/usr/bin/vim\n' > /tmp/10-hardening
+visudo -cf /tmp/10-hardening
+sudo install -m 440 /tmp/10-hardening /etc/sudoers.d/10-hardening
+sudo visudo -c
+```
+
+Every PAM prompt on the machine, the login page, the lock screen, sudo,
+shares one `pam_faillock` counter. The stock three failures in ten
+minutes lock the account on a mistyped passphrase and one retry; five
+within fifteen minutes and two minutes out still stops a brute force,
+with no service reachable from the network anyway, without punishing a
+fumble at the lock screen.
+
+```bash
+printf 'deny = 5\nfail_interval = 900\nunlock_time = 120\n' | sudo tee /etc/security/faillock.conf
+```
+
+### Network Privacy
+
+NetworkManager's defaults for new connection profiles give each
+network a stable random MAC address, the same one each time on that
+network and a different one elsewhere, prefer IPv6 privacy addresses,
+turn LLMNR and multicast DNS off per connection, send no hostname in
+DHCP requests, and derive the DHCPv6 identifier from the profile
+instead of the link-layer address, so no two networks see the same
+identity. Scanning uses a random address too. Each item is a section
+of the wiki's NetworkManager page, and the internal DHCP client in use
+honours all of them. Profiles that already exist keep their own
+values where they set one, so the loop brings the existing ones in
+line once.
+
+Name resolution goes through systemd-resolved, which NetworkManager
+uses on its own once the service is enabled, and the stub symlink is
+the wiki's documented way to hand it `/etc/resolv.conf`. Two things
+are set on top of it. The compiled-in fallback resolvers are emptied,
+so a link that brings no DNS fails visibly instead of drifting to a
+public resolver, and LLMNR and multicast DNS are off globally. A
+global DNS over TLS resolver is not pinned here on purpose. It would
+encrypt queries with the VPN off, but an ISP that blackholes port 853
+turns that into no name resolution at all, with nothing left to fall
+back to. The VPN's own resolver takes every query while the tunnel is
+up, and its firewall refuses DNS to any other destination; without the
+tunnel, the network's resolver answers, which is what a VPN that is
+off means.
+
+```bash
+sudo tee /etc/NetworkManager/conf.d/10-privacy.conf > /dev/null <<'EOF'
+[main]
+dns=systemd-resolved
+
+[connection]
+wifi.cloned-mac-address=stable
+ethernet.cloned-mac-address=stable
+ipv6.ip6-privacy=2
+connection.llmnr=0
+connection.mdns=0
+ipv4.dhcp-send-hostname=0
+ipv6.dhcp-send-hostname=0
+ipv6.dhcp-duid=stable-uuid
+
+[device]
+wifi.scan-rand-mac-address=yes
+EOF
+sudo tee /etc/systemd/resolved.conf.d/10-dns.conf > /dev/null <<'EOF'
+[Resolve]
+FallbackDNS=
+MulticastDNS=no
+LLMNR=no
+EOF
+sudo systemctl enable --now systemd-resolved
+sudo ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+sudo systemctl reload NetworkManager
+sudo systemctl restart systemd-resolved
+nmcli -g UUID,TYPE connection show | while IFS=: read -r uuid type; do
+    case "$type" in
+        802-11-wireless) sudo nmcli connection modify "$uuid" 802-11-wireless.cloned-mac-address stable ipv6.ip6-privacy 2 connection.llmnr 0 connection.mdns 0 ;;
+        802-3-ethernet)  sudo nmcli connection modify "$uuid" 802-3-ethernet.cloned-mac-address stable ipv6.ip6-privacy 2 connection.llmnr 0 connection.mdns 0 ;;
+    esac
+done
+resolvectl status
+```
+
+The status must show `-LLMNR -mDNS` on the global line and no fallback
+servers, and the connected link's DHCP resolver as the current server
+while no tunnel is up.
+
+### Service Boundaries
+
+Every daemon so far runs with the full rights of the user it starts
+as. For the root daemons that is everything, every capability, the
+whole filesystem, every device and system call. Ordinary permissions
+cannot narrow that, since the owner of a process is root either way.
+What narrows it is the scope systemd can declare per unit, enforced by
+the kernel through capability bounding sets, mount namespaces, device
+control groups and seccomp filters, the same primitives a mandatory
+access control system would use, without profiles to install or a
+policy engine to maintain. The exposure report lists what each unit
+declares and what it leaves open.
 
 ```bash
 systemd-analyze security
@@ -848,39 +1171,125 @@ such namespace. And a `DeviceAllow` line, including the one
 `ProtectClock` implies, turns the device policy into an allow list, so
 a daemon that reaches block devices must name them or lose them.
 
-Roll a boundary out in two steps and measure each. The first installs
-the drop-in with `SystemCallLog=` in place of `SystemCallFilter=`,
-which makes the kernel log every system call outside the intended set
-instead of blocking it, while every other directive is already
-enforced and its failures show in the unit's journal. The kernel
-writes those records to its log even with auditd off. The second
-swaps the filter back in, restarts the unit, and reads the exposure
-report, the process's bounding set in `/proc/<pid>/status`, and the
-journal once more. A boot must follow before the next unit, since the
-ordering of anything that runs before the network only shows on a real
-boot. Rollback is the removal of the drop-in directory, a
-`daemon-reload` and a restart.
+The boundaries for the units named above are this guide's, one file
+per unit with its reasoning in the header, and `mullvad-net-cls.service`
+beside them, a oneshot that mounts the cgroup hierarchy Mullvad's
+split tunnelling needs so the daemon itself needs neither
+`CAP_SYS_ADMIN` nor `mount(2)`. A drop-in for a unit that is not
+installed is harmless, so all seven land at once. Deployment order
+matters for the Mullvad pair. The package's post-install script enables
+and starts the daemon, so the drop-ins must be on disk before the
+package is installed or upgraded, or the daemon starts once against
+stale boundaries and its early boot blocker, which installs a blocking
+firewall policy, holds the machine off the network until the drop-ins
+land.
 
 ```bash
-journalctl -k -b | grep 'type=1326'
-grep -E 'CapBnd|NoNewPrivs|Seccomp' /proc/$(systemctl show -p MainPID --value wpa_supplicant.service)/status
+cd "$(mktemp -d)"
+for u in wpa_supplicant mullvad-daemon mullvad-early-boot-blocking thermald grub-btrfsd udisks2; do
+    curl -fsSL -o "$u.conf" "https://nafud.github.io/kiln/assets/hardening/systemd/system/$u.service.d/hardening.conf"
+    sudo install -D -m 644 "$u.conf" "/etc/systemd/system/$u.service.d/hardening.conf"
+done
+curl -fsSL -o mullvad-net-cls.service https://nafud.github.io/kiln/assets/hardening/systemd/system/mullvad-net-cls.service
+sudo install -m 644 mullvad-net-cls.service /etc/systemd/system/mullvad-net-cls.service
+sudo curl -fsSL -o /usr/local/sbin/sandbox-check https://nafud.github.io/kiln/assets/sandbox-check
+sudo chmod 755 /usr/local/sbin/sandbox-check
+sudo systemctl daemon-reload
 ```
 
-The workspace repository carries the boundaries for the units named
-above under `system/etc/systemd/system`, each with its reasoning in
-the header, installed and restarted by `bash setup.sh system`. Its
-`tools/sandbox-check` runs the same procedure end to end, `learn`
-installs the layer in the logging mode, `report` decodes the records
-and prints each unit's state, bounding set and score, and `score`
-checks the committed drop-ins offline against copies of the packages'
-unit files, which is how the test suite keeps a later edit from
-loosening one. Two limits stay. The score is not a security rating, a
-root daemon with access to the system bus can still ask the service
-manager for things its own unit forbids, so a boundary contains
-accidents and cuts off whole classes of exploit rather than confining a
-compromised root process outright, and the boundaries hold only for
-the daemons they name, so a new service arriving on the machine
-arrives unconfined until it gets one.
+Roll a boundary out in two steps and measure each, with
+`sandbox-check`, this guide's tool, driving both. `learn` swaps the
+unit's `SystemCallFilter=` for a `SystemCallLog=` of the same set,
+which makes the kernel log every system call outside the intended set
+instead of blocking it, while every other directive is already
+enforced and its failures show in the unit's journal; the kernel
+writes those records to its log even with auditd off. `report` reads
+the exposure score, the process's bounding set from `/proc`, the
+journal since the unit started, and the decoded log records for the
+whole boot, grouped by program, so a learning run reads as a list of
+what to allow. `enforce` puts the filter back. A unit of type oneshot
+is reloaded, never restarted, since a boot-time blocker or a mount
+would repeat its work in the middle of a session; those two show on
+a real boot, which must follow before the next unit is judged.
+Rollback is the removal of the drop-in directory, a `daemon-reload`
+and a restart.
+
+```bash
+sudo sandbox-check learn wpa_supplicant
+sandbox-check report wpa_supplicant
+sudo sandbox-check enforce wpa_supplicant
+sandbox-check report
+```
+
+Use the machine for a day between `learn` and `enforce`, with the
+things that daemon does, a network change, a plugged disk, a snapshot,
+a suspend. A clean report is strong evidence, not proof, because the
+kernel rate-limits the records like any log line; the enforce step and
+a report after a reboot are the proof. Two limits stay. The score is
+not a security rating, a root daemon with access to the system bus can
+still ask the service manager for things its own unit forbids, so a
+boundary contains accidents and cuts off whole classes of exploit
+rather than confining a compromised root process outright, and the
+boundaries hold only for the daemons they name, so a new service
+arriving on the machine arrives unconfined until it gets one.
+
+### The Record
+
+Everything above is a file under `/etc`, written by hand, and the
+question a year from now is what changed, when, and why. The wiki's
+answer is etckeeper, a git repository inside `/etc` that a pacman hook
+commits to before and after every transaction, and that tracks file
+ownership and modes, which git alone does not and which matters for
+files like `/etc/shadow` and the sudoers file above. The repository
+stays on the encrypted root and inside every snapshot, and is never
+pushed anywhere, since it holds password hashes and keys.
+
+git needs a committer name and email and refuses the commit without
+them. The name it takes from root's entry in `/etc/passwd`, whose
+comment field Arch leaves empty, which the wiki's note fills; the
+email it would guess from the hostname. The repository's own config
+sets both, so neither guess is needed.
+
+```bash
+sudo pacman -S etckeeper
+sudo usermod -c root root
+sudo etckeeper init
+sudo git -C /etc config user.name root
+sudo git -C /etc config user.email root@localhost
+sudo etckeeper commit "the installed system, hardened"
+sudo systemctl enable --now etckeeper.timer
+```
+
+From here a change is an edit, a check, and a commit with a message,
+`sudo etckeeper commit "what and why"`. The timer commits whatever was
+forgotten once a day under a generic message, a safety net that keeps
+the history complete, not a replacement for the message. Two wiki
+warnings apply. A `git checkout` inside `/etc` can leave permissions
+broken, so the repository is read with `sudo etckeeper vcs log` and
+`sudo etckeeper vcs diff`, and a rollback goes through snapper, never
+through git. And the list of explicitly installed packages belongs in
+the same history, which the wiki's pacman hook provides, so a fresh
+machine gets the set back with `pacman -S --needed - < /etc/pkglist.txt`.
+
+```bash
+sudo tee /etc/pacman.d/hooks/pkglist.hook > /dev/null <<'EOF'
+[Trigger]
+Operation = Install
+Operation = Remove
+Type = Package
+Target = *
+
+[Action]
+When = PostTransaction
+Exec = /bin/sh -c '/usr/bin/pacman -Qqe > /etc/pkglist.txt'
+EOF
+pacman -Qqe | sudo tee /etc/pkglist.txt > /dev/null
+sudo etckeeper commit "package list hook"
+sudo etckeeper vcs log --oneline
+```
+
+The log shows the three commits, and the next pacman transaction adds
+its pair on its own.
 
 ## Secure Boot
 

@@ -1,0 +1,184 @@
+#!/bin/bash
+# sandbox-check — the measuring tool for service boundaries, the
+# drop-ins under /etc/systemd/system/<unit>.service.d/hardening.conf
+# that give a root daemon an explicit scope (which capabilities, paths,
+# devices, socket families and system calls it may use). It runs where
+# the boundaries live, on the machine, in the order a rollout runs:
+#
+#   learn UNIT...    (root) switch UNIT's boundary to learning mode: the
+#                    SystemCallFilter= line becomes a SystemCallLog=
+#                    deny-list of the same set and SystemCallErrorNumber=
+#                    goes, everything else stays enforced. Under it the
+#                    kernel logs (does not block) every system call
+#                    outside the intended set, the seccomp SECCOMP_RET_LOG
+#                    action the kernel documents for exactly this. The
+#                    enforced file is kept beside it as
+#                    hardening.conf.enforced (systemd reads *.conf only).
+#   enforce UNIT...  (root) put the enforced file back.
+#   report [UNIT...] no root: each unit's state, its main process's
+#                    bounding set (decoded), no_new_privs and seccomp
+#                    mode, its exposure score, the warnings in its
+#                    journal since it started, and, for the whole boot,
+#                    every seccomp log record decoded to the syscall's
+#                    name and grouped by program, so a learning run reads
+#                    as a list of what to allow. Only SECCOMP_RET_LOG
+#                    records are shown (code=0x7ffc0000); a kill from an
+#                    enforced filter is a different code and shows up as
+#                    the unit dying, not here.
+#   render UNIT      print the learning-mode form of UNIT's drop-in.
+#   units            list the units that carry a boundary.
+#
+# A unit of Type=oneshot is reloaded into the manager, never restarted:
+# a boot-time oneshot (a firewall blocker, a mount) would do its work
+# again in the middle of a session. Every other unit is try-restarted,
+# so a unit that is not running stays down.
+#
+# Records reach the kernel log even with auditd off: audit_seccomp()
+# is not gated by audit_enabled and, with no audit daemon connected,
+# kauditd prints the record through printk. They are rate-limited by
+# the kernel like any printk; a burst can drop lines, so a clean
+# report is strong evidence, not proof. The enforce step and `report`
+# again are the proof.
+#
+# Needs: systemd-analyze, journalctl, capsh (libcap), ausyscall (audit).
+set -euo pipefail
+
+LAYER=/etc/systemd/system
+
+die() { printf 'sandbox-check: %s\n' "$*" >&2; exit 1; }
+usage() {
+    sed -n '2,/^$/p' "$0" | sed 's/^# \{0,1\}//'
+    exit 2
+}
+dropin() { echo "$LAYER/$1.service.d/hardening.conf"; }
+
+# units — every unit with a hardening.conf drop-in, sorted
+units() {
+    local d
+    for d in "$LAYER"/*.service.d; do
+        [ -f "$d/hardening.conf" ] || continue
+        basename "$d" .service.d
+    done | sort
+}
+
+# oneshot UNIT — true for a unit the manager runs once (reload, no restart)
+oneshot() { [ "$(systemctl show -p Type --value "$1.service" 2>/dev/null)" = oneshot ]; }
+
+# --------------------------------------------------------------- render ---
+# The drop-in with its filter turned into a log: several
+# SystemCallFilter= lines fold into one deny-list (the union of their
+# sets), placed where the first stood; SystemCallErrorNumber= is
+# dropped, since without a filter it has nothing to apply to.
+render_file() {
+    local sets
+    sets="$(awk -F= '/^SystemCallFilter=/ { s = s (s == "" ? "" : " ") $2 } END { print s }' "$1")"
+    awk -v sets="$sets" '
+        /^SystemCallFilter=/ { if (!seen++) print "SystemCallLog=~" sets; next }
+        /^SystemCallErrorNumber=/ { next }
+        { print }
+    ' "$1"
+}
+render() {
+    local file; file="$(dropin "$1")"
+    [ -f "$file" ] || die "$1 has no boundary under $LAYER"
+    [ -f "$file.enforced" ] && file="$file.enforced"
+    grep -q '^SystemCallFilter=' "$file" || die "$1's boundary has no SystemCallFilter= to turn into a log"
+    render_file "$file"
+}
+
+# ------------------------------------------------------- learn, enforce ---
+apply() {   # apply UNIT — the manager rereads the drop-in, the daemon restarts
+    systemctl daemon-reload
+    if oneshot "$1"; then
+        printf 'reloaded: %s (oneshot, not restarted)\n' "$1"
+    elif systemctl try-restart "$1.service"; then
+        printf 'restarted: %s\n' "$1"
+    fi
+}
+
+learn() {
+    [ "$(id -u)" -eq 0 ] || die "learn writes under $LAYER: run it as root"
+    [ $# -gt 0 ] || usage
+    local unit file
+    for unit in "$@"; do
+        file="$(dropin "$unit")"
+        [ -f "$file" ] || die "$unit has no boundary under $LAYER"
+        [ ! -f "$file.enforced" ] || die "$unit is already learning (enforce it first)"
+        cp -p "$file" "$file.enforced"
+        render_file "$file.enforced" > "$file"
+        printf 'learning: %s\n' "$unit"
+        apply "$unit"
+    done
+}
+
+enforce() {
+    [ "$(id -u)" -eq 0 ] || die "enforce writes under $LAYER: run it as root"
+    [ $# -gt 0 ] || usage
+    local unit file
+    for unit in "$@"; do
+        file="$(dropin "$unit")"
+        [ -f "$file.enforced" ] || die "$unit is not learning (no $file.enforced)"
+        mv "$file.enforced" "$file"
+        printf 'enforced: %s\n' "$unit"
+        apply "$unit"
+    done
+}
+
+# --------------------------------------------------------------- report ---
+# caps MASK — capsh's decode without the mask echo: "cap_net_admin,cap_net_raw"
+caps() { capsh --decode="$1" | sed 's/^[^=]*=//'; }
+
+report_unit() {
+    local unit="$1" pid state since cap nnp seccomp score lines mode=enforced
+    state="$(systemctl show -p ActiveState --value "$unit.service" 2>/dev/null || true)"
+    [ -f "$(dropin "$unit").enforced" ] && mode=learning
+    printf '\n== %s: %s (%s)\n' "$unit" "${state:-not loaded}" "$mode"
+    [ "$state" = active ] || return 0
+    pid="$(systemctl show -p MainPID --value "$unit.service")"
+    since="$(systemctl show -p ExecMainStartTimestamp --value "$unit.service")"
+    if [ "${pid:-0}" -gt 0 ] && [ -r "/proc/$pid/status" ]; then
+        cap="$(awk '/^CapBnd:/ { print $2 }' "/proc/$pid/status")"
+        nnp="$(awk '/^NoNewPrivs:/ { print $2 }' "/proc/$pid/status")"
+        seccomp="$(awk '/^Seccomp:/ { print $2 }' "/proc/$pid/status")"
+        printf '   pid %s  CapBnd %s\n   no_new_privs %s  seccomp %s (0 none, 2 filter)\n' \
+            "$pid" "$(caps "$cap")" "$nnp" "$seccomp"
+    fi
+    score="$(systemd-analyze security --no-pager "$unit.service" 2>/dev/null | tail -n1 | grep -oE '[0-9]+\.[0-9] [A-Z]+' || true)"
+    printf '   exposure %s\n' "${score:-unknown}"
+    local -a window=()
+    [ -n "$since" ] && window=(--since "$since")
+    printf '   journal since %s (warning and up):\n' "${since:-boot}"
+    lines="$(journalctl -q -u "$unit.service" -p warning "${window[@]}" -o cat --no-pager | tail -n 20)"
+    printf '%s\n' "${lines:-nothing}" | sed 's/^/     /'
+}
+
+# seccomp_log — the boot's SECCOMP_RET_LOG records as "count  program  syscall"
+seccomp_log() {
+    printf '\n== seccomp log records this boot (learning mode hits)\n'
+    local records
+    records="$(journalctl -q -k -b -o cat --no-pager | grep -E 'type=1326 .*code=0x7ffc0000' || true)"
+    [ -n "$records" ] || { printf '   none\n'; return 0; }
+    sed -E 's/.* exe="([^"]*)".* syscall=([0-9]+).*/\1 \2/' <<<"$records" \
+        | sort | uniq -c | sort -rn \
+        | while read -r count exe nr; do
+            printf '   %5s  %-32s %s\n' "$count" "$exe" "$(ausyscall "$nr" 2>/dev/null || echo "syscall $nr")"
+        done
+}
+
+report() {
+    local -a list=("$@")
+    [ ${#list[@]} -gt 0 ] || mapfile -t list < <(units)
+    local unit
+    for unit in "${list[@]}"; do report_unit "$unit"; done
+    seccomp_log
+}
+
+# ----------------------------------------------------------------- main ---
+case "${1:-}" in
+    learn)   shift; learn "$@" ;;
+    enforce) shift; enforce "$@" ;;
+    render)  [ $# -eq 2 ] || usage; render "$2" ;;
+    report)  shift; report "$@" ;;
+    units)   units ;;
+    *)       usage ;;
+esac
