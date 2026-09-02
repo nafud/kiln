@@ -880,7 +880,10 @@ its own table beside it, untouched.
 ### Kernel Parameters
 
 The sysctls below are the ones the Arch Wiki's Security and Sysctl
-pages recommend and the shipped defaults leave open on this kernel.
+pages recommend and the shipped defaults leave open on this kernel,
+plus three the kernel's own sysctl documentation describes and the
+wiki does not list, the TTY line discipline switch and the two
+protected file keys.
 `kptr_restrict` hides kernel pointers from unprivileged readers of
 `/proc`, `kexec_load_disabled` refuses a replacement kernel until the
 next boot and is the one switch here that cannot be undone at runtime,
@@ -895,8 +898,8 @@ nor sent. For IPv4 the kernel accepts a redirect when either `all` or
 the interface allows it, so `all`, `default` and every interface are
 set, and the `default` keys cover interfaces that appear later. For
 IPv6 the kernel reads the interface value alone, so `all` is excluded
-with the leading dash, the same notation systemd's own defaults use to
-keep a key out of a glob's reach.
+with the leading dash, the notation the wiki's Sysctl page and
+systemd's own defaults use to keep a key out of a glob's reach.
 
 What stays out has a reason each. `kernel.unprivileged_userns_clone`
 stays at 1 because Firefox, Chromium, flatpak and bubblewrap build
@@ -1019,7 +1022,9 @@ stat -c %a /boot
 
 The mode must read `700`. `ls /boot` as the user is refused from now
 on, which is the intended effect, and the coredump drop-in needs no
-restart, since systemd-coredump reads it at each crash.
+restart, since systemd-coredump reads it at each crash. The wiki's
+Core dump page pairs `Storage=none` with `ProcessSizeMax=0`; the
+second is left out here on purpose, for the backtrace.
 
 ### sudo and Failed Logins
 
@@ -1055,15 +1060,18 @@ network and a different one elsewhere, prefer IPv6 privacy addresses,
 turn LLMNR and multicast DNS off per connection, send no hostname in
 DHCP requests, and derive the DHCPv6 identifier from the profile
 instead of the link-layer address, so no two networks see the same
-identity. Scanning uses a random address too. Each item is a section
-of the wiki's NetworkManager page, and the internal DHCP client in use
-honours all of them. Profiles that already exist keep their own
+identity. Scanning uses a random address too. The hostname and DUID
+settings and the address randomisation are sections of the wiki's
+NetworkManager page, the IPv6 privacy and the LLMNR and multicast DNS
+switches are `nm-settings(5)` options, and the internal DHCP client in
+use honours all of them. Profiles that already exist keep their own
 values where they set one, so the loop brings the existing ones in
 line once.
 
 Name resolution goes through systemd-resolved, which NetworkManager
-uses on its own once the service is enabled, and the stub symlink is
-the wiki's documented way to hand it `/etc/resolv.conf`. Two things
+uses on its own once `/etc/resolv.conf` is the stub symlink, the
+wiki's documented way to hand it the file; the explicit `dns=` line
+says the same in the configuration. Two things
 are set on top of it. The compiled-in fallback resolvers are emptied,
 so a link that brings no DNS fails visibly instead of drifting to a
 public resolver, and LLMNR and multicast DNS are off globally. A
@@ -1140,9 +1148,9 @@ attacker root, a low one means it buys what the daemon itself could
 do. Read the list by what runs and what it faces. On this installation
 the units that arrive unconfined and matter are `wpa_supplicant`,
 which parses frames from the air as root, `udisks2`, which mounts
-whatever filesystem a plugged device carries, `thermald`, which writes
-firmware knobs through sysfs, `grub-btrfsd`, which regenerates the boot
-menu on every snapshot, and a VPN daemon such as Mullvad's once one is
+whatever filesystem a plugged device carries, `grub-btrfsd`, which
+regenerates the boot menu on every snapshot, and a VPN daemon such as
+Mullvad's once one is
 installed, which configures routes, nftables and DNS. NetworkManager
 and bluez already carry the capability set and filesystem controls
 upstream can afford, and the remaining points on their reports are
@@ -1176,7 +1184,7 @@ per unit with its reasoning in the header, and `mullvad-net-cls.service`
 beside them, a oneshot that mounts the cgroup hierarchy Mullvad's
 split tunnelling needs so the daemon itself needs neither
 `CAP_SYS_ADMIN` nor `mount(2)`. A drop-in for a unit that is not
-installed is harmless, so all seven land at once. Deployment order
+installed is harmless, so all six land at once. Deployment order
 matters for the Mullvad pair. The package's post-install script enables
 and starts the daemon, so the drop-ins must be on disk before the
 package is installed or upgraded, or the daemon starts once against
@@ -1186,7 +1194,7 @@ land.
 
 ```bash
 cd "$(mktemp -d)"
-for u in wpa_supplicant mullvad-daemon mullvad-early-boot-blocking thermald grub-btrfsd udisks2; do
+for u in wpa_supplicant mullvad-daemon mullvad-early-boot-blocking grub-btrfsd udisks2; do
     curl -fsSL -o "$u.conf" "https://nafud.github.io/kiln/assets/hardening/systemd/system/$u.service.d/hardening.conf"
     sudo install -D -m 644 "$u.conf" "/etc/systemd/system/$u.service.d/hardening.conf"
 done
