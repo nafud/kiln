@@ -1036,7 +1036,7 @@ parse locks sudo out, and one with the wrong mode is refused, so the
 file is checked by `visudo -c` before it lands and installed at 0440.
 
 ```bash
-printf 'Defaults !env_editor\nDefaults editor=/usr/bin/micro:/usr/bin/vim\n' > /tmp/10-hardening
+printf 'Defaults !env_editor\nDefaults editor=/usr/bin/nvim:/usr/bin/vim\n' > /tmp/10-hardening
 visudo -cf /tmp/10-hardening
 sudo install -m 440 /tmp/10-hardening /etc/sudoers.d/10-hardening
 sudo visudo -c
