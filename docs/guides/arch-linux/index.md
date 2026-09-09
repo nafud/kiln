@@ -35,7 +35,9 @@ name, the timezone as a `Region/City` name, and the root password, the
 user's password and the disk passphrase, each twice without echo. Then
 it runs to the end and reports what it did on the way, the mounted
 tree, the fstab, the hook and kernel lines, the kernels GRUB found, the
-snapper values and the etckeeper log.
+snapper values and the etckeeper log, and closes with a table of what
+it installed and configured, one lit row per component, each probed
+against the installed tree before it is unmounted.
 
 What it does is this guide in this order, with four differences that
 a script allows and a keyboard does not. Every package from every

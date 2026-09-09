@@ -192,7 +192,9 @@ def run_iso_stage(name, body, timeout):
         srv.shutdown()
         die(f"{name}: the machine did not power off within {timeout}s (see {logfile})")
     srv.shutdown()
-    text = logfile.read_text(errors="replace")
+    # the serial log carries the installer's colour escapes; the
+    # assertions read it plain
+    text = re.sub(r"\x1b\[[0-9;?]*[A-Za-z]", "", logfile.read_text(errors="replace"))
     if f"WRAPPER-END {name}" not in text:
         die(f"{name}: the wrapper did not finish (see {logfile})")
     return text
@@ -229,6 +231,12 @@ if bash /root/install install --yes; then echo "INSTALL-OK"; else echo "INSTALL-
     text = run_iso_stage("install", body, timeout=2400)
     if "INSTALL-OK" not in text:
         die(f"install: the installer did not report success (see {WORK / 'install.log'})")
+    # the closing summary: one row per component, every one lit
+    summary = text.split("installed and configured", 1)
+    rows = re.findall(r"\[ ([+-]) \] (\S+)", summary[1]) if len(summary) == 2 else []
+    dark = [name for state, name in rows if state == "-"]
+    if len(rows) < 15 or dark:
+        die(f"install: the summary has {len(rows)} rows, dark: {dark}")
     # the first menu entry's linux line, as grub.cfg has it, to be typed
     # verbatim at the GRUB shell in the boot stage
     m = re.search(r"^linux\s+/vmlinuz-linux\s+(.*?)\s*$", text, re.M)

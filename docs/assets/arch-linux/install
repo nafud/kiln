@@ -490,6 +490,55 @@ EOF
     etckeeper vcs log --oneline | sed 's/^/    /'
 }
 
+# ------------------------------------------------------------------ summary ---
+# The closing table of the install stage, probed against the installed
+# tree while it is still mounted: packages in the target's database,
+# units by their enablement links, files by their presence. The same
+# rows, read live, are `verify` after the first boot.
+row() {   # row LABEL DESCRIPTION COMMAND... — one summary row; a dark one says why
+    local label="$1" desc="$2" out; shift 2
+    if out="$("$@" 2>&1)"; then
+        printf '  \033[1;32m[ + ]\033[0m %-14s %s\n' "$label" "$desc"
+    else
+        printf '  \033[1;31m[ - ]\033[0m %-14s %s\n' "$label" "$desc"
+        [ -n "$out" ] && tail -n 5 <<<"$out" | sed 's/^/        /'
+        SUMMARY_FAILED=1
+    fi
+}
+SUMMARY_FAILED=0
+
+tpkg()  { pacman -r "$MNT" -Q "$@"; }                       # installed in the target
+tunit() { local u; for u in "$@"; do systemctl --root="$MNT" -q is-enabled "$u" || return 1; done; }
+tfile() { local f; for f in "$@"; do [ -e "$MNT$f" ] || return 1; done; }
+
+print_install_summary() {
+    local hw
+    read -ra hw <<<"$UCODE $AUDIO_PKGS $GPU_PKGS"
+    printf '\n\033[1m[install] installed and configured\033[0m\n'
+    row "Disk"          "GPT on $KILN_DISK: 1G ESP, 1G ext4 /boot, LUKS2 root"  bash -c "sfdisk -d '$KILN_DISK' | grep -q 'label: gpt' && cryptsetup isLuks '$P3'"
+    row "Filesystem"    "btrfs @ @home @log @pkg @snapshots, zstd, noatime"     bash -c "[ \"\$(btrfs subvolume list '$MNT' | grep -c ' path @')\" -eq 5 ] && grep -qE 'subvol=/@[[:space:]]' '$MNT/etc/fstab'"
+    row "Kernels"       "linux, linux-lts${UCODE:+, $UCODE}"                    tpkg linux linux-lts ${UCODE:+"$UCODE"}
+    row "Initramfs"     "encrypt hook, snapshot overlay, both images"          bash -c "grep -q ' encrypt ' '$MNT/etc/mkinitcpio.conf' && [ -f '$MNT/boot/initramfs-linux.img' ] && [ -f '$MNT/boot/initramfs-linux-lts.img' ]"
+    row "GRUB"          "EFI entry, cryptdevice line, mainline on top"          bash -c "[ -f '$MNT/boot/efi/EFI/GRUB/grubx64.efi' ] && grep -q '^GRUB_TOP_LEVEL=' '$MNT/etc/default/grub' && grep -q 'cryptdevice=UUID=$LUKS_UUID' '$MNT/boot/grub/grub.cfg'"
+    row "Time, locale"  "$KILN_TIMEZONE, en_US.UTF-8, keymap us"                bash -c "[ -f '$MNT/etc/localtime' ] && grep -q '^LANG=en_US.UTF-8' '$MNT/etc/locale.conf' && grep -q '^KEYMAP=us' '$MNT/etc/vconsole.conf'"
+    row "Identity"      "$KILN_HOSTNAME; root and $KILN_USER in wheel, sudo"    bash -c "[ \"\$(cat '$MNT/etc/hostname')\" = '$KILN_HOSTNAME' ] && grep -q '^$KILN_USER:' '$MNT/etc/passwd' && grep -q '^wheel:.*$KILN_USER' '$MNT/etc/group' && [ -f '$MNT/etc/sudoers.d/wheel' ]"
+    row "Graphics"      "mesa${GPU_PKGS:-} (no vendor package for this GPU)"    tpkg mesa "${hw[@]}"
+    row "First boot"    "NetworkManager, timesyncd, fstrim.timer"               tunit NetworkManager systemd-timesyncd fstrim.timer
+    row "Snapshots"     "snapper on @snapshots, snap-pac, grub-btrfs, timers"   bash -c "pacman -r '$MNT' -Q snapper snap-pac grub-btrfs inotify-tools > /dev/null && grep -q '^ALLOW_GROUPS=\"wheel\"' '$MNT/etc/snapper/configs/root' && systemctl --root='$MNT' -q is-enabled snapper-cleanup.timer grub-btrfsd btrfs-scrub@-.timer"
+    row "zram"          "half of RAM, zstd; zswap off on the kernel line"       bash -c "pacman -r '$MNT' -Q zram-generator > /dev/null && grep -q 'ram / 2' '$MNT/etc/systemd/zram-generator.conf' && grep -q 'zswap.enabled=0' '$MNT/etc/default/grub'"
+    row "Firewall"      "nftables, input and forward drop, enabled"             bash -c "grep -q 'policy drop' '$MNT/etc/nftables.conf' && systemctl --root='$MNT' -q is-enabled nftables"
+    row "Kernel"        "sysctl hardening, module refusals"                     tfile /etc/sysctl.d/50-hardening.conf /etc/modprobe.d/hardening.conf
+    row "Core, journal" "no core storage, 1G journal, /boot root-only"          tfile /etc/systemd/coredump.conf.d/10-storage.conf /etc/systemd/journald.conf.d/10-size.conf /etc/tmpfiles.d/boot.conf
+    row "sudo, logins"  "editor pinned, faillock five in fifteen"               tfile /etc/sudoers.d/10-hardening /etc/security/faillock.conf
+    row "Privacy"       "NetworkManager identity, resolved without fallbacks"   bash -c "[ -f '$MNT/etc/NetworkManager/conf.d/10-privacy.conf' ] && [ -f '$MNT/etc/systemd/resolved.conf.d/10-dns.conf' ] && [ \"\$(readlink '$MNT/etc/resolv.conf')\" = /run/systemd/resolve/stub-resolv.conf ] && systemctl --root='$MNT' -q is-enabled systemd-resolved"
+    row "Boundaries"    "five drop-ins, mullvad-net-cls, sandbox-check"         tfile /etc/systemd/system/wpa_supplicant.service.d/hardening.conf /etc/systemd/system/udisks2.service.d/hardening.conf /etc/systemd/system/grub-btrfsd.service.d/hardening.conf /etc/systemd/system/mullvad-daemon.service.d/hardening.conf /etc/systemd/system/mullvad-early-boot-blocking.service.d/hardening.conf /etc/systemd/system/mullvad-net-cls.service /usr/local/sbin/sandbox-check
+    row "No sshd"       "installed for later, not enabled"                      bash -c "! systemctl --root='$MNT' -q is-enabled sshd"
+    # the live ISO carries no git: the reflog has one line per commit
+    row "Record"        "etckeeper: two commits, daily timer, package list"     bash -c "[ \"\$(wc -l < '$MNT/etc/.git/logs/HEAD')\" -eq 2 ] && systemctl --root='$MNT' -q is-enabled etckeeper.timer && [ -f '$MNT/etc/pkglist.txt' ]"
+    printf '\n'
+    [ "$SUMMARY_FAILED" = 0 ] || die "a row is dark"
+}
+
 # ------------------------------------------------------------------ install ---
 install_system() {
     local yes=0
@@ -508,6 +557,7 @@ install_system() {
     ln -sf /run/systemd/resolve/stub-resolv.conf "$MNT/etc/resolv.conf"
     arch-chroot "$MNT" bash /root/install chroot-record
     rm "$MNT/root/install"
+    print_install_summary
     log "unmounting and closing the container"
     umount -R "$MNT"
     cryptsetup close cryptroot
@@ -518,18 +568,6 @@ install_system() {
 # ------------------------------------------------------------------- verify ---
 # On the installed system, as root: the must-holds every chapter
 # states, live. A row is lit when the condition holds.
-row() {   # row LABEL DESCRIPTION COMMAND... — one summary row; a dark one says why
-    local label="$1" desc="$2" out; shift 2
-    if out="$("$@" 2>&1)"; then
-        printf '  \033[1;32m[ + ]\033[0m %-14s %s\n' "$label" "$desc"
-    else
-        printf '  \033[1;31m[ - ]\033[0m %-14s %s\n' "$label" "$desc"
-        [ -n "$out" ] && tail -n 5 <<<"$out" | sed 's/^/        /'
-        VERIFY_FAILED=1
-    fi
-}
-VERIFY_FAILED=0
-
 root_opts() { findmnt -no OPTIONS /; }
 mainline_running() { [ "$(cat "/usr/lib/modules/$(uname -r)/pkgbase")" = linux ]; }
 luks_argon2id() {
@@ -576,9 +614,7 @@ verify_system() {
     row "etckeeper"     "/etc under git, two commits, the daily timer" bash -c '[ -d /etc/.git ] && [ "$(git -C /etc log --oneline | wc -l)" -ge 2 ] && systemctl -q is-enabled etckeeper.timer && [ -f /etc/pkglist.txt ] && [ -f /etc/pacman.d/hooks/pkglist.hook ]'
     row "Base units"    "fstrim.timer, timesyncd enabled"              all_enabled fstrim.timer systemd-timesyncd
     printf '\n'
-    if [ "$VERIFY_FAILED" = 1 ]; then
-        die "a row is dark"
-    fi
+    [ "$SUMMARY_FAILED" = 0 ] || die "a row is dark"
     log "every row lit"
 }
 
