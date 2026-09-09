@@ -1,8 +1,9 @@
 # Arch Linux
 
-A manual Arch Linux installation. The result is a LUKS2-encrypted btrfs
-system with automatic snapshots and the niri workspace from
-[dotfiles](https://github.com/nafud/dotfiles){ .external-link } deployed
+A manual Arch Linux installation, and the script that performs it. The
+result is a LUKS2-encrypted btrfs system with automatic snapshots,
+hardened, on which the author's niri workspace from
+[dotfiles](https://github.com/nafud/dotfiles){ .external-link } deploys
 in one command.
 
 ## Objectives
@@ -15,6 +16,60 @@ in one command.
 | Kernels | `linux`, `linux-lts` | The LTS kernel serves as recovery for a broken mainline kernel, and GRUB boots the mainline by default. Snapshots do not cover `/boot`, and the workspace closes that gap with pacman hooks that keep the outgoing kernel beside the current one |
 | Swap | zram | Compressed swap in RAM, with no partition and no hibernation. The workspace adds systemd-oomd, which stops a runaway process before the session stalls |
 | Secure Boot | Off for the install | The ISO is unsigned, and re-enabling with custom keys is a post-install option |
+
+## The Script
+
+The chapters from Disk Layout to System Hardening are also one
+script, `install`, which performs them on a blank disk from the live
+ISO without the typing. Boot the ISO and join the network as the next
+two chapters describe, then fetch the script and run it.
+
+```bash
+curl -fsSLO https://nafud.github.io/kiln/assets/arch-linux/install
+bash install
+```
+
+It asks seven things before it writes anything. The disk, confirmed
+by typing its name since the wipe is total, the hostname, the user
+name, the timezone as a `Region/City` name, and the root password, the
+user's password and the disk passphrase, each twice without echo. Then
+it runs to the end and reports what it did on the way, the mounted
+tree, the fstab, the hook and kernel lines, the kernels GRUB found, the
+snapper values and the etckeeper log.
+
+What it does is this guide in this order, with four differences that
+a script allows and a keyboard does not. Every package from every
+chapter goes into the single pacstrap, so the machine is one
+transaction and one initramfs build. The Snapshots, Swap and System
+Hardening chapters are applied inside the chroot, before the first
+boot, since none of their files needs a running system and the one
+ordering rule among them, the boundaries before a VPN daemon, holds
+either way. `sshd` is never enabled, since the script has no use for
+the remote session. And the sandbox-check learning cycle is skipped,
+so the boundaries land enforced, as this guide left them. The CPU
+vendor decides the microcode package and the GPU vendor the Vulkan
+and VA-API packages, so the same script serves an AMD machine. The
+optional sections, the header backup, the deep standby line and
+Secure Boot, stay manual.
+
+After the reboot, log in, join the network, and check the machine
+with the script's second command, which runs every live verification
+of the chapters above and prints a row per condition.
+
+```bash
+curl -fsSLO https://nafud.github.io/kiln/assets/arch-linux/install
+sudo bash install verify
+```
+
+Every row must be lit. The machine is then the finished base system
+of this guide and nothing more. What runs on it is the owner's choice,
+the author's is the Workspace chapter, and the chapters themselves
+remain the reference for what the script did and why. An unattended
+run takes its answers from the environment, `KILN_DISK`,
+`KILN_HOSTNAME`, `KILN_USER`, `KILN_TIMEZONE`, `KILN_ROOT_PASSWORD`,
+`KILN_USER_PASSWORD` and `KILN_LUKS_PASSPHRASE`, with `--yes` in place
+of the typed confirmation. That is how the script is tested, on a
+virtual machine that boots the ISO, installs, reboots and verifies.
 
 ## ISO and USB
 
@@ -1031,12 +1086,14 @@ second is left out here on purpose, for the backtrace.
 
 Arch builds sudo with `env_editor`, so `visudo` and `sudoedit` run
 whatever `$EDITOR` names, chosen by the unprivileged caller.
-`!env_editor` pins them to a fixed list. A sudoers file that does not
-parse locks sudo out, and one with the wrong mode is refused, so the
-file is checked by `visudo -c` before it lands and installed at 0440.
+`!env_editor` pins them to a fixed list, here the editor the base
+system installs. An editor installed later joins the front of that
+list by hand. A sudoers file that does not parse locks sudo out, and
+one with the wrong mode is refused, so the file is checked by
+`visudo -c` before it lands and installed at 0440.
 
 ```bash
-printf 'Defaults !env_editor\nDefaults editor=/usr/bin/nvim:/usr/bin/vim\n' > /tmp/10-hardening
+printf 'Defaults !env_editor\nDefaults editor=/usr/bin/vim\n' > /tmp/10-hardening
 visudo -cf /tmp/10-hardening
 sudo install -m 440 /tmp/10-hardening /etc/sudoers.d/10-hardening
 sudo visudo -c

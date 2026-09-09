@@ -1,0 +1,592 @@
+#!/usr/bin/env bash
+#
+# install — the Arch Linux guide, run end to end from the live ISO.
+#
+#   curl -fsSLO https://nafud.github.io/kiln/assets/arch-linux/install
+#   bash install              the install: seven answers, then no questions
+#   bash install verify       on the installed system: every must-hold, as rows
+#
+# The guide (https://nafud.github.io/kiln/guides/arch-linux/) is the
+# specification and this script is its execution, chapter by chapter:
+# the disk layout (GPT, an ESP, an ext4 /boot, a LUKS2 container with
+# five btrfs subvolumes), the base system in one pacstrap, the system
+# configuration in a chroot, then the post-boot chapters that need no
+# running system, snapshots, swap and the hardening, applied inside the
+# same chroot so the first boot is the finished machine. What the guide
+# leaves optional stays out: the remote session, the header backup, the
+# deep standby line, Secure Boot. What the guide verifies live, the
+# mounts, the kernel, zram, the resolver, the firewall, the snapshots,
+# `verify` checks after the first boot.
+#
+# Machine-neutral: the CPU vendor picks the microcode package, the GPU
+# vendor the Vulkan and VA-API packages, the disk name its partition
+# suffix. Nothing here belongs to any particular machine or workspace;
+# what to run on the installed system afterwards is the owner's choice.
+#
+# The answers are asked on the terminal, or taken from the environment
+# for an unattended run (KILN_DISK, KILN_HOSTNAME, KILN_USER,
+# KILN_TIMEZONE, KILN_ROOT_PASSWORD, KILN_USER_PASSWORD,
+# KILN_LUKS_PASSPHRASE) with --yes standing in for the typed
+# confirmation of the wipe. KILN_ASSETS overrides where the hardening
+# drop-ins are fetched from (default: the guide's site).
+#
+# shellcheck disable=SC2016  # the verify rows hand bash -c literal snippets
+set -Eeuo pipefail
+# every failure names its line; the build logs, when they exist, speak first
+on_error() {
+    local f
+    for f in /tmp/mkinitcpio.log /tmp/grub-mkconfig.log; do
+        [ -f "$f" ] && { printf '\n--- %s (tail) ---\n' "$f"; tail -n 20 "$f"; }
+    done
+    die "failed at line $1: $2"
+}
+trap 'on_error "$LINENO" "$BASH_COMMAND"' ERR
+
+ASSETS="${KILN_ASSETS:-https://nafud.github.io/kiln/assets}"
+MNT=/mnt
+
+log()  { printf '\033[1m[install]\033[0m %s\n' "$*"; }
+warn() { printf '\033[1;33m[install] WARNING:\033[0m %s\n' "$*" >&2; }
+die()  { printf '\033[1;31m[install] ERROR:\033[0m %s\n' "$*" >&2; exit 1; }
+
+# ---------------------------------------------------------------- answers ---
+# Each answer comes from the environment when set, else from the
+# terminal (/dev/tty, so the script may be piped). Each is validated
+# before anything is written.
+ask() {   # ask VAR PROMPT — a visible answer
+    local var="$1" prompt="$2" value
+    if [ -n "${!var:-}" ]; then return 0; fi
+    read -r -p "$prompt: " value < /dev/tty
+    printf -v "$var" '%s' "$value"
+}
+
+ask_secret() {   # ask_secret VAR PROMPT — read twice without echo, must agree
+    local var="$1" prompt="$2" a b
+    if [ -n "${!var:-}" ]; then return 0; fi
+    while :; do
+        read -r -s -p "$prompt: " a < /dev/tty; printf '\n'
+        read -r -s -p "$prompt (again): " b < /dev/tty; printf '\n'
+        [ -n "$a" ] || { echo "empty; again"; continue; }
+        [ "$a" = "$b" ] || { echo "they differ; again"; continue; }
+        break
+    done
+    printf -v "$var" '%s' "$a"
+}
+
+partition_path() {   # partition_path DISK N — nvme0n1p3 or sda3
+    case "$1" in *[0-9]) printf '%sp%s' "$1" "$2" ;; *) printf '%s%s' "$1" "$2" ;; esac
+}
+
+collect_answers() {
+    local yes="$1"
+    log "the disk will be wiped whole; the table below is what the machine has"
+    lsblk -dno NAME,SIZE,MODEL,TYPE | sed 's/^/    /'
+    ask KILN_DISK "disk to install to (/dev/...)"
+    [ -b "$KILN_DISK" ] || die "$KILN_DISK is not a block device"
+    [ "$(lsblk -dno TYPE "$KILN_DISK")" = disk ] || die "$KILN_DISK is not a whole disk"
+    if lsblk -no MOUNTPOINTS "$KILN_DISK" | grep -q .; then
+        die "$KILN_DISK has mounted filesystems (the live medium?)"
+    fi
+    ask KILN_HOSTNAME "hostname"
+    [[ $KILN_HOSTNAME =~ ^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$ ]] || die "hostname: lowercase letters, digits and hyphens"
+    ask KILN_USER "user name"
+    [[ $KILN_USER =~ ^[a-z_][a-z0-9_-]{0,31}$ ]] || die "user name: lowercase, starting with a letter"
+    [ "$KILN_USER" != root ] || die "the user is not root"
+    ask KILN_TIMEZONE "timezone (Region/City, as under /usr/share/zoneinfo)"
+    [ -f "/usr/share/zoneinfo/$KILN_TIMEZONE" ] || die "no such timezone: $KILN_TIMEZONE"
+    [[ $KILN_TIMEZONE == */* ]] || die "timezone must be Region/City"
+    ask_secret KILN_ROOT_PASSWORD "root password"
+    ask_secret KILN_USER_PASSWORD "password for $KILN_USER"
+    ask_secret KILN_LUKS_PASSPHRASE "disk passphrase (asked at every boot)"
+    export KILN_DISK KILN_HOSTNAME KILN_USER KILN_TIMEZONE KILN_ROOT_PASSWORD KILN_USER_PASSWORD KILN_LUKS_PASSPHRASE
+    if [ "$yes" != 1 ]; then
+        local typed
+        printf '\n'
+        log "everything on $KILN_DISK will be erased"
+        read -r -p "type the disk name ($(basename "$KILN_DISK")) to continue: " typed < /dev/tty
+        [ "$typed" = "$(basename "$KILN_DISK")" ] || die "not confirmed"
+    fi
+}
+
+# --------------------------------------------------------------- preflight ---
+# UEFI, the network, the live ISO's keyring, the mirrorlist and the
+# clock, in the guide's order. The keyring: archiso initialises it in
+# pacman-init after time synchronisation, which a network that blocks
+# NTP never completes; then the guide's fix does the service's work by
+# hand and pacstrap runs without -K, copying the working keyring in.
+PACSTRAP_KEYRING=-K
+preflight_checks() {
+    [ "$(id -u)" -eq 0 ] || die "run as root on the live ISO"
+    [ -d /run/archiso ] || die "this runs on the Arch live ISO"
+    [ -f "$0" ] || die "run from a file: curl -fsSLO .../install && bash install"
+    [ "$(cat /sys/firmware/efi/fw_platform_size 2>/dev/null)" = 64 ] || die "not booted in 64-bit UEFI mode"
+    curl -fsS -m 10 -o /dev/null https://archlinux.org/ || die "no network; join one first (iwctl for Wi-Fi)"
+}
+
+prepare_pacman() {
+    log "waiting for the live ISO's keyring (pacman-init)"
+    local _i
+    for _i in $(seq 1 60); do
+        systemctl -q is-active pacman-init && break
+        sleep 2
+    done
+    if ! systemctl -q is-active pacman-init; then
+        warn "pacman-init never ran (timedatectl: $(timedatectl show -p NTPSynchronized --value)); initialising the keyring by hand"
+        systemctl cancel
+        pacman-key --init
+        pacman-key --populate
+        pacman -Sy --noconfirm archlinux-keyring
+        PACSTRAP_KEYRING=""
+    fi
+    if ! grep -q '^# With:.*reflector' /etc/pacman.d/mirrorlist; then
+        log "ranking mirrors (reflector)"
+        reflector --latest 10 --protocol https --sort rate --save /etc/pacman.d/mirrorlist
+    fi
+    grep -q '^Server' /etc/pacman.d/mirrorlist || die "the mirrorlist is empty"
+    log "clock: $(timedatectl show -p NTPSynchronized --value | sed 's/yes/synchronised/; s/no/not synchronised/')"
+}
+
+# ---------------------------------------------------------------- hardware ---
+# The microcode package follows the CPU vendor, the Vulkan and VA-API
+# packages the GPU vendor (mesa serves every one of them), sof-firmware
+# the Intel audio it exists for. lspci class 03 is every display
+# controller, so a hybrid machine gets both vendors' packages.
+UCODE="" GPU_PKGS="" AUDIO_PKGS=""
+detect_hardware() {
+    local vendor gpus
+    vendor="$(awk -F': ' '/^vendor_id/ {print $2; exit}' /proc/cpuinfo)"
+    case "$vendor" in
+        GenuineIntel) UCODE=intel-ucode; AUDIO_PKGS=sof-firmware ;;
+        AuthenticAMD) UCODE=amd-ucode ;;
+        *) warn "unknown CPU vendor $vendor: no microcode package" ;;
+    esac
+    gpus="$(lspci -n | awk '$2 ~ /^03/ {print $3}' | cut -d: -f1 | sort -u)"
+    local id
+    for id in $gpus; do
+        case "$id" in
+            8086) GPU_PKGS="$GPU_PKGS vulkan-intel intel-media-driver" ;;
+            1002) GPU_PKGS="$GPU_PKGS vulkan-radeon libva-mesa-driver" ;;
+            10de) warn "NVIDIA GPU: mesa's nouveau serves it; the proprietary driver is a choice for later" ;;
+        esac
+    done
+    log "cpu $vendor → ${UCODE:-no microcode}; gpu ${gpus:-none} → mesa${GPU_PKGS}"
+}
+
+# ------------------------------------------------------------- disk layout ---
+P1="" P2="" P3=""
+partition_and_format() {
+    P1="$(partition_path "$KILN_DISK" 1)"
+    P2="$(partition_path "$KILN_DISK" 2)"
+    P3="$(partition_path "$KILN_DISK" 3)"
+    log "partitioning $KILN_DISK: 1G ESP, 1G /boot, the rest LUKS"
+    sfdisk --quiet --wipe always --wipe-partitions always "$KILN_DISK" <<EOF
+label: gpt
+size=1GiB, type=uefi
+size=1GiB, type=linux
+type=linux
+EOF
+    partprobe "$KILN_DISK"
+    udevadm settle
+    [ -b "$P3" ] || die "$P3 did not appear"
+    log "formatting $P1 (FAT32) and $P2 (ext4)"
+    mkfs.fat -F32 "$P1" > /dev/null
+    mkfs.ext4 -q "$P2"
+    log "creating the LUKS2 container on $P3 (argon2id, the defaults)"
+    printf '%s' "$KILN_LUKS_PASSPHRASE" | cryptsetup luksFormat --batch-mode --key-file - "$P3"
+    printf '%s' "$KILN_LUKS_PASSPHRASE" | cryptsetup open --key-file - "$P3" cryptroot
+    log "btrfs with five subvolumes"
+    mkfs.btrfs -q -L arch /dev/mapper/cryptroot
+    mount /dev/mapper/cryptroot "$MNT"
+    local sv
+    for sv in @ @home @log @pkg @snapshots; do
+        btrfs -q subvolume create "$MNT/$sv"
+    done
+    umount "$MNT"
+    local o=compress=zstd,noatime
+    mount -o "subvol=@,$o" /dev/mapper/cryptroot "$MNT"
+    mount --mkdir -o "subvol=@home,$o"      /dev/mapper/cryptroot "$MNT/home"
+    mount --mkdir -o "subvol=@log,$o"       /dev/mapper/cryptroot "$MNT/var/log"
+    mount --mkdir -o "subvol=@pkg,$o"       /dev/mapper/cryptroot "$MNT/var/cache/pacman/pkg"
+    mount --mkdir -o "subvol=@snapshots,$o" /dev/mapper/cryptroot "$MNT/.snapshots"
+    mount --mkdir "$P2" "$MNT/boot"
+    mount --mkdir "$P1" "$MNT/boot/efi"
+    findmnt -R "$MNT" -o TARGET,SOURCE,FSTYPE | sed 's/^/    /'
+}
+
+# ------------------------------------------------------------- base system ---
+# One pacstrap: the guide's base list, the graphics packages, and the
+# packages of the snapshots, swap and hardening chapters, so the whole
+# machine is one transaction and one initramfs build.
+pacstrap_base() {
+    local pkgs hw
+    read -ra hw <<<"$UCODE $AUDIO_PKGS $GPU_PKGS"
+    pkgs=(base linux linux-lts linux-firmware
+          btrfs-progs cryptsetup e2fsprogs dosfstools grub efibootmgr
+          networkmanager base-devel sudo vim git man-db man-pages openssh
+          mesa "${hw[@]}"
+          snapper snap-pac grub-btrfs inotify-tools
+          zram-generator nftables etckeeper)
+    log "pacstrap: ${pkgs[*]}"
+    # shellcheck disable=SC2086  # PACSTRAP_KEYRING is -K or nothing
+    pacstrap $PACSTRAP_KEYRING "$MNT" "${pkgs[@]}"
+    genfstab -U "$MNT" >> "$MNT/etc/fstab"
+    check_fstab
+}
+
+# The three properties the guide names: the five btrfs lines share one
+# UUID and each names its subvolume without a subvolid; every btrfs
+# line carries compress=zstd and noatime; /boot is ext4 and /boot/efi
+# vfat, each under its own UUID.
+check_fstab() {
+    local f="$MNT/etc/fstab" btrfs uuids
+    btrfs="$(awk '$3 == "btrfs"' "$f")"
+    [ "$(wc -l <<<"$btrfs")" -eq 5 ] || die "fstab: expected five btrfs lines"
+    uuids="$(awk '{print $1}' <<<"$btrfs" | sort -u)"
+    [ "$(wc -l <<<"$uuids")" -eq 1 ] || die "fstab: the btrfs lines name more than one UUID"
+    [[ $uuids == UUID=* ]] || die "fstab: btrfs lines not by UUID"
+    while read -r _ _ _ opts _; do
+        [[ $opts == *subvol=/@* ]] || die "fstab: a btrfs line lacks subvol=: $opts"
+        [[ $opts != *subvolid=* ]] || die "fstab: subvolid= would pin a rollback: $opts"
+        [[ $opts == *compress=zstd* && $opts == *noatime* ]] || die "fstab: options drifted: $opts"
+    done <<<"$btrfs"
+    awk '$2 == "/boot" && $3 == "ext4" && $1 ~ /^UUID=/' "$f" | grep -q . || die "fstab: /boot is not ext4 by UUID"
+    awk '$2 == "/boot/efi" && $3 == "vfat" && $1 ~ /^UUID=/' "$f" | grep -q . || die "fstab: /boot/efi is not vfat by UUID"
+    log "fstab: five subvolumes on one filesystem, /boot and the ESP by UUID"
+    sed 's/^/    /' "$f" | grep -v '^\s*$'
+}
+
+# --------------------------------------------------------- inside the chroot ---
+# Everything from the System Configuration chapter to the end of
+# System Hardening, minus what needs a running system. The initramfs
+# and grub.cfg are built once, at the end, with every hook and line in
+# place. Runs as `install chroot-configure` inside arch-chroot; the
+# answers arrive in the environment.
+chroot_configure() {
+    log "time, locale, console, identity"
+    ln -sf "/usr/share/zoneinfo/$KILN_TIMEZONE" /etc/localtime
+    [ -f /etc/localtime ] || die "/etc/localtime does not resolve"
+    hwclock --systohc
+    sed -i 's/^#en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen
+    locale-gen > /dev/null
+    echo 'LANG=en_US.UTF-8' > /etc/locale.conf
+    echo 'KEYMAP=us' > /etc/vconsole.conf
+    echo "$KILN_HOSTNAME" > /etc/hostname
+    echo "127.0.1.1 $KILN_HOSTNAME" >> /etc/hosts
+
+    log "accounts: root, $KILN_USER in wheel, sudo for wheel"
+    printf 'root:%s\n' "$KILN_ROOT_PASSWORD" | chpasswd
+    useradd -m -G wheel "$KILN_USER"
+    printf '%s:%s\n' "$KILN_USER" "$KILN_USER_PASSWORD" | chpasswd
+    echo '%wheel ALL=(ALL:ALL) ALL' > /etc/sudoers.d/wheel
+    chmod 440 /etc/sudoers.d/wheel
+    visudo -c > /dev/null || die "sudoers does not parse"
+
+    log "initramfs hooks: encrypt between block and filesystems, the snapshot overlay last"
+    sed -i 's/^HOOKS=.*/HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont block encrypt filesystems fsck grub-btrfs-overlayfs)/' /etc/mkinitcpio.conf
+    grep '^HOOKS' /etc/mkinitcpio.conf
+
+    log "GRUB: the kernel line names the LUKS partition by UUID, zswap off, mainline pinned on top"
+    [ -n "${LUKS_UUID:-}" ] || die "no LUKS partition UUID handed in"
+    sed -i "s|^GRUB_CMDLINE_LINUX=.*|GRUB_CMDLINE_LINUX=\"cryptdevice=UUID=$LUKS_UUID:cryptroot:allow-discards root=/dev/mapper/cryptroot zswap.enabled=0\"|" /etc/default/grub
+    echo 'GRUB_TOP_LEVEL="/boot/vmlinuz-linux"' >> /etc/default/grub
+    grep '^GRUB_CMDLINE_LINUX=' /etc/default/grub
+    grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB --recheck 2>&1 | tail -1
+
+    log "services of the first boot"
+    systemctl -q enable NetworkManager fstrim.timer systemd-timesyncd
+
+    # -- snapshots ---------------------------------------------------------
+    log "snapper: the config on the top-level @snapshots, transaction-driven only"
+    umount /.snapshots
+    rm -r /.snapshots
+    snapper --no-dbus -c root create-config /
+    btrfs -q subvolume delete /.snapshots
+    mkdir /.snapshots
+    mount -a
+    chmod 750 /.snapshots
+    chown :wheel /.snapshots
+    findmnt -no SOURCE /.snapshots | grep -q '@snapshots' || die "/.snapshots is not the @snapshots subvolume"
+    sed -i 's/^ALLOW_GROUPS=.*/ALLOW_GROUPS="wheel"/; s/^TIMELINE_CREATE=.*/TIMELINE_CREATE="no"/; s/^NUMBER_LIMIT=.*/NUMBER_LIMIT="10"/; s/^NUMBER_LIMIT_IMPORTANT=.*/NUMBER_LIMIT_IMPORTANT="10"/' /etc/snapper/configs/root
+    grep -E '^(ALLOW_GROUPS|TIMELINE_CREATE|NUMBER_LIMIT|NUMBER_LIMIT_IMPORTANT)=' /etc/snapper/configs/root
+    systemctl -q enable snapper-cleanup.timer grub-btrfsd btrfs-scrub@-.timer
+
+    # -- swap --------------------------------------------------------------
+    log "zram: half of RAM, zstd; the VM sysctls for it"
+    printf '[zram0]\nzram-size = ram / 2\ncompression-algorithm = zstd\n' > /etc/systemd/zram-generator.conf
+    printf 'vm.swappiness = 180\nvm.watermark_boost_factor = 0\nvm.watermark_scale_factor = 125\nvm.page-cluster = 0\n' > /etc/sysctl.d/99-vm-zram.conf
+
+    # -- hardening ---------------------------------------------------------
+    log "firewall: input and forward drop, only what a client needs"
+    cat > /etc/nftables.conf <<'EOF'
+#!/usr/bin/nft -f
+# The host firewall: nothing comes in that this machine did not ask
+# for. Only this table is rebuilt on a reload; a VPN daemon's and
+# libvirt's tables survive it. A packet must pass every table on a
+# hook, so the libvirt bridge is admitted here as well.
+destroy table inet filter
+table inet filter {
+  chain input {
+    type filter hook input priority filter; policy drop;
+
+    ct state invalid drop
+    ct state { established, related } accept
+    iif lo accept
+    meta l4proto icmp accept
+    meta l4proto ipv6-icmp accept
+    ip6 saddr fe80::/10 udp dport 546 accept
+    iifname "virbr0" meta l4proto { tcp, udp } th dport { 53, 67 } accept
+    pkttype host limit rate 5/second counter reject with icmpx type admin-prohibited
+    counter
+  }
+  chain forward {
+    type filter hook forward priority filter; policy drop;
+
+    ct state { established, related } accept
+    iifname "virbr0" accept
+    oifname "virbr0" accept
+  }
+}
+EOF
+    nft -c -f /etc/nftables.conf
+    systemctl -q enable nftables
+
+    log "kernel parameters"
+    cat > /etc/sysctl.d/50-hardening.conf <<'EOF'
+kernel.kptr_restrict = 1
+kernel.kexec_load_disabled = 1
+dev.tty.ldisc_autoload = 0
+fs.protected_fifos = 2
+fs.protected_regular = 2
+net.core.bpf_jit_harden = 1
+vm.mmap_rnd_bits = 32
+vm.mmap_rnd_compat_bits = 16
+net.ipv4.tcp_rfc1337 = 1
+net.ipv4.conf.all.accept_redirects = 0
+net.ipv4.conf.default.accept_redirects = 0
+net.ipv4.conf.*.accept_redirects = 0
+net.ipv4.conf.all.secure_redirects = 0
+net.ipv4.conf.default.secure_redirects = 0
+net.ipv4.conf.*.secure_redirects = 0
+net.ipv4.conf.all.send_redirects = 0
+net.ipv4.conf.default.send_redirects = 0
+net.ipv4.conf.*.send_redirects = 0
+net.ipv6.conf.default.accept_redirects = 0
+net.ipv6.conf.*.accept_redirects = 0
+-net.ipv6.conf.all.accept_redirects
+EOF
+
+    log "kernel modules"
+    cat > /etc/modprobe.d/hardening.conf <<'EOF'
+install sctp /bin/false
+install rds /bin/false
+install tipc /bin/false
+install n-hdlc /bin/false
+install atm /bin/false
+install can /bin/false
+install firewire-core /bin/false
+install floppy /bin/false
+install vivid /bin/false
+install gfs2 /bin/false
+install cramfs /bin/false
+install jffs2 /bin/false
+install hfs /bin/false
+install hfsplus /bin/false
+blacklist squashfs
+blacklist udf
+blacklist cifs
+blacklist nfs
+blacklist nfsv3
+blacklist nfsv4
+EOF
+
+    log "core dumps, the journal cap, /boot root-only"
+    install -d /etc/systemd/coredump.conf.d /etc/systemd/journald.conf.d
+    printf '[Coredump]\nStorage=none\n' > /etc/systemd/coredump.conf.d/10-storage.conf
+    printf '[Journal]\nSystemMaxUse=1G\n' > /etc/systemd/journald.conf.d/10-size.conf
+    printf 'z /boot 0700 root root -\n' > /etc/tmpfiles.d/boot.conf
+    chmod 700 /boot
+
+    log "sudo pinned to its editor, faillock at five in fifteen minutes"
+    printf 'Defaults !env_editor\nDefaults editor=/usr/bin/vim\n' > /tmp/10-hardening
+    visudo -cf /tmp/10-hardening > /dev/null || die "the sudoers drop-in does not parse"
+    install -m 440 /tmp/10-hardening /etc/sudoers.d/10-hardening
+    visudo -c > /dev/null || die "sudoers does not parse"
+    printf 'deny = 5\nfail_interval = 900\nunlock_time = 120\n' > /etc/security/faillock.conf
+
+    log "network privacy: NetworkManager's per-network identity, resolved without fallbacks"
+    cat > /etc/NetworkManager/conf.d/10-privacy.conf <<'EOF'
+[main]
+dns=systemd-resolved
+
+[connection]
+wifi.cloned-mac-address=stable
+ethernet.cloned-mac-address=stable
+ipv6.ip6-privacy=2
+connection.llmnr=0
+connection.mdns=0
+ipv4.dhcp-send-hostname=0
+ipv6.dhcp-send-hostname=0
+ipv6.dhcp-duid=stable-uuid
+
+[device]
+wifi.scan-rand-mac-address=yes
+EOF
+    install -d /etc/systemd/resolved.conf.d
+    printf '[Resolve]\nFallbackDNS=\nMulticastDNS=no\nLLMNR=no\n' > /etc/systemd/resolved.conf.d/10-dns.conf
+    systemctl -q enable systemd-resolved
+
+    log "service boundaries: the guide's drop-ins, from $ASSETS"
+    local u
+    for u in wpa_supplicant mullvad-daemon mullvad-early-boot-blocking grub-btrfsd udisks2; do
+        curl -fsSL --create-dirs -o "/etc/systemd/system/$u.service.d/hardening.conf" \
+            "$ASSETS/hardening/systemd/system/$u.service.d/hardening.conf"
+        chmod 644 "/etc/systemd/system/$u.service.d/hardening.conf"
+    done
+    curl -fsSL -o /etc/systemd/system/mullvad-net-cls.service "$ASSETS/hardening/systemd/system/mullvad-net-cls.service"
+    chmod 644 /etc/systemd/system/mullvad-net-cls.service
+    curl -fsSL -o /usr/local/sbin/sandbox-check "$ASSETS/sandbox-check"
+    chmod 755 /usr/local/sbin/sandbox-check
+
+    log "the initramfs for both kernels, then grub.cfg"
+    mkinitcpio -P > /tmp/mkinitcpio.log 2>&1 || { cat /tmp/mkinitcpio.log; die "mkinitcpio failed"; }
+    grep '^==> Initcpio image generation successful' /tmp/mkinitcpio.log
+    [ "$(grep -c '^==> Initcpio image generation successful' /tmp/mkinitcpio.log)" -eq 2 ]
+    grep -q '\[encrypt\]' /tmp/mkinitcpio.log || die "the encrypt hook is not in the image"
+    grub-mkconfig -o /boot/grub/grub.cfg > /tmp/grub-mkconfig.log 2>&1 || { cat /tmp/grub-mkconfig.log; die "grub-mkconfig failed"; }
+    grep -E 'Found linux image|Detecting snapshots' /tmp/grub-mkconfig.log
+    # the first entry's own line: the mainline kernel, the root
+    # subvolume, and the cryptdevice line from above
+    grep -m1 -E '^\s*linux\s+/vmlinuz-' /boot/grub/grub.cfg | sed 's/^\s*//'
+    grep -m1 -E '^\s*linux\s+/vmlinuz-' /boot/grub/grub.cfg | grep -q 'vmlinuz-linux .*rootflags=subvol=@.*cryptdevice=UUID=' || die "grub.cfg's first entry is not the mainline kernel on @"
+}
+
+# The record, in a second chroot pass with no network: the resolver
+# stub is symlinked from outside (arch-chroot bind-mounts the live
+# system's resolv.conf over the target's while inside), then etckeeper
+# commits the finished /etc with the guide's two messages.
+chroot_record() {
+    log "etckeeper: the record of /etc"
+    usermod -c root root
+    GIT_CONFIG_PARAMETERS="'init.defaultBranch=master'" etckeeper init > /dev/null
+    git -C /etc config user.name root
+    git -C /etc config user.email root@localhost
+    etckeeper commit "the installed system, hardened" > /dev/null
+    systemctl -q enable etckeeper.timer
+    log "the package list hook"
+    install -d /etc/pacman.d/hooks
+    cat > /etc/pacman.d/hooks/pkglist.hook <<'EOF'
+[Trigger]
+Operation = Install
+Operation = Remove
+Type = Package
+Target = *
+
+[Action]
+When = PostTransaction
+Exec = /bin/sh -c '/usr/bin/pacman -Qqe > /etc/pkglist.txt'
+EOF
+    pacman -Qqe > /etc/pkglist.txt
+    etckeeper commit "package list hook" > /dev/null
+    etckeeper vcs log --oneline | sed 's/^/    /'
+}
+
+# ------------------------------------------------------------------ install ---
+install_system() {
+    local yes=0
+    [ "${1:-}" = "--yes" ] && yes=1
+    preflight_checks
+    collect_answers "$yes"
+    prepare_pacman
+    detect_hardware
+    partition_and_format
+    pacstrap_base
+    LUKS_UUID="$(blkid -s UUID -o value "$P3")"
+    [ -n "$LUKS_UUID" ] || die "no UUID for $P3"
+    export LUKS_UUID
+    cp "$0" "$MNT/root/install"
+    arch-chroot "$MNT" bash /root/install chroot-configure
+    ln -sf /run/systemd/resolve/stub-resolv.conf "$MNT/etc/resolv.conf"
+    arch-chroot "$MNT" bash /root/install chroot-record
+    rm "$MNT/root/install"
+    log "unmounting and closing the container"
+    umount -R "$MNT"
+    cryptsetup close cryptroot
+    log "installed. reboot, remove the medium, unlock with the passphrase, log in as $KILN_USER"
+    log "then: curl -fsSLO $ASSETS/arch-linux/install && sudo bash install verify"
+}
+
+# ------------------------------------------------------------------- verify ---
+# On the installed system, as root: the must-holds every chapter
+# states, live. A row is lit when the condition holds.
+row() {   # row LABEL DESCRIPTION COMMAND... — one summary row; a dark one says why
+    local label="$1" desc="$2" out; shift 2
+    if out="$("$@" 2>&1)"; then
+        printf '  \033[1;32m[ + ]\033[0m %-14s %s\n' "$label" "$desc"
+    else
+        printf '  \033[1;31m[ - ]\033[0m %-14s %s\n' "$label" "$desc"
+        [ -n "$out" ] && tail -n 5 <<<"$out" | sed 's/^/        /'
+        VERIFY_FAILED=1
+    fi
+}
+VERIFY_FAILED=0
+
+root_opts() { findmnt -no OPTIONS /; }
+mainline_running() { [ "$(cat "/usr/lib/modules/$(uname -r)/pkgbase")" = linux ]; }
+luks_argon2id() {
+    local dev
+    dev="$(cryptsetup status cryptroot | awk '/device:/ {print $2}')"
+    cryptsetup luksDump "$dev" | grep -q 'PBKDF:.*argon2id'
+}
+resolved_global() { resolvectl status | sed -n '/^Global/,/^Link/p'; }
+grub_first_kernel() { grep -m1 -E '^\s*linux\s+/vmlinuz-' /boot/grub/grub.cfg | grep -q 'vmlinuz-linux '; }
+all_enabled() { local u; for u in "$@"; do systemctl -q is-enabled "$u" || return 1; done; }
+
+verify_system() {
+    [ "$(id -u)" -eq 0 ] || die "verify runs as root (sudo bash install verify)"
+    export -f mainline_running grub_first_kernel all_enabled resolved_global
+    printf '\n\033[1m[install] the installed system\033[0m\n'
+    row "Root"          "btrfs @ on cryptroot, zstd, noatime, discard"  bash -c '[ "$(findmnt -no SOURCE /)" = "/dev/mapper/cryptroot[/@]" ] && [[ $(findmnt -no OPTIONS /) == *subvol=/@* && $(findmnt -no OPTIONS /) == *compress=zstd* && $(findmnt -no OPTIONS /) == *noatime* && $(findmnt -no OPTIONS /) == *discard=async* ]]'
+    row "Subvolumes"    "@home @log @pkg @snapshots mounted"           bash -c 'for p in /home:@home /var/log:@log /var/cache/pacman/pkg:@pkg /.snapshots:@snapshots; do findmnt -no SOURCE "${p%%:*}" | grep -q "\[/${p##*:}\]" || exit 1; done'
+    row "Boot"          "/boot ext4, /boot/efi vfat, /boot mode 700"   bash -c '[ "$(findmnt -no FSTYPE /boot)" = ext4 ] && [ "$(findmnt -no FSTYPE /boot/efi)" = vfat ] && [ "$(stat -c %a /boot)" = 700 ]'
+    row "LUKS2"         "argon2id container behind cryptroot"          luks_argon2id
+    row "Kernel"        "mainline booted ($(uname -r)), LTS on /boot"  bash -c 'mainline_running && [ -f /boot/vmlinuz-linux-lts ]'
+    row "GRUB"          "mainline first in grub.cfg, GRUB in the firmware" bash -c 'grub_first_kernel && efibootmgr | grep -q GRUB'
+    row "Initramfs"     "HOOKS with encrypt and the snapshot overlay"  grep -q '^HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont block encrypt filesystems fsck grub-btrfs-overlayfs)$' /etc/mkinitcpio.conf
+    row "Kernel line"   "cryptdevice by UUID, allow-discards, zswap off" bash -c 'grep -q "cryptdevice=UUID=[0-9a-f-]*:cryptroot:allow-discards" /proc/cmdline && grep -q "zswap.enabled=0" /proc/cmdline'
+    row "Time"          "$(timedatectl show -p Timezone --value), NTP $(timedatectl show -p NTPSynchronized --value | sed 's/yes/synchronised/; s/no/not synchronised (a network that blocks it?)/')" bash -c '[ "$(timedatectl show -p NTP --value)" = yes ] && [ -f /etc/localtime ]'
+    row "Locale"        "en_US.UTF-8, keymap us"                       bash -c 'grep -q "^LANG=en_US.UTF-8" /etc/locale.conf && grep -q "^KEYMAP=us" /etc/vconsole.conf && localedef --list-archive | grep -qi "en_US.utf8"'
+    row "Network"       "NetworkManager up, archlinux.org answers"     bash -c 'systemctl -q is-active NetworkManager && ping -c1 -W5 archlinux.org'
+    row "Sudo"          "wheel may sudo, editor pinned, sudoers parses" bash -c 'visudo -c && grep -q "^Defaults !env_editor" /etc/sudoers.d/10-hardening && [ "$(stat -c %a /etc/sudoers.d/10-hardening)" = 440 ] && grep -q "^%wheel" /etc/sudoers.d/wheel'
+    row "Faillock"      "five failures in fifteen minutes, two out"    grep -q '^deny = 5' /etc/security/faillock.conf
+    row "Snapper"       "config root on @snapshots, wheel, no timeline" bash -c 'grep -q "^ALLOW_GROUPS=\"wheel\"" /etc/snapper/configs/root && grep -q "^TIMELINE_CREATE=\"no\"" /etc/snapper/configs/root && grep -q "^NUMBER_LIMIT=\"10\"" /etc/snapper/configs/root && snapper list > /dev/null'
+    row "Snap timers"   "cleanup timer, grub-btrfsd, monthly scrub"    all_enabled snapper-cleanup.timer grub-btrfsd btrfs-scrub@-.timer
+    row "zram"          "zram0 zstd at half of RAM, priority 100"      bash -c 'zramctl --noheadings -o NAME,ALGORITHM | grep -q "zram0 *zstd" && swapon --noheadings --show=NAME,PRIO | grep -q "/dev/zram0 *100"'
+    row "zswap"         "off, so pages reach zram"                     bash -c '[ "$(cat /sys/module/zswap/parameters/enabled)" = N ]'
+    row "VM sysctls"    "swappiness 180, page-cluster 0"               bash -c '[ "$(sysctl -n vm.swappiness)" = 180 ] && [ "$(sysctl -n vm.page-cluster)" = 0 ]'
+    # nftables.service is a oneshot that loads the ruleset and exits, so
+    # the kernel's ruleset is the state to read, not the unit's
+    row "Firewall"      "inet filter loaded, input and forward drop"   bash -c 'systemctl -q is-enabled nftables && nft list ruleset | grep -q "^table inet filter" && [ "$(nft list ruleset | grep -c "policy drop;")" -eq 2 ]'
+    row "Sysctls"       "kptr_restrict 1, protected_regular 2, no redirects" bash -c '[ "$(sysctl -n kernel.kptr_restrict)" = 1 ] && [ "$(sysctl -n fs.protected_regular)" = 2 ] && [ "$(sysctl -n net.ipv4.conf.all.accept_redirects)" = 0 ]'
+    row "Modules"       "sctp refused, udf only blacklisted"           bash -c 'modprobe -n -v sctp | grep -q "install /bin/false" && modprobe -n -v udf | grep -q insmod'
+    row "Core dumps"    "Storage=none, journal capped at 1G"           bash -c 'grep -q "^Storage=none" /etc/systemd/coredump.conf.d/10-storage.conf && grep -q "^SystemMaxUse=1G" /etc/systemd/journald.conf.d/10-size.conf'
+    row "Resolver"      "resolved, stub symlink, no LLMNR, mDNS or fallback" bash -c 'systemctl -q is-active systemd-resolved && [ "$(readlink /etc/resolv.conf)" = /run/systemd/resolve/stub-resolv.conf ] && resolved_global | grep -q -- "-LLMNR -mDNS" && ! resolved_global | grep -q "Fallback DNS"'
+    row "NM privacy"    "stable MACs, no hostname in DHCP, resolved DNS" bash -c 'grep -q "^dns=systemd-resolved" /etc/NetworkManager/conf.d/10-privacy.conf && grep -q "^wifi.cloned-mac-address=stable" /etc/NetworkManager/conf.d/10-privacy.conf'
+    row "Boundaries"    "five drop-ins, mullvad-net-cls, sandbox-check"  bash -c 'for u in wpa_supplicant mullvad-daemon mullvad-early-boot-blocking grub-btrfsd udisks2; do [ -f /etc/systemd/system/$u.service.d/hardening.conf ] || exit 1; done; [ -f /etc/systemd/system/mullvad-net-cls.service ] && [ -x /usr/local/sbin/sandbox-check ]'
+    row "No sshd"       "nothing listens for the network"              bash -c '! systemctl -q is-enabled sshd && ! systemctl -q is-active sshd'
+    row "etckeeper"     "/etc under git, two commits, the daily timer" bash -c '[ -d /etc/.git ] && [ "$(git -C /etc log --oneline | wc -l)" -ge 2 ] && systemctl -q is-enabled etckeeper.timer && [ -f /etc/pkglist.txt ] && [ -f /etc/pacman.d/hooks/pkglist.hook ]'
+    row "Base units"    "fstrim.timer, timesyncd enabled"              all_enabled fstrim.timer systemd-timesyncd
+    printf '\n'
+    if [ "$VERIFY_FAILED" = 1 ]; then
+        die "a row is dark"
+    fi
+    log "every row lit"
+}
+
+# --------------------------------------------------------------------- main ---
+case "${1:-install}" in
+    install)          install_system "${2:-}" ;;
+    verify)           verify_system ;;
+    chroot-configure) chroot_configure ;;
+    chroot-record)    chroot_record ;;
+    *) die "usage: bash install [install [--yes] | verify]" ;;
+esac
