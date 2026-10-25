@@ -9,6 +9,11 @@ Usage guides and cheat sheets for the tools in regular use.
 <span class="home-card-text">Manual encrypted install, ISO to workspace.</span>
 </a>
 
+<a class="home-card" href="pandas/">
+<span class="home-card-title">Pandas</span>
+<span class="home-card-text">Data cleaning, from load to split.</span>
+</a>
+
 <a class="home-card" href="radare2/">
 <span class="home-card-title">Radare2</span>
 <span class="home-card-text">From triage to patching.</span>
