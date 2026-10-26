@@ -123,7 +123,10 @@ nav:
   - Guides:
       - guides/index.md
       - Arch Linux: guides/arch-linux/index.md
-      - Pandas: guides/pandas/index.md
+      - Pandas:
+          - guides/pandas/index.md
+          - Clean-Up: guides/pandas/clean-up.md
+          - Analysis: guides/pandas/analysis.md
       - Radare2: guides/radare2/index.md
       - Volatility 3: guides/volatility3/index.md
 

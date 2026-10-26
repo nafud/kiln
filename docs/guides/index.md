@@ -11,7 +11,7 @@ Usage guides and cheat sheets for the tools in regular use.
 
 <a class="home-card" href="pandas/">
 <span class="home-card-title">Pandas</span>
-<span class="home-card-text">Data cleaning, from load to split.</span>
+<span class="home-card-text">Data cleaning and analysis idioms.</span>
 </a>
 
 <a class="home-card" href="radare2/">
