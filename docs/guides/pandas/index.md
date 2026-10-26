@@ -222,15 +222,7 @@ df.loc[df["churned"] == 1, "payment_method"].value_counts()
 
 A comparison on a column returns a Series of True and False, the mask. `loc` takes rows first and columns second, both by label, and keeps the rows where the mask is True. `sum()` on a mask counts the True values.
 
-**Combining conditions.**
-
-| operator | meaning |
-|---|---|
-| `&` | and |
-| `\|` | or |
-| `~` | not |
-
-Each condition sits in its own parentheses. The words `and`, `or`, `not` raise an error on columns. A misspelled or wrongly cased string returns zero rows with no error, so check spellings with `value_counts()` first.
+**Combining conditions.** `&` is and, `|` is or, `~` is not. Each condition sits in its own parentheses. The words `and`, `or`, `not` raise an error on columns. A misspelled or wrongly cased string returns zero rows with no error, so check spellings with `value_counts()` first.
 
 ```python
 df["payment_method"].value_counts()          # tally, largest first
