@@ -1,8 +1,12 @@
 # Pandas
 
-A data-cleaning procedure for a fresh CSV, from load to the point where the frame is ready to split. Each step looks before it changes anything, assigns the result back, and checks that the change landed. The example is a telecom churn table with a `churned` target.
+A data-cleaning procedure for a fresh CSV, from load to the point where the frame is ready to split, followed by the analysis idioms that answer questions about the cleaned frame. Each cleaning step looks before it changes anything, assigns the result back, and checks that the change landed. The example is a telecom churn table with a `churned` target.
 
-## Setup
+## Clean-Up
+
+Thirteen steps in a fixed order. Each one is a look, a fix that assigns back to `df`, and a check.
+
+### Setup
 
 ```python
 import pandas as pd
@@ -16,7 +20,7 @@ raw = df.copy()
 
 ---
 
-## Deduplication
+### Deduplication
 
 ```python
 df.duplicated().sum()                      # look
@@ -28,7 +32,7 @@ df.shape                                   # check
 
 ---
 
-## Column-name normalisation
+### Column-name normalisation
 
 ```python
 df.columns.tolist()                        # look
@@ -40,7 +44,7 @@ Lowercase names without spaces or padding spare the quoting and the guesswork in
 
 ---
 
-## Type inspection
+### Type inspection
 
 ```python
 df.dtypes
@@ -51,7 +55,7 @@ A column is judged by what it holds, not by its label. Amounts stored as text, d
 
 ---
 
-## Hidden-missing scan
+### Hidden-missing scan
 
 ```python
 df.isna().sum()                            # missing pandas already recognises
@@ -62,7 +66,7 @@ Runs before any conversion. `read_csv` already maps the markers in its default `
 
 ---
 
-## Type coercion, numeric
+### Type coercion, numeric
 
 ```python
 df["total_charges"] = pd.to_numeric(df["total_charges"], errors="coerce")        # fix
@@ -74,7 +78,7 @@ raw.loc[df.index[df["total_charges"].isna()], "total_charges"].value_counts()   
 
 ---
 
-## Type coercion, datetime
+### Type coercion, datetime
 
 ```python
 df["signup_date"] = pd.to_datetime(df["signup_date"], errors="coerce")      # fix
@@ -88,7 +92,7 @@ Unparseable dates become `NaT`. The minimum and maximum expose a swapped day and
 
 ---
 
-## Categorical-label normalisation
+### Categorical-label normalisation
 
 ```python
 df["contract"].value_counts()                                   # look
@@ -100,7 +104,7 @@ df["contract"].value_counts()                                   # check
 
 ---
 
-## Missing-value audit
+### Missing-value audit
 
 ```python
 df.isna().sum()
@@ -110,7 +114,7 @@ After the conversions every missing value, declared or disguised, is a `NaN`, so
 
 ---
 
-## Imputation
+### Imputation
 
 ```python
 df[["tenure_months", "total_charges"]].describe()                                     # mean vs 50%
@@ -123,7 +127,7 @@ The fill depends on the column. When `mean` and `50%` agree the distribution is 
 
 ---
 
-## Range validation
+### Range validation
 
 ```python
 df.describe().T
@@ -133,7 +137,7 @@ Minimum and maximum of every numeric column against what is physically possible.
 
 ---
 
-## Feature pruning
+### Feature pruning
 
 ```python
 df.nunique()                               # look
@@ -145,7 +149,7 @@ A `nunique` equal to the row count marks an identifier, a `nunique` of 1 marks a
 
 ---
 
-## Final verification
+### Final verification
 
 ```python
 print(df.shape)
@@ -155,3 +159,129 @@ print(df["churned"].mean().round(3))
 ```
 
 A notebook cell displays only its last expression, hence one `print` per line. Four facts are confirmed before the split. The shape is the planned one, no column that should be numeric is still `str`, the missing count is zero, and the target rate matches the raw file (a changed rate means rows were lost unevenly). `mean()` returns a NumPy float, which has a `round` method; a plain Python float, such as the value a scikit-learn metric returns, does not and takes the built-in `round(x, 3)` instead.
+
+---
+
+## Analysis
+
+Answering questions about the cleaned table. Every question is one of five patterns, each a short chain of methods on `df`.
+
+---
+
+### The five patterns
+
+| pattern | question shape | idiom |
+|---|---|---|
+| aggregate | one number for the whole table | `df["col"].mean()` |
+| group | one number per category | `df.groupby("key")["col"].mean()` |
+| filter | rows that satisfy a condition | `df.loc[mask, "col"]` |
+| derive | a new column from an old one | `pd.cut`, `pd.to_datetime`, `.dt`, `.str` |
+| relate | how two columns move together | `df["a"].corr(df["b"])` |
+
+---
+
+### Aggregate
+
+```python
+df["churned"].mean()                      # share of 1s in a 0/1 column, the rate
+df["monthly_charges"].median()            # middle value, robust to outliers
+df["col"].sum() / .min() / .max() / .std() / .nunique()
+```
+
+The mean of a 0/1 column is a proportion. `mean()` returns a NumPy float, so `.round(4)` works on it.
+
+---
+
+### Group
+
+```python
+df.groupby("contract")["churned"].mean().round(3).sort_values()
+```
+
+Split the rows into one pile per distinct value of the key, apply the calculation to the chosen column of each pile, combine the results into a Series indexed by the key. Three slots vary, the key, the column, the calculation.
+
+```python
+df.groupby("churned")["monthly_charges"].median()           # another key, column, calculation
+df.groupby("contract")["churned"].agg(["mean", "count"])    # several calculations
+df.groupby("tenure_band", observed=True)["churned"].mean()  # category key, drop empty bands
+```
+
+`df.groupby("key")` alone is a plan, not a result. The column selection and the calculation turn it into numbers. `sort_values()` orders by value ascending, `sort_index()` by label.
+
+---
+
+### Filter
+
+```python
+mask = (df["tenure_months"] > 24) & (df["internet_service"] == "Fiber optic")
+mask.sum()                                   # count of matching rows
+df.loc[mask]                                 # the matching rows
+df.loc[mask, "payment_method"]               # one column of the matching rows
+df.loc[df["churned"] == 1, "payment_method"].value_counts()
+```
+
+A comparison on a column returns a Series of True and False, the mask. `loc` takes rows first and columns second, both by label, and keeps the rows where the mask is True. `sum()` on a mask counts the True values.
+
+**Combining conditions.**
+
+| operator | meaning |
+|---|---|
+| `&` | and |
+| `\|` | or |
+| `~` | not |
+
+Each condition sits in its own parentheses. The words `and`, `or`, `not` raise an error on columns. A misspelled or wrongly cased string returns zero rows with no error, so check spellings with `value_counts()` first.
+
+```python
+df["payment_method"].value_counts()          # tally, largest first
+df["payment_method"].value_counts().idxmax() # label of the largest
+```
+
+---
+
+### Derive
+
+**Number to category.**
+
+```python
+df["tenure_band"] = pd.cut(df["tenure_months"],
+                           bins=[-1, 12, 36, 100],
+                           labels=["0-12", "13-36", "37+"])
+```
+
+`bins` are the fence posts, one more than the labels. Each interval excludes its left edge and includes its right one, so the first post sits below the minimum. Values outside every interval, and NaN, become NaN.
+
+**Text to date.**
+
+```python
+df["signup_date"] = pd.to_datetime(df["signup_date"], errors="coerce")
+df["signup_date"].dt.year.value_counts().sort_index()
+```
+
+`to_datetime` is the date twin of `to_numeric`, and unparseable text becomes NaT. `.dt` opens the date parts, `year`, `month`, `day`, `dayofweek`, `quarter`, and works only after the conversion. `.str` opens text methods the same way, `strip`, `lower`, `contains`, `replace`.
+
+---
+
+### Relate
+
+```python
+round(df["tenure_months"].corr(df["total_charges"]), 3)   # two Series, a float
+df[["tenure_months", "total_charges"]].corr()             # matrix, answer at .iloc[0, 1]
+df.select_dtypes("number").corr()                         # all numeric pairs
+```
+
+Pearson by default, from -1 to 1, measuring the strength of a straight-line relation. Rows with NaN in either column are skipped. The two-Series form returns a Python float, so use `round(x, 3)` rather than `.round(3)`.
+
+---
+
+### Reading a result
+
+A rate is a share of the rows in that pile. A median is the typical row, a mean is the balance point. A correlation says how much, not why. A count depends on what happened to the NaN upstream, so state it.
+
+---
+
+### Notebook habits
+
+- One check per cell, or `print()` each one. A cell shows only its last expression.
+- Numbered Markdown answers, the number, the value, one clause of interpretation.
+- Restart Kernel and Run All before writing up. A result from a deleted cell is not reproducible.
