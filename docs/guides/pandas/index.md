@@ -1,12 +1,12 @@
 # Pandas
 
-Pandas idioms for a tabular dataset, the cleaning procedure that readies a fresh CSV for a split and the analysis patterns that answer questions about the cleaned frame. The example throughout is a telecom churn table with a `churned` target.
+Pandas idioms for a tabular dataset, the cleaning procedure that readies a fresh CSV for a split and the analysis patterns that answer questions about the cleaned frame.
 
 <div class="home-grid">
 
 <a class="home-card" href="clean-up/">
 <span class="home-card-title">Clean-Up</span>
-<span class="home-card-text">Thirteen steps, from load to split.</span>
+<span class="home-card-text">Twelve steps, from load to split.</span>
 </a>
 
 <a class="home-card" href="analysis/">
