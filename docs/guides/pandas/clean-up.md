@@ -29,6 +29,7 @@ df.shape                                   # check
 ```python
 df.columns.tolist()                                                                  # look
 df.columns = df.columns.str.strip().str.lower().str.replace(r"[\s-]+", "_", regex=True)   # fix
+raw.columns = df.columns                                                             # keep the lookup copy aligned
 df.columns.tolist()                                                                  # check
 ```
 
