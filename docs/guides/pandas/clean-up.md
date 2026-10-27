@@ -31,8 +31,9 @@ df.columns.tolist()                                                             
 ```python
 df.duplicated().sum()                                    # look: identical rows
 df.duplicated(subset=["record_id"]).sum()                # look: same key, different values
-df = df.drop_duplicates().reset_index(drop=True)         # fix + assign; keep="last" to prefer the latest row
-df.shape                                                 # check
+df = df.drop_duplicates().reset_index(drop=True)                                      # fix + assign: identical rows
+df = df.drop_duplicates(subset=["record_id"], keep="last").reset_index(drop=True)     # fix + assign when the key look is nonzero; the last row wins
+df.shape                                                                              # check
 ```
 
 ---
@@ -41,7 +42,7 @@ df.shape                                                 # check
 
 ```python
 df.isna().sum()                            # detect only; read_csv already maps N/A, NA, null, None to NaN on load
-df.isin([" ", "", "?", "-"]).sum()         # detect only; markers outside that default list, coercion turns them into NaN
+df.isin([" ", "", "?", "-"]).sum()         # detect only; markers outside that default list, numeric coercion turns them into NaN, text columns need the replace in label normalisation
 ```
 
 ---
@@ -76,7 +77,7 @@ df["flag"] = df["flag"].str.strip().str.lower().map({"yes": 1, "no": 0})   # yes
 
 ```python
 df["event_date"] = pd.to_datetime(df["event_date"], errors="coerce")      # fix; unparseable -> NaT; dayfirst=True for 31/12/2023, format="mixed" for several layouts
-df["event_date"].isna().sum(), df["event_date"].min(), df["event_date"].max()   # check NaT and range
+df["event_date"].isna().sum(), df["event_date"].min(), df["event_date"].max()   # check; a NaT count near the row count or a max past the known range is a wrong layout, not missing data, so retry with dayfirst=True
 df["event_year"] = df["event_date"].dt.year                               # extract
 df["event_month"] = df["event_date"].dt.month
 df = df.drop(columns=["event_date"])                                      # drop raw datetime
@@ -91,9 +92,10 @@ for c in df.columns[df.dtypes == "str"]:                                   # loo
     print(c, df[c].nunique(), df[c].str.strip().str.lower().nunique())
 
 df["category"].value_counts()                                   # look; synonyms show up here, not in the loop
-df["category"] = df["category"].str.strip().str.lower()         # fix + assign, by name; ids and case-bearing labels stay as they are
-df["category"] = df["category"].replace({"ops": "operations"})  # fix: merge synonyms
-df["category"].value_counts()                                   # check
+df["category"] = df["category"].str.strip().str.lower()                         # fix + assign, by name; ids and case-bearing labels stay as they are
+df["category"] = df["category"].replace({"": np.nan, "?": np.nan, "-": np.nan})   # fix: the markers the scan found become NaN, imputation fills them later
+df["category"] = df["category"].replace({"ops": "operations"})                  # fix: merge synonyms
+df["category"].value_counts()                                                   # check
 ```
 
 ---
@@ -104,6 +106,7 @@ df["category"].value_counts()                                   # check
 df.describe().T                                      # look: min and max against what is possible, one column at a time
 (df["end_date"] < df["start_date"]).sum()            # look: cross-column rule describe cannot see
 df.loc[df["amount"] < 0, "amount"] = np.nan          # fix: impossible -> NaN, imputation fills it next; report the count, never silently drop rows
+df.loc[~df["duration"].between(0, 365), "duration"] = np.nan   # fix: both bounds at once; a value above the possible maximum is as impossible as a negative
 ```
 
 ---
@@ -135,8 +138,8 @@ df.shape                                   # check
 ## Final verification
 
 ```python
-print(df.shape)
-print(df.dtypes)
+print(df.shape)                            # a gate, not a report; any count below that is not zero sends the frame back to the step that owns it
+print(df.dtypes)                           # no str column left that a model is meant to use
 print(df.isna().sum().sum())               # zero
 print(df.duplicated().sum())               # zero; label fixes can create exact duplicates the first check missed
 print(df["target"].mean().round(3))        # rate unchanged from the raw file
