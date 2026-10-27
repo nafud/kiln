@@ -35,7 +35,7 @@ raw.columns = df.columns                                                        
 df.columns.tolist()                                                                  # check
 ```
 
-The regex step is not optional. A name that keeps a space or a hyphen rules out attribute access, and `df.query("distance-km > 20")` reads the hyphen as a subtraction. Every later cell names columns, so the rename comes before any of them.
+The regex step is not optional. A name that keeps a space or a hyphen rules out attribute access, and `df.query("unit-amount > 20")` reads the hyphen as a subtraction. Every later cell names columns, so the rename comes before any of them.
 
 ---
 
@@ -106,7 +106,7 @@ df["category"] = df["category"].str.strip().str.lower()         # fix + assign, 
 df["category"].value_counts()                                   # check
 ```
 
-Fix by name rather than lowercasing every text column, which would also rewrite ids and labels such as `PhD` that were fine. Synonyms (`sales` against `sales dept`) escape the loop and surface only in `value_counts()` of the low-cardinality columns that `nunique()` points out.
+Fix by name rather than lowercasing every text column, which would also rewrite ids and case-bearing labels such as `USD` that were fine. Synonyms (`north` against `north region`) escape the loop and surface only in `value_counts()` of the low-cardinality columns that `nunique()` points out.
 
 ---
 
@@ -128,7 +128,7 @@ Filling is a data decision and it has two possible homes. Here, which is fast, o
 
 ```python
 df.describe().T                            # min and max against what is possible, one column at a time
-(df["duration"] > df["age"] - 18).sum()    # cross-column rule describe cannot see; report it, do not silently fix
+(df["end_date"] < df["start_date"]).sum()  # cross-column rule describe cannot see; report it, do not silently fix
 ```
 
 ---
