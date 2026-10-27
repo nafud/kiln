@@ -66,7 +66,7 @@ df["channel"].str.lower().str.contains("card")                         # .str: s
 ## Relate
 
 ```python
-round(df["duration"].corr(df["amount"]), 3)      # Pearson, -1 to 1, NaN rows skipped; Python float, so round(x, 3)
+df["duration"].corr(df["amount"]).round(3)       # Pearson, -1 to 1, NaN rows skipped; a NumPy float, .round(3) works as on mean()
 df[["duration", "amount"]].corr()                # matrix, answer at .iloc[0, 1]
 df.select_dtypes("number").corr()                # all numeric pairs
 ```
