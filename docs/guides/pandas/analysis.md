@@ -21,7 +21,8 @@ Answering questions about a cleaned table, each one of five patterns and a short
 ```python
 df["target"].mean()                        # share of 1s in a 0/1 column, the rate; NumPy float, .round(4) works
 df["rate"].median()                        # middle value, robust to outliers
-df["col"].sum() / .min() / .max() / .std() / .nunique()
+df["amount"].sum()                         # the same shape for min, max, std and nunique
+df["category"].nunique()                   # number of distinct labels
 ```
 
 ---
@@ -32,7 +33,6 @@ df["col"].sum() / .min() / .max() / .std() / .nunique()
 df.groupby("category")["target"].mean().round(3).sort_values()   # key, column, calculation; sort_index() for label order
 df.groupby("target")["rate"].median()                            # another key, column, calculation
 df.groupby("category")["target"].agg(["mean", "count"])          # several calculations
-df.groupby("duration_band", observed=True)["target"].mean()      # category key, drop empty bands
 ```
 
 ---
@@ -56,6 +56,8 @@ df["channel"].value_counts().idxmax()                      # label of the larges
 df["duration_band"] = pd.cut(df["duration"],
                              bins=[-1, 12, 36, 100],          # fence posts, one more than labels; (left, right]
                              labels=["0-12", "13-36", "37+"]) # outside every bin, and NaN, -> NaN
+df["duration_band"].value_counts()                                     # check: every row in a band, counts sum to the row count
+df.groupby("duration_band", observed=True)["target"].mean()            # group on the band; observed=True drops empty bands, order follows the labels
 df["event_date"] = pd.to_datetime(df["event_date"], errors="coerce")   # unparseable -> NaT
 df["event_date"].dt.year.value_counts().sort_index()                   # .dt: year, month, day, dayofweek, quarter
 df["channel"].str.lower().str.contains("card")                         # .str: strip, lower, contains, replace
