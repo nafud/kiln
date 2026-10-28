@@ -147,10 +147,3 @@ pd.crosstab(df["category"], df["region"], margins=True)
 pd.crosstab(df["category"], df["region"], normalize="index").round(3)
 ```
 
----
-
-## Notebook habits
-
-- One check per cell, or `print()` each one. A cell shows only its last expression.
-- Numbered Markdown answers, the number, the value, one clause of interpretation.
-- Restart Kernel and Run All before writing up. A result from a deleted cell is not reproducible.
