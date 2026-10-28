@@ -11,7 +11,7 @@ Pandas idioms for a tabular dataset, the cleaning procedure that readies a fresh
 
 <a class="home-card" href="analysis/">
 <span class="home-card-title">Analysis</span>
-<span class="home-card-text">Aggregate, group, filter, derive, relate.</span>
+<span class="home-card-text">Aggregate, group, filter, derive, relate, join, reshape.</span>
 </a>
 
 <a class="home-card" href="plot/">
