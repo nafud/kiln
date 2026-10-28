@@ -4,6 +4,24 @@ Six chart shapes for a cleaned frame, each one line on pandas or scikit-learn, w
 
 ---
 
+## Essentials
+
+```python
+import matplotlib.pyplot as plt
+from sklearn.metrics import RocCurveDisplay, ConfusionMatrixDisplay
+
+df["amount"].plot(kind="hist", bins=30, title="Amount")
+df.groupby("category")["target"].mean().plot(kind="bar", title="Target rate by category")
+df.set_index("event_date")["amount"].resample("ME").mean().plot(title="Monthly mean amount")
+df.plot(kind="scatter", x="duration", y="amount", alpha=0.3, title="Amount vs duration")
+df.boxplot(column="amount", by="category")
+RocCurveDisplay.from_estimator(pipe, X_test, y_test)
+ConfusionMatrixDisplay.from_estimator(pipe, X_test, y_test)
+plt.show()
+```
+
+---
+
 ## Choosing the chart
 
 | question shape | chart | idiom |
@@ -19,16 +37,20 @@ Six chart shapes for a cleaned frame, each one line on pandas or scikit-learn, w
 
 ## Setup
 
+pandas draws through matplotlib. `plt.show()` renders the figure, and `plt.tight_layout()` before it fixes clipped labels.
+
 ```python
-import matplotlib.pyplot as plt          # pandas draws through matplotlib; plt.show() renders the figure, plt.tight_layout() before it fixes clipped labels
+import matplotlib.pyplot as plt
 ```
 
 ---
 
 ## Histogram
 
+One numeric column, `bins` is the number of bars, NaN is skipped. A right-skewed shape points to the median for imputation.
+
 ```python
-df["amount"].plot(kind="hist", bins=30, title="Amount")        # one numeric column; bins is the number of bars, NaN skipped
+df["amount"].plot(kind="hist", bins=30, title="Amount")
 plt.xlabel("amount")
 plt.show()
 ```
@@ -37,12 +59,14 @@ plt.show()
 
 ## Bar
 
+A groupby result is already the bar heights, and `sort_values()` before `plot` ranks them. `value_counts()` gives counts per label, largest first. The bar that stands out names the risk group.
+
 ```python
-df.groupby("category")["target"].mean().plot(kind="bar", title="Target rate by category")   # a groupby result is already the bar heights
+df.groupby("category")["target"].mean().sort_values().plot(kind="bar", title="Target rate by category")
 plt.ylabel("rate")
 plt.show()
 
-df["category"].value_counts().plot(kind="bar", title="Rows per category")                  # counts per label, largest first
+df["category"].value_counts().plot(kind="bar", title="Rows per category")
 plt.show()
 ```
 
@@ -50,11 +74,13 @@ plt.show()
 
 ## Line
 
+`resample` needs a datetime index. `"ME"` is month end, `"W"` week, `"QE"` quarter end. The second form counts rows per month without setting the index.
+
 ```python
-df.set_index("event_date")["amount"].resample("ME").mean().plot(title="Monthly mean amount")   # a datetime index; "ME" month end, "W" week, "QE" quarter end
+df.set_index("event_date")["amount"].resample("ME").mean().plot(title="Monthly mean amount")
 plt.show()
 
-df["event_date"].dt.to_period("M").value_counts().sort_index().plot(kind="line", title="Rows per month")   # count per month without setting the index
+df["event_date"].dt.to_period("M").value_counts().sort_index().plot(kind="line", title="Rows per month")
 plt.show()
 ```
 
@@ -62,8 +88,10 @@ plt.show()
 
 ## Scatter
 
+Two numeric columns. `alpha` shows density where points overlap. No visible pattern says the correlation is near zero.
+
 ```python
-df.plot(kind="scatter", x="duration", y="amount", alpha=0.3, title="Amount vs duration")   # two numeric columns; alpha shows density where points overlap
+df.plot(kind="scatter", x="duration", y="amount", alpha=0.3, title="Amount vs duration")
 plt.show()
 ```
 
@@ -71,10 +99,12 @@ plt.show()
 
 ## Box
 
+One box per group. The line is the median, the box is the middle half, and points beyond the whiskers are candidates for range validation. `plt.suptitle("")` drops the automatic grouped-by line.
+
 ```python
-df.boxplot(column="amount", by="category")       # one box per group; median line, box is the middle half, points beyond the whiskers are candidates for range validation
+df.boxplot(column="amount", by="category")
 plt.title("Amount by category")
-plt.suptitle("")                                 # drop the automatic "Boxplot grouped by" line
+plt.suptitle("")
 plt.show()
 ```
 
@@ -82,20 +112,14 @@ plt.show()
 
 ## Classifier quality
 
+Both take the fitted pipeline and the test split. The ROC legend prints the AUC. In the confusion matrix rows are true classes and columns are predicted classes at the default 0.5 threshold.
+
 ```python
 from sklearn.metrics import RocCurveDisplay, ConfusionMatrixDisplay
 
-RocCurveDisplay.from_estimator(pipe, X_test, y_test)             # the fitted pipeline and the test split; the legend prints the AUC
+RocCurveDisplay.from_estimator(pipe, X_test, y_test)
 plt.show()
 
-ConfusionMatrixDisplay.from_estimator(pipe, X_test, y_test)      # rows are true classes, columns are predicted, at the default 0.5 threshold
+ConfusionMatrixDisplay.from_estimator(pipe, X_test, y_test)
 plt.show()
 ```
-
----
-
-## Reading the chart
-
-- One sentence after every figure, the shape and what it means for the task. A right-skewed histogram points to the median for imputation. A bar that stands out names the risk group. A scatter with no pattern says the correlation is near zero.
-- Title on every chart, axis labels when the column name is not self-explanatory. Nothing else is graded.
-- A chart answers a question that was asked. Unrequested charts cost time and are read as padding.
