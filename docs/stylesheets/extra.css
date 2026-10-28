@@ -842,7 +842,8 @@ tt {
    header's sit on the top one. Left the page path, right the
    position token (All/Top/NN%, 100% at the bottom). The label style
    minus the uppercase (paths stay lowercase, like a prompt).
-   Non-interactive. */
+   The path's parent segments are crumb links (page-chrome.js); the
+   rest is inert. */
 .kiln-status {
   position: fixed;
   left: 0;
@@ -873,6 +874,21 @@ tt {
 .kiln-status__path {
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Parent-directory crumbs: links to their landing pages. The bar
+   swallows no clicks (pointer-events: none above), so only the crumbs
+   themselves re-enable hit testing; the current segment and the /
+   separators stay plain text. Hover follows the header-nav grammar,
+   muted at rest sharpening to the accent. */
+.kiln-status__crumb {
+  color: inherit;
+  pointer-events: auto;
+  transition: color 150ms ease;
+}
+
+.kiln-status__crumb:hover {
+  color: var(--color-accent);
 }
 
 /* : command output (quick-jump.js paints one pre of aligned

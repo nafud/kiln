@@ -6,7 +6,8 @@
    the site root (~ for the homepage), right the position token — All
    when the page fits, Top at the start, otherwise the percentage
    through 100% at the bottom. The document scrollbar is hidden
-   (extra.css), so this is the position indicator. */
+   (extra.css), so this is the position indicator. The path's parent
+   segments are links to their directories' landing pages. */
 
 (function () {
   "use strict";
@@ -47,8 +48,23 @@
     pos.textContent = positionToken(offset, scrollRange.max);
   }
 
+  /* A parent-directory segment of the statusline path: a link to
+     that directory's landing page (every directory has one, the
+     index.md convention). A real anchor, so navigation.instant stays
+     in charge of the jump like everywhere else. */
+  function crumb(label, href) {
+    const link = document.createElement("a");
+    link.className = "kiln-status__crumb";
+    link.href = href;
+    link.textContent = label;
+    return link;
+  }
+
   /* Left-hand segment: the page path below the site root, ~-prefixed
-     like a shell prompt; the homepage is plain ~. */
+     like a shell prompt; the homepage is plain ~. Every parent
+     segment is a crumb link — ~ itself included, the site root —
+     while the last segment is the current location and stays plain
+     text, as does the whole path on the homepage. */
   function updatePath() {
     const path = document.querySelector(".kiln-status__path");
     if (!path) return;
@@ -57,7 +73,21 @@
       ? location.pathname.slice(base.length)
       : location.pathname;
     rel = decodeURIComponent(rel).replace(/\/+$/, "");
-    path.textContent = rel ? "~/" + rel : "~";
+
+    const parts = rel ? rel.split("/") : [];
+    const frag = document.createDocumentFragment();
+    frag.appendChild(
+      parts.length ? crumb("~", base) : document.createTextNode("~")
+    );
+    parts.forEach(function (part, i) {
+      frag.appendChild(document.createTextNode("/"));
+      frag.appendChild(
+        i < parts.length - 1
+          ? crumb(part, base + parts.slice(0, i + 1).join("/") + "/")
+          : document.createTextNode(part)
+      );
+    });
+    path.replaceChildren(frag);
   }
 
   /* Header nav active marker. The header is rendered once per full
@@ -94,13 +124,14 @@
     if (!document.querySelector(".kiln-status")) {
       const bar = document.createElement("div");
       bar.className = "kiln-status";
-      /* Chrome flavor; the path duplicates the URL and progress isn't
-         meaningful read aloud one mutation at a time. */
-      bar.setAttribute("aria-hidden", "true");
       const path = document.createElement("span");
       path.className = "kiln-status__path";
       const pos = document.createElement("span");
       pos.className = "kiln-status__pos";
+      /* Progress isn't meaningful read aloud one mutation at a time;
+         the path stays exposed — its crumbs are real links, and an
+         aria-hidden ancestor would hide focusable content. */
+      pos.setAttribute("aria-hidden", "true");
       bar.appendChild(path);
       bar.appendChild(pos);
       document.body.appendChild(bar);

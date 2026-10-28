@@ -310,6 +310,17 @@ def run(page):
         assert active == ["books"], f"active nav item wrong: {active}"
         path = page.eval_on_selector(".kiln-status__path", "el => el.textContent")
         assert path == "~/books/csapp/chapter-03", f"statusline path: {path!r}"
+        # Parent segments (~ included) are crumb links to their landing
+        # pages; the current segment stays plain text.
+        crumbs = page.eval_on_selector_all(
+            ".kiln-status__path .kiln-status__crumb",
+            "els => els.map(e => [e.textContent, new URL(e.href).pathname])",
+        )
+        assert crumbs == [
+            ["~", "/"],
+            ["books", "/books/"],
+            ["csapp", "/books/csapp/"],
+        ], f"statusline crumbs: {crumbs}"
         pos = page.eval_on_selector(".kiln-status__pos", "el => el.textContent")
         assert pos == "Top", f"statusline pos: {pos!r}"
         page.keyboard.press("G")
@@ -319,6 +330,13 @@ def run(page):
             "() => document.querySelector('.kiln-status__pos').textContent === '100%'",
             timeout=5000,
         )
+        # Clicking a crumb jumps to that directory's landing page.
+        page.click(".kiln-status__path .kiln-status__crumb >> text=csapp")
+        page.wait_for_timeout(500)
+        landed = page.evaluate("() => location.pathname")
+        assert landed.endswith("/books/csapp/"), f"crumb did not jump: {landed}"
+        path = page.eval_on_selector(".kiln-status__path", "el => el.textContent")
+        assert path == "~/books/csapp", f"path after crumb jump: {path!r}"
         # 1 opens the first section (the nav lists exactly the six
         # sections; home belongs to 0 via the logo).
         page.keyboard.press("1")
