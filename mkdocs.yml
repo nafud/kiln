@@ -127,6 +127,7 @@ nav:
           - guides/pandas/index.md
           - Clean-Up: guides/pandas/clean-up.md
           - Analysis: guides/pandas/analysis.md
+          - Plot: guides/pandas/plot.md
       - Radare2: guides/radare2/index.md
       - Volatility 3: guides/volatility3/index.md
 
