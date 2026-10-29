@@ -24,4 +24,9 @@ Pandas idioms for a tabular dataset, the cleaning procedure that readies a fresh
 <span class="home-card-text">Split, baseline, pipeline, score, validate, explain.</span>
 </a>
 
+<a class="home-card" href="walkthrough/">
+<span class="home-card-title">Walkthrough</span>
+<span class="home-card-text">One table from load to a cross-validated score, every cell with its output.</span>
+</a>
+
 </div>

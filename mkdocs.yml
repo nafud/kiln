@@ -129,6 +129,7 @@ nav:
           - Analysis: guides/pandas/analysis.md
           - Plot: guides/pandas/plot.md
           - Model: guides/pandas/model.md
+          - Walkthrough: guides/pandas/walkthrough.md
       - Radare2: guides/radare2/index.md
       - Volatility 3: guides/volatility3/index.md
 
