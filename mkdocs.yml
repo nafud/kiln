@@ -130,6 +130,7 @@ nav:
           - Plot: guides/pandas/plot.md
           - Model: guides/pandas/model.md
           - Walkthrough: guides/pandas/walkthrough.md
+          - MIT Roadmap: guides/pandas/mit-roadmap.md
       - Radare2: guides/radare2/index.md
       - Volatility 3: guides/volatility3/index.md
 
