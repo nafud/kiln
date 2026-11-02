@@ -1,6 +1,6 @@
 # MIT Roadmap
 
-A self-study sequence through the free MIT courses behind the Pandas guides, from the Python base to probability, statistics, linear algebra and machine learning, with the term, instructors, content and place of each course, and the pages of this guide it feeds.
+A self-study sequence through the free MIT courses behind the Pandas guides, from the Python base to probability, statistics, linear algebra and machine learning, with the archived run, instructors and content of each course and the reason for the order.
 
 ---
 
