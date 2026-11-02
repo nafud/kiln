@@ -32,37 +32,3 @@ Stage 1 is the floor and stage 5 the first course that looks like the job. Stage
 **18.06 before 18.065, and both before 6.036.** Logistic regression, PCA and every neural net in 6.036 are matrix computations. The 18.06 lectures on projections, least squares and the SVD are the minimum; 18.065 is the same material pointed at data and is the better fit for a working data scientist, but it is written for someone who has seen 18.06.
 
 **15.071 last.** It is the only course of the six built around cases rather than methods. Taken first its decisions look arbitrary; taken last each one lands on a method already learned.
-
----
-
-## What each course feeds here
-
-| guide page | courses behind it |
-|---|---|
-| [Clean-Up](clean-up.md) | 6.0001 for the Python; 15.071 for imputation and the cost of a dropped row. |
-| [Analysis](analysis.md) | 6.0002 for sampling, standard error and confidence intervals; 18.05 for the tests behind a difference between two groups. |
-| [Plot](plot.md) | 6.0002 and 15.071 for reading a distribution before trusting a mean. |
-| [Model](model.md) | 6.036 for logistic regression, gradient descent and the split; 18.650 for what a coefficient and a p-value mean; 18.06 for least squares. |
-| [Walkthrough](walkthrough.md) | All of the above, run on one table. |
-
----
-
-## Working through a course
-
-- **Read the syllabus and calendar first.** They give the session order and the problem set that belongs to each lecture; the lecture list alone does not.
-- **One lecture, its reading, its problem set, then the next.** A lecture watched without the problem set is entertainment. The solutions are posted; the rule is to write the attempt before opening them.
-- **Keep the code.** Every problem set that fits a model is a notebook, and the notebook follows the order of the [Walkthrough](walkthrough.md) page, so that the course work and the practice work accumulate in one place.
-- **Translate, do not skip, the R.** 18.05 and 15.071 use R for the hands-on parts. The statistics are the same; the translation into pandas, SciPy and scikit-learn is where the methods become usable.
-- **The textbooks are optional, except one.** 6.0001 and 6.0002 follow Guttag, *Introduction to Computation and Programming Using Python*, second edition, MIT Press 2016, and the lectures are written to it. Strang's *Linear Algebra and Learning from Data* (Wellesley-Cambridge Press 2019) is the book of 18.065 but the lectures stand alone.
-
----
-
-## The MITx track
-
-The same ground is taught on edX as the [MITx MicroMasters in Statistics and Data Science](https://micromasters.mit.edu/ds/){ .external-link }, four courses in a fixed order, 6.431x Probability (the science of uncertainty and data), 18.6501x Fundamentals of Statistics, 6.86x Machine Learning with Python, and 14.310x Data Analysis for Social Scientists. Each can be audited free of charge; the graded track, the proctored exams and the credential are paid. 18.6501x is 18.650 by its newer name, and 6.86x covers the 6.036 material in Python with autograded projects. The edX courses run on a calendar with deadlines, which suits some people better than the self-paced OCW archive; the content is the same, so the choice is about pacing, not substance.
-
----
-
-## What is not here
-
-MIT publishes more. 6.041 Probabilistic Systems Analysis and Applied Probability is a deeper 18.05; 6.867 Machine Learning is the graduate 6.036; 6.S191 Introduction to Deep Learning is a one-week bootcamp on neural nets, published on its own site rather than on OCW. None of them is needed before the five stages above are done, and the five stages are a year of evenings.
