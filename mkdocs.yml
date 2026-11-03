@@ -123,6 +123,7 @@ nav:
   - Guides:
       - guides/index.md
       - Arch Linux: guides/arch-linux/index.md
+      - LeetCode: guides/leetcode/index.md
       - Pandas:
           - guides/pandas/index.md
           - Clean-Up: guides/pandas/clean-up.md
