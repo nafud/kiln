@@ -11,7 +11,7 @@ Usage guides and cheat sheets for the tools in regular use.
 
 <a class="home-card" href="leetcode/">
 <span class="home-card-title">LeetCode</span>
-<span class="home-card-text">Forty array, string and dictionary problems, solved.</span>
+<span class="home-card-text">Sixty array, string and dictionary problems, solved.</span>
 </a>
 
 <a class="home-card" href="pandas/">

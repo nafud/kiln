@@ -1,6 +1,6 @@
 # LeetCode
 
-Forty easy to medium problems on arrays, strings and dictionaries, grouped by the pattern each one reuses, each in the form LeetCode's Python3 editor expects so the block pastes and runs as is. Every solution passes the problem's published examples.
+Sixty easy to medium problems on arrays, strings and dictionaries, grouped by the pattern each one reuses, each in the form LeetCode's Python3 editor expects so the block pastes and runs as is. Every solution passes the problem's published examples.
 
 ## Dictionary and set
 
@@ -163,6 +163,65 @@ class Solution:
         return best
 ```
 
+### 205. Isomorphic Strings
+
+```python
+class Solution:
+    def isIsomorphic(self, s, t):
+        return len(set(s)) == len(set(t)) == len(set(zip(s, t)))
+```
+
+### 290. Word Pattern
+
+```python
+class Solution:
+    def wordPattern(self, pattern, s):
+        words = s.split()
+        if len(words) != len(pattern):
+            return False
+        return len(set(pattern)) == len(set(words)) == len(set(zip(pattern, words)))
+```
+
+### 219. Contains Duplicate II
+
+```python
+class Solution:
+    def containsNearbyDuplicate(self, nums, k):
+        last = {}
+        for i, x in enumerate(nums):
+            if x in last and i - last[x] <= k:
+                return True
+            last[x] = i
+        return False
+```
+
+### 409. Longest Palindrome
+
+```python
+from collections import Counter
+
+class Solution:
+    def longestPalindrome(self, s):
+        odd = sum(c % 2 for c in Counter(s).values())
+        return len(s) - odd + (1 if odd else 0)
+```
+
+### 128. Longest Consecutive Sequence
+
+```python
+class Solution:
+    def longestConsecutive(self, nums):
+        seen = set(nums)
+        best = 0
+        for x in seen:
+            if x - 1 not in seen:
+                n = 1
+                while x + n in seen:
+                    n += 1
+                best = max(best, n)
+        return best
+```
+
 ## Two pointers
 
 ### 125. Valid Palindrome
@@ -275,6 +334,93 @@ class Solution:
         return i == len(s)
 ```
 
+### 27. Remove Element
+
+```python
+class Solution:
+    def removeElement(self, nums, val):
+        w = 0
+        for x in nums:
+            if x != val:
+                nums[w] = x
+                w += 1
+        return w
+```
+
+### 680. Valid Palindrome II
+
+```python
+class Solution:
+    def validPalindrome(self, s):
+        i, j = 0, len(s) - 1
+        while i < j:
+            if s[i] != s[j]:
+                a, b = s[i + 1:j + 1], s[i:j]
+                return a == a[::-1] or b == b[::-1]
+            i += 1
+            j -= 1
+        return True
+```
+
+### 11. Container With Most Water
+
+```python
+class Solution:
+    def maxArea(self, height):
+        i, j = 0, len(height) - 1
+        best = 0
+        while i < j:
+            best = max(best, (j - i) * min(height[i], height[j]))
+            if height[i] < height[j]:
+                i += 1
+            else:
+                j -= 1
+        return best
+```
+
+### 15. 3Sum
+
+```python
+class Solution:
+    def threeSum(self, nums):
+        nums.sort()
+        out = []
+        for i in range(len(nums) - 2):
+            if i and nums[i] == nums[i - 1]:
+                continue
+            lo, hi = i + 1, len(nums) - 1
+            while lo < hi:
+                s = nums[i] + nums[lo] + nums[hi]
+                if s < 0:
+                    lo += 1
+                elif s > 0:
+                    hi -= 1
+                else:
+                    out.append([nums[i], nums[lo], nums[hi]])
+                    lo += 1
+                    while lo < hi and nums[lo] == nums[lo - 1]:
+                        lo += 1
+        return out
+```
+
+### 75. Sort Colors
+
+```python
+class Solution:
+    def sortColors(self, nums):
+        lo, mid, hi = 0, 0, len(nums) - 1
+        while mid <= hi:
+            if nums[mid] == 0:
+                nums[lo], nums[mid] = nums[mid], nums[lo]
+                lo += 1
+                mid += 1
+            elif nums[mid] == 2:
+                nums[mid], nums[hi] = nums[hi], nums[mid]
+                hi -= 1
+            else:
+                mid += 1
+```
+
 ## Running value
 
 ### 121. Best Time to Buy and Sell Stock
@@ -368,6 +514,58 @@ class Solution:
         return prefix
 ```
 
+### 485. Max Consecutive Ones
+
+```python
+class Solution:
+    def findMaxConsecutiveOnes(self, nums):
+        best = run = 0
+        for x in nums:
+            run = run + 1 if x == 1 else 0
+            best = max(best, run)
+        return best
+```
+
+### 122. Best Time to Buy and Sell Stock II
+
+```python
+class Solution:
+    def maxProfit(self, prices):
+        return sum(max(0, prices[i] - prices[i - 1]) for i in range(1, len(prices)))
+```
+
+### 56. Merge Intervals
+
+```python
+class Solution:
+    def merge(self, intervals):
+        intervals.sort()
+        out = []
+        for a, b in intervals:
+            if out and a <= out[-1][1]:
+                out[-1][1] = max(out[-1][1], b)
+            else:
+                out.append([a, b])
+        return out
+```
+
+### 560. Subarray Sum Equals K
+
+```python
+from collections import defaultdict
+
+class Solution:
+    def subarraySum(self, nums, k):
+        seen = defaultdict(int)
+        seen[0] = 1
+        total = count = 0
+        for x in nums:
+            total += x
+            count += seen[total - k]
+            seen[total] += 1
+        return count
+```
+
 ## Stack
 
 ### 20. Valid Parentheses
@@ -384,6 +582,35 @@ class Solution:
             else:
                 stack.append(ch)
         return not stack
+```
+
+### 1047. Remove All Adjacent Duplicates In String
+
+```python
+class Solution:
+    def removeDuplicates(self, s):
+        stack = []
+        for ch in s:
+            if stack and stack[-1] == ch:
+                stack.pop()
+            else:
+                stack.append(ch)
+        return "".join(stack)
+```
+
+### 739. Daily Temperatures
+
+```python
+class Solution:
+    def dailyTemperatures(self, temperatures):
+        out = [0] * len(temperatures)
+        stack = []
+        for i, t in enumerate(temperatures):
+            while stack and temperatures[stack[-1]] < t:
+                j = stack.pop()
+                out[j] = i - j
+            stack.append(i)
+        return out
 ```
 
 ## Each value from the previous ones
@@ -422,6 +649,28 @@ class Solution:
                 row[i] = rows[r - 1][i - 1] + rows[r - 1][i]
             rows.append(row)
         return rows
+```
+
+### 746. Min Cost Climbing Stairs
+
+```python
+class Solution:
+    def minCostClimbingStairs(self, cost):
+        a = b = 0
+        for c in cost:
+            a, b = b, min(a, b) + c
+        return min(a, b)
+```
+
+### 198. House Robber
+
+```python
+class Solution:
+    def rob(self, nums):
+        prev = cur = 0
+        for x in nums:
+            prev, cur = cur, max(cur, prev + x)
+        return cur
 ```
 
 ## Numbers, digits and bits
@@ -526,4 +775,30 @@ class Solution:
             else:
                 hi = mid - 1
         return -1
+```
+
+### 35. Search Insert Position
+
+```python
+class Solution:
+    def searchInsert(self, nums, target):
+        lo, hi = 0, len(nums)
+        while lo < hi:
+            mid = (lo + hi) // 2
+            if nums[mid] < target:
+                lo = mid + 1
+            else:
+                hi = mid
+        return lo
+```
+
+### 338. Counting Bits
+
+```python
+class Solution:
+    def countBits(self, n):
+        out = [0] * (n + 1)
+        for i in range(1, n + 1):
+            out[i] = out[i >> 1] + (i & 1)
+        return out
 ```
