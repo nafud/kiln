@@ -82,8 +82,12 @@ def intersect(nums1, nums2):
 
 ```python
 def can_construct(ransom, magazine):
-    need, have = Counter(ransom), Counter(magazine)
-    return all(have[ch] >= k for ch, k in need.items())
+    have = Counter(magazine)
+    for ch in ransom:
+        if have[ch] == 0:
+            return False
+        have[ch] -= 1
+    return True
 ```
 
 ### Happy Number
@@ -118,11 +122,14 @@ def group_anagrams(strs):
 
 ```python
 def length_of_longest_substring(s):
-    last, left, best = {}, 0, 0
-    for right, ch in enumerate(s):
-        if ch in last and last[ch] >= left:
-            left = last[ch] + 1
-        last[ch] = right
+    seen = set()
+    left = 0
+    best = 0
+    for right in range(len(s)):
+        while s[right] in seen:
+            seen.remove(s[left])
+            left += 1
+        seen.add(s[right])
         best = max(best, right - left + 1)
     return best
 ```
@@ -360,11 +367,13 @@ def fib(n):
 
 ```python
 def pascal(num_rows):
-    rows = [[1]]
-    for _ in range(num_rows - 1):
-        prev = rows[-1]
-        rows.append([1] + [prev[i] + prev[i + 1] for i in range(len(prev) - 1)] + [1])
-    return rows[:num_rows]
+    rows = []
+    for r in range(num_rows):
+        row = [1] * (r + 1)
+        for i in range(1, r):
+            row[i] = rows[r - 1][i - 1] + rows[r - 1][i]
+        rows.append(row)
+    return rows
 ```
 
 ## Numbers, digits and bits
