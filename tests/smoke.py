@@ -22,6 +22,7 @@ the exit code is the number of failed steps.
 import contextlib
 import http.server
 import os
+import re
 import sys
 import threading
 
@@ -358,6 +359,61 @@ def run(page):
         )
         assert "1111 1111 1111 0000" in out and "s16   -16" in out, f"readout changed: {out!r}"
 
+    with step("widgets: ds-roadmap tracker ticks, persists, restores"):
+        dash = ".kiln-widget[data-widget='ds-roadmap'] .kiln-term-out"
+        prompt = ".kiln-widget[data-widget='ds-roadmap'] .kiln-term-input"
+        read = lambda: page.eval_on_selector(dash, "el => el.textContent")  # noqa: E731
+        page.goto(f"{BASE}/guides/ds-roadmap/")
+        page.wait_for_selector(dash)
+        # Every step is a list item opening with a week token that
+        # carries a unique <prefix>-<nn> id; the tracker keys its
+        # record and its state code on exactly that shape.
+        ids = page.eval_on_selector_all(
+            "[data-step]",
+            "els => els.map(e => [e.getAttribute('data-step'), e.textContent.trim(),"
+            " !!e.closest('li.kiln-step')])",
+        )
+        total = len(ids)
+        assert total > 50, f"only {total} steps found"
+        assert len({i[0] for i in ids}) == total, "duplicate step ids"
+        for step_id, token, upgraded in ids:
+            assert re.fullmatch(r"[a-z0-9]+-\d\d", step_id), f"bad step id {step_id!r}"
+            assert re.fullmatch(r"W\d\d(-\d\d)?", token), f"bad week token {token!r}"
+            assert upgraded, f"step {step_id} was not upgraded"
+        assert f"0/{total}  0%" in read(), f"fresh dashboard: {read()!r}"
+        # Tick two steps: bars, per-step state and the state code follow.
+        boxes = page.locator(".kiln-step-box")
+        boxes.nth(0).click()
+        boxes.nth(1).click()
+        assert f"2/{total}" in read(), "tick did not reach the dashboard"
+        assert boxes.nth(0).get_attribute("aria-checked") == "true"
+        assert f"ds1//{ids[0][0].split('-')[0]}:1-2" in read(), f"state code: {read()!r}"
+        # A start date dates the weeks and marks the one in progress.
+        page.locator(prompt).fill("2020-01-06")
+        page.wait_for_timeout(60)
+        assert "past W52" in read(), f"week row: {read()!r}"
+        title = page.eval_on_selector("[data-step]", "el => el.title")
+        assert title == "2020-01-06 to 2020-01-12", f"week tooltip: {title!r}"
+        # The record survives a reload (localStorage) ...
+        page.reload()
+        page.wait_for_selector(dash)
+        assert f"2/{total}" in read() and "ds1/2020-01-06/" in read(), "record lost on reload"
+        # ... and a pasted state code replaces it, unknown ids dropped.
+        page.locator(prompt).fill(f"ds1//{ids[2][0].split('-')[0]}:1,zz:7")
+        page.wait_for_timeout(60)
+        assert f"restored 1 of {total} steps" in read(), f"restore: {read()!r}"
+        assert page.locator(prompt).input_value() == "", "prompt kept the state code"
+        assert page.locator(".kiln-step--done").count() == 1
+        page.locator(prompt).fill("nonsense")
+        page.wait_for_timeout(60)
+        assert "not a date" in read(), "bad input not reported"
+        # The toggles are buttons, so focus on one leaves the site keys live.
+        boxes.nth(5).focus()
+        page.keyboard.press("G")
+        page.wait_for_timeout(400)
+        assert page.evaluate("() => scrollY") > 500, "site keys dead while a toggle has focus"
+        page.evaluate("() => localStorage.removeItem('kiln.ds-roadmap.v1')")
+
     with step("palette typography is context-independent"):
         # The palette mounts inside .md-typeset (homepage bar) and on
         # document.body (overlay); every element must compute identical
@@ -419,6 +475,23 @@ def run_no_js(browser):
             ".kiln-header__nav .kiln-header__link", "els => els.length"
         )
         assert links == 6, "header nav missing without JS"
+        context.close()
+
+    with step("no-JS: ds-roadmap steps stand alone as a linked list"):
+        context = browser.new_context(java_script_enabled=False)
+        page = context.new_page()
+        page.goto(BASE + "/guides/ds-roadmap/")
+        plain = page.eval_on_selector_all(
+            "[data-step]",
+            "els => els.filter(e => { const li = e.closest('li');"
+            " return li && !li.classList.contains('kiln-step'); }).length",
+        )
+        linked = page.eval_on_selector_all(
+            "li:has([data-step]) a[href^='http']", "els => els.length"
+        )
+        toggles = page.eval_on_selector_all(".kiln-step-box", "els => els.length")
+        assert plain > 50 and linked > 50, "roadmap steps missing without JS"
+        assert toggles == 0, "tracker toggles rendered without JS"
         context.close()
 
 

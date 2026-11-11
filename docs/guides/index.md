@@ -9,6 +9,11 @@ Usage guides and cheat sheets for the tools in regular use.
 <span class="home-card-text">Manual encrypted install, ISO to workspace.</span>
 </a>
 
+<a class="home-card" href="ds-roadmap/">
+<span class="home-card-title">DS Roadmap</span>
+<span class="home-card-text">One year of free MIT courses to data science, tracked.</span>
+</a>
+
 <a class="home-card" href="leetcode/">
 <span class="home-card-title">LeetCode</span>
 <span class="home-card-text">Sixty array, string and dictionary problems, solved.</span>

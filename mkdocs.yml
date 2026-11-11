@@ -123,6 +123,7 @@ nav:
   - Guides:
       - guides/index.md
       - Arch Linux: guides/arch-linux/index.md
+      - DS Roadmap: guides/ds-roadmap/index.md
       - LeetCode: guides/leetcode/index.md
       - Pandas:
           - guides/pandas/index.md

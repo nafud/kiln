@@ -1349,6 +1349,78 @@ tt {
   color: var(--color-accent);
 }
 
+/* DS roadmap tracker (widgets.js, the ds-roadmap widget). The guide's
+   step lists are plain Markdown lists; the widget stamps .kiln-steps on
+   each list and .kiln-step on each item, wraps the item's content in
+   .kiln-step-body and prepends a [ ]/[x] toggle. Everything here is
+   therefore JS-only styling — with JS off the lists keep Material's
+   bullets and none of these classes exist. The toggle is command text
+   in the kiln-term-flag manner (muted at rest, accent on hover/focus),
+   not a surface, so it carries no border or lift. */
+.md-typeset ul.kiln-steps {
+  list-style: none;
+  margin-left: 0;
+}
+
+.md-typeset ul.kiln-steps > li.kiln-step {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 0.6rem;
+  margin-left: 0;
+  transition: color 150ms ease;
+}
+
+.md-typeset .kiln-step-box {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  line-height: inherit;
+  white-space: pre;
+  align-self: start;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.md-typeset .kiln-step-box:hover,
+.md-typeset .kiln-step-box:focus-visible,
+.md-typeset .kiln-step--done .kiln-step-box {
+  color: var(--color-accent);
+}
+
+/* A finished step steps down the text ladder; its links stay links
+   but stop competing with the open steps. */
+.md-typeset .kiln-step--done,
+.md-typeset .kiln-step--done code {
+  color: var(--color-text-faint);
+}
+
+.md-typeset .kiln-step--done a {
+  opacity: 0.55;
+}
+
+/* The week token of the step in progress takes the accent; one whose
+   week has passed unticked steps up to primary. Both need a start
+   date, so neither shows before one is set. */
+.md-typeset .kiln-step--now .kiln-step-body > code:first-child {
+  color: var(--color-accent);
+}
+
+.md-typeset .kiln-step--late .kiln-step-body > code:first-child {
+  color: var(--color-text-primary);
+}
+
+/* Per-list meter above each step list: the label style's faint,
+   small register, block characters from JetBrains Mono. */
+.md-typeset .kiln-steps-meter {
+  margin: 0.9rem 0 -0.4rem;
+  font-size: 0.65rem;
+  letter-spacing: 0.04em;
+  color: var(--color-text-faint);
+  user-select: none;
+}
+
 /* Narrow screens */
 
 @media screen and (max-width: 760px) {
