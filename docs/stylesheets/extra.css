@@ -1400,17 +1400,6 @@ tt {
   opacity: 0.55;
 }
 
-/* The week token of the step in progress takes the accent; one whose
-   week has passed unticked steps up to primary. Both need a start
-   date, so neither shows before one is set. */
-.md-typeset .kiln-step--now .kiln-step-body > code:first-child {
-  color: var(--color-accent);
-}
-
-.md-typeset .kiln-step--late .kiln-step-body > code:first-child {
-  color: var(--color-text-primary);
-}
-
 /* Narrow screens */
 
 @media screen and (max-width: 760px) {

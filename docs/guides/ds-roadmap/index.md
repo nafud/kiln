@@ -1,8 +1,8 @@
 # DS Roadmap
 
-A one-year path from no Python, no calculus and no statistics to a data science foundation, built on free MIT courses, with every step linked, dated and tracked.
+A one-year path from no Python, no calculus and no statistics to a data science foundation, built on free MIT courses, with every step linked and tickable.
 
-<div class="kiln-widget" data-widget="ds-roadmap"></div>
+<div class="kiln-widget" data-widget="ds-roadmap" hidden></div>
 
 ## The plan
 

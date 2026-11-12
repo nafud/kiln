@@ -359,15 +359,12 @@ def run(page):
         )
         assert "1111 1111 1111 0000" in out and "s16   -16" in out, f"readout changed: {out!r}"
 
-    with step("widgets: ds-roadmap tracker ticks, persists, restores"):
-        dash = ".kiln-widget[data-widget='ds-roadmap'] .kiln-term-out"
-        prompt = ".kiln-widget[data-widget='ds-roadmap'] .kiln-term-input"
-        read = lambda: page.eval_on_selector(dash, "el => el.textContent")  # noqa: E731
+    with step("widgets: ds-roadmap steps tick and persist"):
+        key = "kiln.ds-roadmap.v1"
         page.goto(f"{BASE}/guides/ds-roadmap/")
-        page.wait_for_selector(dash)
+        page.wait_for_selector(".kiln-step-box")
         # Every step is a list item opening with a week token that
-        # carries a unique <prefix>-<nn> id; the tracker keys its
-        # record and its state code on exactly that shape.
+        # carries a unique <prefix>-<nn> id; the record is keyed on it.
         ids = page.eval_on_selector_all(
             "[data-step]",
             "els => els.map(e => [e.getAttribute('data-step'), e.textContent.trim(),"
@@ -380,42 +377,49 @@ def run(page):
             assert re.fullmatch(r"[a-z0-9]+-\d\d", step_id), f"bad step id {step_id!r}"
             assert re.fullmatch(r"W\d\d(-\d\d)?", token), f"bad week token {token!r}"
             assert upgraded, f"step {step_id} was not upgraded"
-        assert f"0/{total}  0%" in read(), f"fresh dashboard: {read()!r}"
-        # Tick two steps: bars, per-step state and the state code follow.
+        # The page carries toggles and nothing else: no dashboard, no
+        # prompt, no per-list meters (all removed at the owner's request).
+        extras = page.eval_on_selector_all(
+            ".md-content .kiln-term, .md-content .kiln-steps-meter", "els => els.length"
+        )
+        assert extras == 0, "the roadmap dashboard or a list meter is back"
+        shown = page.eval_on_selector(
+            ".kiln-widget[data-widget='ds-roadmap']", "el => el.getBoundingClientRect().height"
+        )
+        assert shown == 0, "the tracker's mount point takes up space"
+        # Tick two steps: glyph, state and the stored record follow.
         boxes = page.locator(".kiln-step-box")
+        assert boxes.count() == total
         boxes.nth(0).click()
         boxes.nth(1).click()
-        assert f"2/{total}" in read(), "tick did not reach the dashboard"
         assert boxes.nth(0).get_attribute("aria-checked") == "true"
         marks = [boxes.nth(n).text_content() for n in (0, 2)]
         assert marks == ["[ + ]", "[   ]"], f"toggle glyphs: {marks!r}"
-        assert page.locator(".kiln-steps-meter").count() == 0, "per-list meter is back"
-        assert f"ds1//{ids[0][0].split('-')[0]}:1-2" in read(), f"state code: {read()!r}"
-        # A start date dates the weeks and marks the one in progress.
-        page.locator(prompt).fill("2020-01-06")
-        page.wait_for_timeout(60)
-        assert "past W52" in read(), f"week row: {read()!r}"
-        title = page.eval_on_selector("[data-step]", "el => el.title")
-        assert title == "2020-01-06 to 2020-01-12", f"week tooltip: {title!r}"
-        # The record survives a reload (localStorage) ...
+        stored = page.evaluate(f"() => JSON.parse(localStorage.getItem('{key}')).done")
+        assert stored == [ids[0][0], ids[1][0]], f"stored record: {stored!r}"
+        # The record survives a reload, and a tick can be undone.
         page.reload()
-        page.wait_for_selector(dash)
-        assert f"2/{total}" in read() and "ds1/2020-01-06/" in read(), "record lost on reload"
-        # ... and a pasted state code replaces it, unknown ids dropped.
-        page.locator(prompt).fill(f"ds1//{ids[2][0].split('-')[0]}:1,zz:7")
-        page.wait_for_timeout(60)
-        assert f"restored 1 of {total} steps" in read(), f"restore: {read()!r}"
-        assert page.locator(prompt).input_value() == "", "prompt kept the state code"
+        page.wait_for_selector(".kiln-step-box")
+        assert page.locator(".kiln-step--done").count() == 2, "ticks lost on reload"
+        boxes.nth(1).click()
+        assert page.locator(".kiln-step--done").count() == 1, "untick failed"
+        # A record written by the earlier dashboard version ({start, done})
+        # still loads, unknown ids ignored.
+        page.evaluate(
+            "([k, id]) => localStorage.setItem(k, JSON.stringify("
+            "{start: '2026-01-05', done: [id, 'zz-07']}))",
+            [key, ids[3][0]],
+        )
+        page.reload()
+        page.wait_for_selector(".kiln-step-box")
         assert page.locator(".kiln-step--done").count() == 1
-        page.locator(prompt).fill("nonsense")
-        page.wait_for_timeout(60)
-        assert "not a date" in read(), "bad input not reported"
+        assert boxes.nth(3).get_attribute("aria-checked") == "true", "old record not read"
         # The toggles are buttons, so focus on one leaves the site keys live.
         boxes.nth(5).focus()
         page.keyboard.press("G")
         page.wait_for_timeout(400)
         assert page.evaluate("() => scrollY") > 500, "site keys dead while a toggle has focus"
-        page.evaluate("() => localStorage.removeItem('kiln.ds-roadmap.v1')")
+        page.evaluate(f"() => localStorage.removeItem('{key}')")
 
     with step("palette typography is context-independent"):
         # The palette mounts inside .md-typeset (homepage bar) and on
