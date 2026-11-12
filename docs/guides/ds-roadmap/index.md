@@ -12,9 +12,9 @@ The year is 52 weeks at about 20 hours a week, roughly 970 hours in total. Two t
 |---|---|---|---|
 | 6.100L Introduction to CS and Programming using Python | MIT OCW, Fall 2022 | `W01-12` | 120 |
 | 18.01SC Single Variable Calculus | MIT OCW Scholar, Fall 2010 | `W01-16` | 135 |
-| 6.0002 Introduction to Computational Thinking and Data Science | MIT OCW, Fall 2016 | `W14-21` | 80 |
+| Python for Data Analysis and Project 1 | McKinney, open edition | `W14-17` | 40 |
 | 18.02SC Multivariable Calculus, selected | MIT OCW Scholar, Fall 2010 | `W17-23` | 65 |
-| Python for Data Analysis and Project 1 | McKinney, open edition | `W22-25` | 40 |
+| 6.0002 Introduction to Computational Thinking and Data Science | MIT OCW, Fall 2016 | `W18-25` | 80 |
 | CS50 SQL, weeks 0 to 3 | Harvard | `W24-25` | 20 |
 | 18.05 Introduction to Probability and Statistics | MIT OCW, Spring 2022 | `W27-41` | 150 |
 | 18.06SC Linear Algebra | MIT OCW Scholar, Fall 2011 | `W27-41` | 150 |
@@ -22,7 +22,7 @@ The year is 52 weeks at about 20 hours a week, roughly 970 hours in total. Two t
 | An Introduction to Statistical Learning with Python | James, Witten, Hastie, Tibshirani, Taylor | `W42-46` | 40 |
 | Capstone | own project | `W47-51` | 50 |
 
-Hours are MIT's own figures where its pages state one (about 150 hours each for the whole of 18.01SC, 18.02SC and 18.06SC, 12 hours a week for 6.036), scaled to the sessions selected here, and estimates elsewhere. Every selection of sessions is this roadmap's, not MIT's.
+Hours are MIT's own figures where its pages state one (about 150 hours each for the whole of 18.01SC, 18.02SC and 18.06SC, 12 hours a week for 6.036), scaled to the sessions selected here, and estimates elsewhere. Every selection of sessions is this roadmap's, not MIT's. The [StatQuest video index](https://statquest.org/video_index.html){ .external-link } is optional support for the statistics and machine learning courses, watched when a concept does not land and never in place of a reading or a problem set.
 
 ---
 
@@ -95,32 +95,32 @@ Unit 4 is cut to the five sessions whose techniques return in 18.02SC and 18.05,
 - `W22`{ data-step=c2-06 } [Exam 2](https://ocw.mit.edu/courses/18-02sc-multivariable-calculus-fall-2010/pages/2.-partial-derivatives/exam-2/){ .external-link }. Sessions 45 and 46.
 - `W22-23`{ data-step=c2-07 } [Unit 3, Part A](https://ocw.mit.edu/courses/18-02sc-multivariable-calculus-fall-2010/pages/3.-double-integrals-and-line-integrals-in-the-plane/part-a-double-integrals/){ .external-link }. Sessions 47 to 55. Double integrals, polar coordinates, change of variables.
 
-### 6.0002 Introduction to Computational Thinking and Data Science
-
-[6.0002](https://ocw.mit.edu/courses/6-0002-introduction-to-computational-thinking-and-data-science-fall-2016/){ .external-link } is the Fall 2016 run taught by Prof. Eric Grimson, Prof. John Guttag and Dr. Ana Bell, the continuation of 6.0001, whose material 6.100L covers. Its 15 lectures come with [slides and code](https://ocw.mit.edu/courses/6-0002-introduction-to-computational-thinking-and-data-science-fall-2016/pages/lecture-slides-and-files/){ .external-link } and five [problem sets](https://ocw.mit.edu/courses/6-0002-introduction-to-computational-thinking-and-data-science-fall-2016/pages/assignments/){ .external-link }, whose page states that "solutions for the problems sets are not available". The course code targets Python 3.5, so a few lines need small repairs on a current interpreter. The course is done when all five problem sets run.
-
-- `W14`{ data-step=cs-01 } [Lectures 1 and 2](https://ocw.mit.edu/courses/6-0002-introduction-to-computational-thinking-and-data-science-fall-2016/video_galleries/lecture-videos/){ .external-link }. Optimization problems. PS 1 started.
-- `W15`{ data-step=cs-02 } [Lectures 3 and 4](https://ocw.mit.edu/courses/6-0002-introduction-to-computational-thinking-and-data-science-fall-2016/video_galleries/lecture-videos/){ .external-link }. Graph-theoretic models, stochastic thinking. PS 1 finished.
-- `W16`{ data-step=cs-03 } [Lectures 5 and 6](https://ocw.mit.edu/courses/6-0002-introduction-to-computational-thinking-and-data-science-fall-2016/video_galleries/lecture-videos/){ .external-link }. Random walks, Monte Carlo simulation. PS 2.
-- `W17`{ data-step=cs-04 } [Lectures 7 and 8](https://ocw.mit.edu/courses/6-0002-introduction-to-computational-thinking-and-data-science-fall-2016/video_galleries/lecture-videos/){ .external-link }. Confidence intervals, sampling and standard error. PS 3.
-- `W18`{ data-step=cs-05 } [Lectures 9 and 10](https://ocw.mit.edu/courses/6-0002-introduction-to-computational-thinking-and-data-science-fall-2016/video_galleries/lecture-videos/){ .external-link }. Understanding experimental data.
-- `W19`{ data-step=cs-06 } [Lectures 11 and 12](https://ocw.mit.edu/courses/6-0002-introduction-to-computational-thinking-and-data-science-fall-2016/video_galleries/lecture-videos/){ .external-link }. Introduction to machine learning, clustering. PS 4.
-- `W20`{ data-step=cs-07 } [Lectures 13 and 14](https://ocw.mit.edu/courses/6-0002-introduction-to-computational-thinking-and-data-science-fall-2016/video_galleries/lecture-videos/){ .external-link }. Classification, statistical sins.
-- `W21`{ data-step=cs-08 } [Lecture 15](https://ocw.mit.edu/courses/6-0002-introduction-to-computational-thinking-and-data-science-fall-2016/video_galleries/lecture-videos/){ .external-link }. Statistical sins and wrap-up. PS 5.
-
 ### pandas and Project 1
 
 The text is the open edition of Wes McKinney's [Python for Data Analysis](https://wesmckinney.com/book/){ .external-link }, third edition. The book "has been updated for pandas 2.0.0 and Python 3.10" and the playground runs pandas 3, so where behaviour differs the [pandas 3.0 release notes](https://pandas.pydata.org/docs/whatsnew/v3.0.0.html){ .external-link } decide. The [Pandas](../pandas/index.md) guide on this site holds the idioms in condensed form. Each chapter's examples are retyped, then repeated on a dataset from one's own field. Project 1 is an exploratory analysis of that dataset, loaded, cleaned, summarised and plotted, ending in five findings a colleague could act on and no model. A labelled network-flow set such as [CIC-IDS2017](https://www.unb.ca/cic/datasets/ids-2017.html){ .external-link } fits.
 
-- `W22`{ data-step=pd-01 } [Chapter 4](https://wesmckinney.com/book/numpy-basics.html){ .external-link }, NumPy Basics, and [chapter 5](https://wesmckinney.com/book/pandas-basics.html){ .external-link }, Getting Started with pandas.
-- `W23`{ data-step=pd-02 } [Chapter 6](https://wesmckinney.com/book/accessing-data.html){ .external-link }, Data Loading, Storage, and File Formats, and [chapter 7](https://wesmckinney.com/book/data-cleaning.html){ .external-link }, Data Cleaning and Preparation.
-- `W24`{ data-step=pd-03 } [Chapter 8](https://wesmckinney.com/book/data-wrangling.html){ .external-link }, Data Wrangling, and [chapter 10](https://wesmckinney.com/book/data-aggregation.html){ .external-link }, Data Aggregation and Group Operations.
-- `W25`{ data-step=pd-04 } [Chapter 9](https://wesmckinney.com/book/plotting-and-visualization.html){ .external-link }, Plotting and Visualization, with the [Matplotlib quick start](https://matplotlib.org/stable/users/explain/quick_start.html){ .external-link } and the [seaborn tutorial](https://seaborn.pydata.org/tutorial.html){ .external-link } as references.
-- `W25`{ data-step=pd-05 } Project 1, committed with its five findings.
+- `W14`{ data-step=pd-01 } [Chapter 4](https://wesmckinney.com/book/numpy-basics.html){ .external-link }, NumPy Basics, and [chapter 5](https://wesmckinney.com/book/pandas-basics.html){ .external-link }, Getting Started with pandas.
+- `W15`{ data-step=pd-02 } [Chapter 6](https://wesmckinney.com/book/accessing-data.html){ .external-link }, Data Loading, Storage, and File Formats, and [chapter 7](https://wesmckinney.com/book/data-cleaning.html){ .external-link }, Data Cleaning and Preparation.
+- `W16`{ data-step=pd-03 } [Chapter 8](https://wesmckinney.com/book/data-wrangling.html){ .external-link }, Data Wrangling, and [chapter 10](https://wesmckinney.com/book/data-aggregation.html){ .external-link }, Data Aggregation and Group Operations.
+- `W17`{ data-step=pd-04 } [Chapter 9](https://wesmckinney.com/book/plotting-and-visualization.html){ .external-link }, Plotting and Visualization, with the [Matplotlib quick start](https://matplotlib.org/stable/users/explain/quick_start.html){ .external-link } and the [seaborn tutorial](https://seaborn.pydata.org/tutorial.html){ .external-link } as references.
+- `W17`{ data-step=pd-05 } Project 1, committed with its five findings.
+
+### 6.0002 Introduction to Computational Thinking and Data Science
+
+[6.0002](https://ocw.mit.edu/courses/6-0002-introduction-to-computational-thinking-and-data-science-fall-2016/){ .external-link } is the Fall 2016 run taught by Prof. Eric Grimson, Prof. John Guttag and Dr. Ana Bell, the continuation of 6.0001, whose material 6.100L covers. Its 15 lectures come with [slides and code](https://ocw.mit.edu/courses/6-0002-introduction-to-computational-thinking-and-data-science-fall-2016/pages/lecture-slides-and-files/){ .external-link } and five [problem sets](https://ocw.mit.edu/courses/6-0002-introduction-to-computational-thinking-and-data-science-fall-2016/pages/assignments/){ .external-link }, whose page states that "solutions for the problems sets are not available". The course code targets Python 3.5, so a few lines need small repairs on a current interpreter. The course is done when all five problem sets run.
+
+- `W18`{ data-step=cs-01 } [Lectures 1 and 2](https://ocw.mit.edu/courses/6-0002-introduction-to-computational-thinking-and-data-science-fall-2016/video_galleries/lecture-videos/){ .external-link }. Optimization problems. PS 1 started.
+- `W19`{ data-step=cs-02 } [Lectures 3 and 4](https://ocw.mit.edu/courses/6-0002-introduction-to-computational-thinking-and-data-science-fall-2016/video_galleries/lecture-videos/){ .external-link }. Graph-theoretic models, stochastic thinking. PS 1 finished.
+- `W20`{ data-step=cs-03 } [Lectures 5 and 6](https://ocw.mit.edu/courses/6-0002-introduction-to-computational-thinking-and-data-science-fall-2016/video_galleries/lecture-videos/){ .external-link }. Random walks, Monte Carlo simulation. PS 2.
+- `W21`{ data-step=cs-04 } [Lectures 7 and 8](https://ocw.mit.edu/courses/6-0002-introduction-to-computational-thinking-and-data-science-fall-2016/video_galleries/lecture-videos/){ .external-link }. Confidence intervals, sampling and standard error. PS 3.
+- `W22`{ data-step=cs-05 } [Lectures 9 and 10](https://ocw.mit.edu/courses/6-0002-introduction-to-computational-thinking-and-data-science-fall-2016/video_galleries/lecture-videos/){ .external-link }. Understanding experimental data.
+- `W23`{ data-step=cs-06 } [Lectures 11 and 12](https://ocw.mit.edu/courses/6-0002-introduction-to-computational-thinking-and-data-science-fall-2016/video_galleries/lecture-videos/){ .external-link }. Introduction to machine learning, clustering. PS 4.
+- `W24`{ data-step=cs-07 } [Lectures 13 and 14](https://ocw.mit.edu/courses/6-0002-introduction-to-computational-thinking-and-data-science-fall-2016/video_galleries/lecture-videos/){ .external-link }. Classification, statistical sins.
+- `W25`{ data-step=cs-08 } [Lecture 15](https://ocw.mit.edu/courses/6-0002-introduction-to-computational-thinking-and-data-science-fall-2016/video_galleries/lecture-videos/){ .external-link }. Statistical sins and wrap-up. PS 5.
 
 ### SQL
 
-[CS50's Introduction to Databases with SQL](https://cs50.harvard.edu/sql/){ .external-link } is Harvard's free course, a lecture and a problem set per week, starting on SQLite. Weeks 0 to 3 are taken, beside the pandas chapters on joins and group operations, and weeks 4 to 6 (viewing, optimizing, scaling) are optional.
+[CS50's Introduction to Databases with SQL](https://cs50.harvard.edu/sql/){ .external-link } is Harvard's free course, a lecture and a problem set per week, starting on SQLite. Weeks 0 to 3 are taken, where joins and group-bys repeat the ideas of chapters 8 and 10 of the pandas book, and weeks 4 to 6 (viewing, optimizing, scaling) are optional.
 
 - `W24`{ data-step=sq-01 } [Week 0](https://cs50.harvard.edu/sql/weeks/0/){ .external-link }, Querying, and [week 1](https://cs50.harvard.edu/sql/weeks/1/){ .external-link }, Relating.
 - `W25`{ data-step=sq-02 } [Week 2](https://cs50.harvard.edu/sql/weeks/2/){ .external-link }, Designing, and [week 3](https://cs50.harvard.edu/sql/weeks/3/){ .external-link }, Writing.
@@ -222,7 +222,7 @@ The next courses, in rough order of use, are [18.650 Statistics for Applications
 
 ## Sources
 
-Every page below was read on 2026-11-11, and quoted text is verbatim. MIT OpenCourseWare is free, needs no enrolment, grants no credit or certificate, and is licensed CC BY-NC-SA. The MIT Open Learning Library is free with optional enrolment.
+Every page below was read on 2026-11-11, the StatQuest index on 2026-11-12, and quoted text is verbatim. MIT OpenCourseWare is free, needs no enrolment, grants no credit or certificate, and is licensed CC BY-NC-SA. The MIT Open Learning Library is free with optional enrolment.
 
 | source | used for |
 |---|---|
@@ -244,4 +244,5 @@ Every page below was read on 2026-11-11, and quoted text is verbatim. MIT OpenCo
 | [NumPy, the absolute basics for beginners](https://numpy.org/doc/stable/user/absolute_beginners.html){ .external-link } | Reference |
 | [The Python Tutorial](https://docs.python.org/3/tutorial/index.html){ .external-link } | Reference |
 | [uv documentation](https://docs.astral.sh/uv/){ .external-link } | Environment |
+| [StatQuest video index](https://statquest.org/video_index.html){ .external-link } | Intuition for statistics and machine learning, on demand |
 | [The Missing Semester of Your CS Education](https://missing.csail.mit.edu/){ .external-link } | Shell and git, if a gap shows |
