@@ -387,6 +387,9 @@ def run(page):
         boxes.nth(1).click()
         assert f"2/{total}" in read(), "tick did not reach the dashboard"
         assert boxes.nth(0).get_attribute("aria-checked") == "true"
+        marks = [boxes.nth(n).text_content() for n in (0, 2)]
+        assert marks == ["[ + ]", "[   ]"], f"toggle glyphs: {marks!r}"
+        assert page.locator(".kiln-steps-meter").count() == 0, "per-list meter is back"
         assert f"ds1//{ids[0][0].split('-')[0]}:1-2" in read(), f"state code: {read()!r}"
         # A start date dates the weeks and marks the one in progress.
         page.locator(prompt).fill("2020-01-06")

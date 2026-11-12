@@ -1352,7 +1352,7 @@ tt {
 /* DS roadmap tracker (widgets.js, the ds-roadmap widget). The guide's
    step lists are plain Markdown lists; the widget stamps .kiln-steps on
    each list and .kiln-step on each item, wraps the item's content in
-   .kiln-step-body and prepends a [ ]/[x] toggle. Everything here is
+   .kiln-step-body and prepends a toggle ([   ] open, [ + ] done). Everything here is
    therefore JS-only styling — with JS off the lists keep Material's
    bullets and none of these classes exist. The toggle is command text
    in the kiln-term-flag manner (muted at rest, accent on hover/focus),
@@ -1409,16 +1409,6 @@ tt {
 
 .md-typeset .kiln-step--late .kiln-step-body > code:first-child {
   color: var(--color-text-primary);
-}
-
-/* Per-list meter above each step list: the label style's faint,
-   small register, block characters from JetBrains Mono. */
-.md-typeset .kiln-steps-meter {
-  margin: 0.9rem 0 -0.4rem;
-  font-size: 0.65rem;
-  letter-spacing: 0.04em;
-  color: var(--color-text-faint);
-  user-select: none;
 }
 
 /* Narrow screens */

@@ -256,8 +256,8 @@
      week token carrying the step id:
          - `W01-02`{ data-step=py-01 } [Lectures 1 and 2](…) …
      With JS off that is the whole page: a readable, linked list. This
-     widget upgrades it into a tracker — every step gains a [ ]/[x]
-     toggle, every list a meter, and the widget root becomes the
+     widget upgrades it into a tracker — every step gains a toggle
+     ([   ] open, [ + ] done) and the widget root becomes the
      dashboard: `$ roadmap --start <date>` with the week in progress,
      done-versus-plan bars, one bar per phase (an h2 holding steps),
      and the state line.
@@ -411,7 +411,6 @@
        that precedes them. */
     const steps = [];
     const phases = [];
-    const lists = [];
     let phase = null;
     scope.querySelectorAll("h2, [data-step]").forEach(function (node) {
       if (node.tagName === "H2") {
@@ -431,15 +430,7 @@
       steps.push(step);
       if (!phase.steps.length) phases.push(phase);
       phase.steps.push(step);
-      const list = item.parentElement;
-      let entry = lists.find(function (candidate) {
-        return candidate.list === list;
-      });
-      if (!entry) {
-        entry = { list: list, steps: [] };
-        lists.push(entry);
-      }
-      entry.steps.push(step);
+      item.parentElement.classList.add("kiln-steps");
     });
     if (!steps.length) return;
 
@@ -479,12 +470,6 @@
       step.item.classList.add("kiln-step");
       step.item.appendChild(box);
       step.item.appendChild(body);
-    });
-
-    lists.forEach(function (entry) {
-      entry.list.classList.add("kiln-steps");
-      entry.meter = el("div", "kiln-steps-meter");
-      entry.list.parentNode.insertBefore(entry.meter, entry.list);
     });
 
     /* The week in progress for a start date: 1-based, 0 before the
@@ -606,6 +591,7 @@
       const copy = el("button", "kiln-term-flag", "copy");
       copy.type = "button";
       copy.setAttribute("aria-label", "copy the state code");
+      copy.title = "backup code. pasted at the prompt, it restores this record";
       copy.addEventListener("click", function (event) {
         event.stopPropagation(); /* not a focus-the-prompt click */
         const done = function (label) {
@@ -626,12 +612,12 @@
     }
 
     /* Repaint what lives in the page rather than in the dashboard:
-       toggles, step classes, week tooltips, list meters. */
+       toggles, step classes, week tooltips. */
     function syncSteps() {
       const week = currentWeek();
       steps.forEach(function (step) {
         const done = isDone(step);
-        step.box.textContent = done ? "[x]" : "[ ]";
+        step.box.textContent = done ? "[ + ]" : "[   ]";
         step.box.setAttribute("aria-checked", done ? "true" : "false");
         step.item.classList.toggle("kiln-step--done", done);
         step.item.classList.toggle(
@@ -642,11 +628,6 @@
         const dates = weekDates(step.from, step.to);
         if (dates) step.chip.title = dates;
         else step.chip.removeAttribute("title");
-      });
-      lists.forEach(function (entry) {
-        const done = countDone(entry.steps);
-        entry.meter.textContent =
-          meterBar(done, entry.steps.length, 12) + " " + done + "/" + entry.steps.length;
       });
     }
 
