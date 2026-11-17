@@ -22,7 +22,7 @@
    print — keep it in sync when bindings here change).
 
    Material's search UI is hidden entirely, and its search keys —
-   s/S, F and / — are neutralized by a capture-phase listener below
+   s/S, f/F and / — are neutralized by a capture-phase listener below
    so nothing can summon the hidden search form: all of them are dead
    keys, and the jump palette is backtick's alone (quick-jump.js).
    Material's p/n page keys are neutralized the same way: n/N belong
@@ -131,7 +131,7 @@
   /* Timestamp of the pending first g of a gg chord. */
   let lastGAt = 0;
 
-  /* Material also binds keys of its own: s/S, F and / focus its
+  /* Material also binds keys of its own: s/S, f/F and / focus its
      (hidden) search, p and n switch pages. This capture-phase
      listener runs before Material's own handler and neutralizes all
      of them outside typing contexts (inside an input the guard lets

@@ -3,7 +3,7 @@
    ` (backtick) or Ctrl/Cmd+K summons the prompt on any page — the
    homepage's inline bar when it is mounted, an overlay everywhere
    else. Material's own search UI is hidden by extra.css, and its
-   s/S/F// search bindings are neutralized by key-nav.js's swallow
+   s/S/f/F// search bindings are neutralized by key-nav.js's swallow
    listener. A typed query searches everything: pages fuzzy-matched
    by title and path rank first, then section content fills the
    remaining rows (as page › section rows landing on the anchor), so
@@ -1313,7 +1313,7 @@
 
 
   /* Capture phase, matching key-nav.js's swallow listener (which
-     neutralizes Material's own s/S/F// search bindings as dead keys —
+     neutralizes Material's own s/S/f/F// search bindings as dead keys —
      the palette is backtick's alone). */
   window.addEventListener(
     "keydown",

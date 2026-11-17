@@ -45,6 +45,10 @@ jobs:
       #   md-main__inner              extra.css :has() homepage flex stretch
       #   md-content__inner           extra.css :has() homepage h1 hiding
       #   md-typeset, md-header       extra.css styling roots
+      #   data-md-color-scheme/-primary/-accent
+      #                               the theme identity pair every theme
+      #                               block, key-nav's t cycle and the
+      #                               palette's :theme preview key on
       - name: Verify Material internals used by custom CSS/JS
         run: |
           # Hooks present in the built page HTML.
@@ -60,7 +64,9 @@ jobs:
             'md-header' \
             'md-container' \
             'md-footer' \
-            'data-md-color-scheme'; do
+            'data-md-color-scheme' \
+            'data-md-color-primary' \
+            'data-md-color-accent'; do
             grep -qF -- "$hook" site/index.html || {
               echo "::error::Material internal '$hook' is gone from the built HTML — a theme update likely renamed it. Update the overrides in docs/stylesheets/extra.css and the page scripts that hook it."
               exit 1
@@ -119,8 +125,13 @@ jobs:
           # The code-copy checkmark (extra.css + code-copy.js) hooks the
           # copy button, which Material injects at runtime, so it is not in
           # the page HTML — guard the tokens in the theme's CSS bundle instead.
+          # Same for the two theme variables Material must keep consuming:
+          # --md-accent-fg-color is the accent bridge (Material's own hover
+          # rules read it, which is why extra.css re-declares it per theme),
+          # and --md-hue is how phosphor and nord tint the slate internals.
           css=$(ls site/assets/stylesheets/main.*.min.css | head -1)
-          for hook in 'md-code__button' 'data-md-type=copy' '--md-code-copy-icon'; do
+          for hook in 'md-code__button' 'data-md-type=copy' '--md-code-copy-icon' \
+                      '--md-accent-fg-color' '--md-hue'; do
             grep -qF -- "$hook" "$css" || {
               echo "::error::Material internal '$hook' is gone from the CSS bundle — a theme update likely renamed it. Update the copy-button checkmark in docs/stylesheets/extra.css / docs/javascripts/code-copy.js."
               exit 1
