@@ -148,6 +148,19 @@ def serve():
     return srv
 
 
+def host_ucode():
+    """The installer picks the microcode package by CPU vendor
+    (detect_hardware) and QEMU runs with -cpu host, so the installed
+    /boot carries the host vendor's image — or none at all for a
+    vendor the installer does not know."""
+    vendor = ""
+    for line in Path("/proc/cpuinfo").read_text().splitlines():
+        if line.startswith("vendor_id"):
+            vendor = line.split(":", 1)[1].strip()
+            break
+    return {"GenuineIntel": "intel-ucode", "AuthenticAMD": "amd-ucode"}.get(vendor, "")
+
+
 def fresh_disk():
     disk = WORK / "disk.qcow2"
     if disk.exists():
@@ -190,8 +203,13 @@ def run_iso_stage(name, body, timeout):
     except subprocess.TimeoutExpired:
         proc.kill()
         srv.shutdown()
+        srv.server_close()
         die(f"{name}: the machine did not power off within {timeout}s (see {logfile})")
     srv.shutdown()
+    # shutdown() stops serve_forever but keeps the listening socket;
+    # close it, or the next stage's bind of the same port depends on
+    # the garbage collector getting there first.
+    srv.server_close()
     # the serial log carries the installer's colour escapes; the
     # assertions read it plain
     text = re.sub(r"\x1b\[[0-9;?]*[A-Za-z]", "", logfile.read_text(errors="replace"))
@@ -378,7 +396,8 @@ def boot():
         mon.key("c")
         time.sleep(1)
         mon.type(f"linux /vmlinuz-linux {cmdline} console=ttyS0,115200\n")
-        mon.type("initrd /intel-ucode.img /initramfs-linux.img\n")
+        ucode = host_ucode()
+        mon.type(f"initrd {f'/{ucode}.img ' if ucode else ''}/initramfs-linux.img\n")
         mon.type("boot\n")
         ser.expect(r"Enter passphrase for", 120)
         log("boot: passphrase prompt")
@@ -416,6 +435,7 @@ def boot():
         if proc.poll() is None:
             proc.kill()
         srv.shutdown()
+        srv.server_close()
 
 
 def main():
