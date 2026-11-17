@@ -147,6 +147,26 @@ def run(page):
         assert "3.5.4 Discussion" in overlay_text(page)
         close_overlay(page)
 
+    with step("palette: Escape closes once focus leaves the input"):
+        # Clicking a non-anchor palette surface (the :h help text)
+        # lands focus on body; Escape must still dismiss the prompt.
+        page.goto(chapter)
+        page.keyboard.press("`")
+        page.wait_for_selector(".kiln-jump--overlay.kiln-jump--open")
+        page.locator(".kiln-jump--overlay .kiln-jump-input").fill(":h")
+        page.wait_for_timeout(150)
+        page.click(".kiln-jump--overlay .kiln-jump-help pre", position={"x": 8, "y": 8})
+        page.wait_for_timeout(100)
+        assert page.evaluate("() => document.activeElement === document.body"), (
+            "focus did not leave the input"
+        )
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(150)
+        assert not page.evaluate(
+            "() => document.querySelector('.kiln-jump--overlay')"
+            ".classList.contains('kiln-jump--open')"
+        ), "Escape did not close the prompt after focus left the input"
+
     with step("palette: :theme lists, previews, commits; t cycles pairs"):
         page.goto(chapter)
         open_overlay(page, ":theme")
@@ -264,6 +284,30 @@ def run(page):
         page.keyboard.press("p")
         page.wait_for_timeout(400)
         assert page.evaluate("() => location.pathname") == path, "n/p navigated"
+        # A /result that is the current page's own intro row (same
+        # path, no hash) re-renders the page, so the pattern must ride
+        # the pending handoff and still arm on arrival.
+        page.goto(f"{BASE}/books/")
+        page.wait_for_timeout(300)
+        open_overlay(page, "/systems programming")
+        page.wait_for_selector(".kiln-jump--overlay .kiln-jump-result")
+        clicked = page.evaluate(
+            """() => {
+              const links = [...document.querySelectorAll(
+                '.kiln-jump--overlay .kiln-jump-results a')];
+              const own = links.find(a =>
+                new URL(a.href).pathname === location.pathname
+                && !new URL(a.href).hash);
+              if (own) own.click();
+              return !!own;
+            }"""
+        )
+        assert clicked, "no same-page intro row offered"
+        page.wait_for_timeout(500)
+        matches = page.evaluate("() => CSS.highlights.get('kiln-search')?.size || 0")
+        assert matches > 0, "own intro row landed without highlights"
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(100)
 
     with step("keys: l G gg scroll, t theme, s dead"):
         page.goto(chapter)
@@ -278,6 +322,16 @@ def run(page):
         page.keyboard.press("g")
         page.wait_for_timeout(700)
         assert page.evaluate("() => window.scrollY") < y_bottom, "gg did not return"
+        # A key seen between two g taps cancels the chord even when it
+        # is capture-swallowed: g s g must not read as gg.
+        page.keyboard.press("G")
+        page.wait_for_timeout(700)
+        y_chord = page.evaluate("() => window.scrollY")
+        assert y_chord > 0
+        for key in ("g", "s", "g"):
+            page.keyboard.press(key)
+        page.wait_for_timeout(700)
+        assert page.evaluate("() => window.scrollY") >= y_chord - 5, "g s g read as gg"
         scheme = page.evaluate("() => document.body.getAttribute('data-md-color-scheme')")
         page.keyboard.press("t")
         page.wait_for_timeout(200)

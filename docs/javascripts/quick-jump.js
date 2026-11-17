@@ -1145,10 +1145,10 @@
        link) and a direct mouse click alike — funnels through this
        delegated listener. Two jobs: a /pattern query arms hlsearch
        for the landing page (immediately when the row is a same-page
-       anchor, pending the page change otherwise), and a same-page
-       anchor row (a :toc row, a section hit on the open page)
-       dismisses the prompt, since no page change will fire for a
-       hash jump and the page change is what normally closes it. */
+       hash jump, pending the page change every other way), and a
+       same-page hash row (a :toc row, a section hit on the open
+       page) dismisses the prompt, since no page change will fire for
+       a hash jump and the page change is what normally closes it. */
     /* Rows never steal focus from the input (the combobox rule): a
        mousedown that moved focus to body would leave the prompt open
        but deaf to Escape — notably after a guarded modified click on
@@ -1196,13 +1196,20 @@
         return;
       }
       const query = input.value.trim();
-      const samePage = link.pathname === location.pathname;
+      const hashJump = link.pathname === location.pathname && !!link.hash;
       if (query.charAt(0) === "/" && query.length >= 3) {
         const pattern = query.slice(1);
-        if (samePage) activateSearch(pattern);
+        /* A same-page hash jump is the one landing with no page
+           change to deliver a pending pattern, so it arms
+           immediately. Every other landing re-renders the page —
+           a same-page row with no hash included (its own intro row):
+           navigation.instant refetches the URL, and the page-change
+           hook would wipe an immediate arm — so the pattern rides
+           the pending handoff and arms on arrival. */
+        if (hashJump) activateSearch(pattern);
         else setPendingSearch(pattern);
       }
-      if (samePage && link.hash) onDismiss();
+      if (hashJump) onDismiss();
     });
 
     input.addEventListener("input", render);
@@ -1226,6 +1233,12 @@
     });
 
     input.addEventListener("keydown", function (event) {
+      /* While an IME composition is active the keys belong to it: the
+         Enter that commits a conversion must not open a result, the
+         arrows move the candidate selection, and Escape cancels the
+         composition, not the prompt. 229 is the legacy keyCode
+         browsers report for the same state. */
+      if (event.isComposing || event.keyCode === 229) return;
       if (event.key === "ArrowDown" || event.key === "ArrowUp") {
         if (results.length) {
           const step = event.key === "ArrowDown" ? 1 : -1;
@@ -1325,23 +1338,44 @@
            which turns n/N — and Material's p/n page keys — into dead
            keys: with no armed search these fall through to the
            swallow and do nothing; with one armed, this handler wins
-           the race and cycles. */
+           the race and cycles. stopPropagation, not the immediate
+           form: Material's bubble handlers must never see the key,
+           but key-nav.js's capture listener on this same target
+           still must — its gg-chord bookkeeping observes every
+           keydown. */
         if (KilnUtils.isTypingTarget(event.target) || inPalette) return;
         if (!searchState.pattern || !searchState.ranges.length) return;
         cycleSearch(event.key === "n" ? 1 : -1);
         event.preventDefault();
-        event.stopImmediatePropagation();
+        event.stopPropagation();
         return;
       }
-      if (event.key === "Escape" && !inPalette) {
-        /* Clears the armed search — pattern, ranges, and tint in one
-           go (vim splits this between :noh and a new search; one key
-           is simpler and predictable). Not from typing contexts: an
-           Escape that leaves a widget input must not also clear the
-           page's highlights. The palette's own Escape lives on its
-           input and is untouched. */
+      if (event.key === "Escape") {
+        /* Dismissal for every focus the prompt can lose to: a click
+           on the help text or a message row lands focus on body, Tab
+           lands it on a result link — the input's own Escape handler
+           no longer hears the key there, so this one dismisses.
+           Typing contexts are left alone: the palette input's own
+           handler dismisses with the full reset, and an Escape that
+           leaves a widget's prompt must not also dismiss or clear
+           anything. With no prompt to dismiss, Escape clears the
+           armed search — pattern, ranges, and tint in one go (vim
+           splits this between :noh and a new search; one key is
+           simpler and predictable). */
         if (KilnUtils.isTypingTarget(event.target)) return;
-        if (searchState.pattern) clearSearch();
+        if (overlayOpen()) {
+          closeOverlay();
+          event.preventDefault();
+        } else if (
+          inlinePrompt &&
+          inlinePrompt.root.isConnected &&
+          inlinePrompt.input.value
+        ) {
+          dismissInline();
+          event.preventDefault();
+        } else if (searchState.pattern) {
+          clearSearch();
+        }
         return;
       }
 

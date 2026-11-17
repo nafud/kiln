@@ -128,6 +128,9 @@
     inputs[(index + 1) % inputs.length].click();
   }
 
+  /* Timestamp of the pending first g of a gg chord. */
+  let lastGAt = 0;
+
   /* Material also binds keys of its own: s/S, F and / focus its
      (hidden) search, p and n switch pages. This capture-phase
      listener runs before Material's own handler and neutralizes all
@@ -137,12 +140,28 @@
      would lose the race; the palette stays backtick's alone
      (quick-jump.js). n/N reach this swallow only while no /search is
      armed: quick-jump.js's capture listener registered earlier and
-     claims them (search-repeat motions) with stopImmediatePropagation
+     claims them (search-repeat motions), stopping their propagation
      when one is. All of them are plain dead keys here, and the
      browser default is left alone. */
   window.addEventListener(
     "keydown",
     function (event) {
+      /* Chord bookkeeping lives here, in the capture listener, so no
+         key can slip past it: the swallow below stops the bubble
+         phase for the dead keys, and quick-jump.js stops it for an
+         armed n/N, so a cancel in the bubble listener would miss
+         exactly those. Any keydown that is not a bare g — modifier
+         chords and keys typed into inputs included — cancels a
+         pending gg chord, as in vim; g s g must not read as gg. */
+      if (
+        event.key !== "g" ||
+        event.ctrlKey ||
+        event.altKey ||
+        event.metaKey ||
+        KilnUtils.isTypingTarget(event.target)
+      ) {
+        lastGAt = 0;
+      }
       if (event.ctrlKey || event.altKey || event.metaKey) return;
       if (KilnUtils.isTypingTarget(event.target)) return;
       if (
@@ -162,16 +181,9 @@
     true
   );
 
-  /* Timestamp of the pending first g of a gg chord. */
-  let lastGAt = 0;
-
   window.addEventListener("keydown", function (event) {
     if (event.ctrlKey || event.altKey || event.metaKey) return;
     if (KilnUtils.isTypingTarget(event.target)) return;
-
-    /* Any key other than g cancels a pending gg chord, as in vim —
-       g j g must not read as gg. */
-    if (event.key !== "g") lastGAt = 0;
 
     /* The scroll motions are the vim keys, case-accurate: gg (a
        two-tap chord) and G jump, lowercase j/k step — their
