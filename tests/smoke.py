@@ -414,10 +414,10 @@ def run(page):
         assert "1111 1111 1111 0000" in out and "s16   -16" in out, f"readout changed: {out!r}"
 
     with step("widgets: ds-roadmap steps tick and persist"):
-        key = "kiln.ds-roadmap.v1"
+        key = "kiln.ds-roadmap.v2"
         page.goto(f"{BASE}/guides/ds-roadmap/")
         page.wait_for_selector(".kiln-step-box")
-        # Every step is a list item opening with a week token that
+        # Every step is a list item opening with a course chip that
         # carries a unique <prefix>-<nn> id; the record is keyed on it.
         ids = page.eval_on_selector_all(
             "[data-step]",
@@ -429,8 +429,25 @@ def run(page):
         assert len({i[0] for i in ids}) == total, "duplicate step ids"
         for step_id, token, upgraded in ids:
             assert re.fullmatch(r"[a-z0-9]+-\d\d", step_id), f"bad step id {step_id!r}"
-            assert re.fullmatch(r"W\d\d(-\d\d)?", token), f"bad week token {token!r}"
+            assert re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9.-]*", token), f"bad chip {token!r}"
             assert upgraded, f"step {step_id} was not upgraded"
+        # The plan is one h2 per week, 26 of them, and every week with
+        # steps closes on the topics it leaves behind.
+        weeks = page.eval_on_selector_all(
+            ".md-content h2", "els => els.map(e => e.textContent.trim())"
+        )
+        weeks = [w for w in weeks if re.fullmatch(r"Week \d+", w)]
+        assert weeks == [f"Week {n}" for n in range(1, 27)], f"week headings: {weeks!r}"
+        afters = page.eval_on_selector_all(
+            ".md-content p > strong:first-child",
+            "els => els.filter(e => e.textContent === 'After this week.').length",
+        )
+        with_steps = page.eval_on_selector_all(
+            ".md-content h2", "els => els.filter(h => { let n = h.nextElementSibling;"
+            " while (n && n.tagName !== 'H2') { if (n.querySelector('[data-step]')) return true;"
+            " n = n.nextElementSibling; } return false; }).length",
+        )
+        assert afters == with_steps == 24, f"{afters} topic lines for {with_steps} weeks"
         # The page carries toggles and nothing else: no dashboard, no
         # prompt, no per-list meters (all removed at the owner's request).
         extras = page.eval_on_selector_all(
@@ -468,6 +485,36 @@ def run(page):
         page.wait_for_selector(".kiln-step-box")
         assert page.locator(".kiln-step--done").count() == 1
         assert boxes.nth(3).get_attribute("aria-checked") == "true", "old record not read"
+        # A week whose steps are all done dims its heading, and one
+        # untick brings the heading back.
+        first_week = page.eval_on_selector_all(
+            "h2#week-1 ~ ul.kiln-steps", "els => els[0].querySelectorAll('.kiln-step-box').length"
+        )
+        page.evaluate(f"() => localStorage.removeItem('{key}')")
+        page.reload()
+        page.wait_for_selector(".kiln-step-box")
+        dimmed = "() => document.querySelector('h2#week-1').classList.contains('kiln-week--done')"
+        for n in range(first_week):
+            assert not page.evaluate(dimmed), "week dimmed before its last step"
+            boxes.nth(n).click()
+        assert page.evaluate(dimmed), "finished week not dimmed"
+        assert page.locator("h2.kiln-week--done").count() == 1, "another week dimmed"
+        page.reload()
+        page.wait_for_selector(".kiln-step-box")
+        assert page.evaluate(dimmed), "finished week not dimmed after reload"
+        boxes.nth(0).click()
+        assert not page.evaluate(dimmed), "week still dimmed after an untick"
+        # The one-year plan's record (v1) is left alone and never read:
+        # its ids reuse prefixes, and an old tick must not land on a new step.
+        page.evaluate(
+            "([k, id]) => { localStorage.removeItem(k); localStorage.setItem("
+            "'kiln.ds-roadmap.v1', JSON.stringify({done: [id]})); }",
+            [key, ids[1][0]],
+        )
+        page.reload()
+        page.wait_for_selector(".kiln-step-box")
+        assert page.locator(".kiln-step--done").count() == 0, "the v1 record was read"
+        page.evaluate("() => localStorage.removeItem('kiln.ds-roadmap.v1')")
         # The toggles are buttons, so focus on one leaves the site keys live.
         boxes.nth(5).focus()
         page.keyboard.press("G")

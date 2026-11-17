@@ -252,25 +252,28 @@
 
   /* ---------- DS roadmap tracker ---------- */
 
-  /* The DS Roadmap guide's steps are plain list items that open with a
-     week token carrying the step id:
-         - `W01-02`{ data-step=py-01 } [Lectures 1 and 2](…) …
+  /* The DS Roadmap guide is one h2 section per week. A step is a plain
+     list item that opens with a chip naming its course and carrying
+     the step id:
+         - `18.05`{ data-step=st-01 } [Classes 1 to 3](…) …
      With JS off that is the whole page: a readable, linked list. This
-     widget upgrades each step with a toggle ([   ] open, [ + ] done)
-     and renders nothing else — the widget div is a hidden mount point.
-     (A dashboard with a start-date prompt, bars and a backup code used
+     widget upgrades each step with a toggle ([   ] open, [ + ] done),
+     dims the heading of a week whose steps are all done, and renders
+     nothing else — the widget div is a hidden mount point. (A
+     dashboard with a start-date prompt, bars and a backup code used
      to live in that div; the owner had it removed.)
 
      The record lives in localStorage only, as {done: [ids]}. Ids, not
-     list positions, key it, so editing the page's steps never shifts
-     what was ticked. Unknown fields of an older record (its start
-     date) are carried along untouched.
+     list positions, key it, so moving a step to another week never
+     shifts what was ticked. The key is v2: the 26-week plan replaced
+     the one-year plan and reuses prefixes, so the v1 record is left
+     alone and no old tick lands on a new step.
 
      The toggles are buttons, not checkboxes: KilnUtils.isTypingTarget
      counts every <input> as a typing target, and a focused checkbox
      would switch the site's key bindings off until it lost focus. */
 
-  const ROADMAP_KEY = "kiln.ds-roadmap.v1";
+  const ROADMAP_KEY = "kiln.ds-roadmap.v2";
 
   function roadmapLoad() {
     try {
@@ -293,14 +296,37 @@
     }
   }
 
+  /* The week a step belongs to is the nearest h2 above its list. */
+  function roadmapWeek(list) {
+    let node = list.previousElementSibling;
+    while (node && node.tagName !== "H2") node = node.previousElementSibling;
+    return node;
+  }
+
   function mountRoadmap(root) {
     const scope = root.closest(".md-typeset") || document;
     const state = roadmapLoad();
+    const weeks = new Map();
 
-    scope.querySelectorAll("[data-step]").forEach(function (chip) {
-      const item = chip.closest("li");
-      if (!item || !/^W\d{2}(?:-\d{2})?$/.test(chip.textContent.trim())) return;
+    /* A week with every step done steps its heading down the text
+       ladder, so the first heading at full strength is where the work
+       resumes. */
+    const paintWeek = function (heading) {
+      if (!heading) return;
+      const done = weeks.get(heading).every(function (id) {
+        return state.done.indexOf(id) !== -1;
+      });
+      heading.classList.toggle("kiln-week--done", done);
+    };
+
+    scope.querySelectorAll("li > code[data-step]:first-child").forEach(function (chip) {
+      const item = chip.parentElement;
       const id = chip.getAttribute("data-step");
+      const heading = roadmapWeek(item.parentElement);
+      if (heading) {
+        if (!weeks.has(heading)) weeks.set(heading, []);
+        weeks.get(heading).push(id);
+      }
 
       /* Wrap the content so the toggle sits in its own column. */
       const body = el("span", "kiln-step-body");
@@ -325,6 +351,7 @@
         else state.done.splice(at, 1);
         roadmapSave(state);
         paint();
+        paintWeek(heading);
       });
 
       item.classList.add("kiln-step");
@@ -332,6 +359,10 @@
       item.appendChild(box);
       item.appendChild(body);
       paint();
+    });
+
+    weeks.forEach(function (ids, heading) {
+      paintWeek(heading);
     });
   }
 

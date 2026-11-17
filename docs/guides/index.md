@@ -11,7 +11,7 @@ Usage guides and cheat sheets for the tools in regular use.
 
 <a class="home-card" href="ds-roadmap/">
 <span class="home-card-title">DS Roadmap</span>
-<span class="home-card-text">One year of free MIT courses to data science, tracked.</span>
+<span class="home-card-text">Twenty-six weeks of MIT courses and LeetCode to data science, tracked.</span>
 </a>
 
 <a class="home-card" href="leetcode/">
