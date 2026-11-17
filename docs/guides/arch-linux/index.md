@@ -55,8 +55,10 @@ optional sections, the header backup, the deep standby line and
 Secure Boot, stay manual.
 
 After the reboot, log in, join the network, and check the machine
-with the script's second command, which runs every live verification
-of the chapters above and prints a row per condition.
+with the script's second command, which runs the live verifications
+of the chapters above and prints a row per condition. The one check
+it leaves manual is the Snapshots chapter's bracket test, installing
+a package and watching the pre and post snapshots appear.
 
 ```bash
 curl -fsSLO https://nafud.github.io/kiln/assets/arch-linux/install
@@ -1356,7 +1358,7 @@ sudo etckeeper commit "package list hook"
 sudo etckeeper vcs log --oneline
 ```
 
-The log shows the three commits, and the next pacman transaction adds
+The log shows the two commits, and the next pacman transaction adds
 its pair on its own.
 
 ## Secure Boot

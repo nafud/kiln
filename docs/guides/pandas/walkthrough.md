@@ -1,6 +1,6 @@
 # Walkthrough
 
-One table taken from the first `read_csv` to a cross-validated score, thirty-four cells in notebook order, each with its code, the output it printed, and what every call does. The file is an employee attrition table of 3540 rows, published at [employees.csv](../../assets/pandas/employees.csv) so every output below can be reproduced from the URL in cell 1.
+One table taken from the first `read_csv` to a cross-validated score, thirty-four numbered cells in notebook order, each with its code, the output it printed, and what every call does. The file is an employee attrition table of 3540 rows, published at [employees.csv](../../assets/pandas/employees.csv) so every output below can be reproduced from the URL in cell 1.
 
 ---
 
@@ -734,7 +734,7 @@ dtype: float64
 
 ```python
 cv = cross_val_score(model, X, y, cv=5, scoring="roc_auc")
-cv.round(3), round(cv.mean(), 3), round(cv.std(), 3)
+print(cv.round(3), "mean", round(cv.mean(), 3), "std", round(cv.std(), 3))
 ```
 
 ```text
