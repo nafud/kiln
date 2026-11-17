@@ -1,8 +1,8 @@
 # Chapter 2. ARM
 
-The Acorn RISC Machine (later Advanced RISC Machine) is a 32-bit RISC architecture designed by Acorn Computers in the late 1980s and now licensed by ARM Holdings. It is dominant in embedded devices — phones, automobile electronics, media players, televisions. The architecture specifications are numbered ARMv1 through ARMv7; most devices run ARMv4, 5, 6, or 7. This chapter covers ARMv7 as defined in the *ARM Architecture Reference Manual: ARMv7-A and ARMv7-R Edition* (ARM DDI 0406B).
+The Acorn RISC Machine (later Advanced RISC Machine) is a 32-bit RISC architecture designed by Acorn Computers in the late 1980s and now licensed by ARM Holdings. It is dominant in embedded devices (phones, automobile electronics, media players, televisions). The architecture specifications are numbered ARMv1 through ARMv7; most devices run ARMv4, 5, 6, or 7. This chapter covers ARMv7 as defined in the *ARM Architecture Reference Manual: ARMv7-A and ARMv7-R Edition* (ARM DDI 0406B).
 
-ARM licenses the architecture rather than manufacturing chips. Companies such as Apple, NVIDIA, Qualcomm, and Texas Instruments build processors (A, Tegra, Snapdragon, OMAP) on licensed cores. Optional extensions are each denoted by a letter: Jazelle (J) runs Java bytecode natively; Thumb (T) adds 16/32-bit instructions for higher code density; Debug (D) enables hardware debugging. Pre-ARMv7 cores append these letters (e.g., ARM1156T2). ARMv7 replaces this with three profiles — Application, Real-time, Microcontroller — and Cortex model names (Cortex-A, Cortex-M).
+ARM licenses the architecture rather than manufacturing chips. Companies such as Apple, NVIDIA, Qualcomm, and Texas Instruments build processors (A, Tegra, Snapdragon, OMAP) on licensed cores. Optional extensions are each denoted by a letter: Jazelle (J) runs Java bytecode natively; Thumb (T) adds 16/32-bit instructions for higher code density; Debug (D) enables hardware debugging. Pre-ARMv7 cores append these letters (e.g., ARM1156T2). ARMv7 replaces this with three profiles (Application, Real-time, Microcontroller) and Cortex model names (Cortex-A, Cortex-M).
 
 ## Basic Features
 
@@ -77,13 +77,13 @@ System settings live in coprocessors rather than dedicated control registers. Th
 !!! note "NEON"
     NEON is the single-instruction multiple-data (SIMD) instruction set for multimedia, comparable to SSE/MMX on x86.
 
-Each coprocessor has 16 registers and eight opcodes. They are accessed only through `MRC` (read) and `MCR` (write), which take a coprocessor number, register numbers, and opcodes:
+Each coprocessor has 16 registers and eight opcodes. They are accessed only through `MRC` (read) and `MCR` (write), which take a coprocessor number, register numbers, and opcodes.
 
 ```asm
 MRC p15, 0, r0, c2, c0, 0   ; read CP15 C2/C0 (translation base) into R0
 ```
 
-`MRC`/`MCR` do not require high privilege, but some coprocessor registers are accessible only in SVC mode; an under-privileged access faults. These instructions appear mostly in low-level code — ROM, boot loaders, firmware, kernel.
+`MRC`/`MCR` do not require high privilege, but some coprocessor registers are accessible only in SVC mode; an under-privileged access faults. These instructions appear mostly in low-level code (ROM, boot loaders, firmware, kernel).
 
 ## Introduction to the Instruction Set
 
@@ -125,7 +125,7 @@ The immediate form corresponds to `MOV Reg, [Reg + Imm]` on x86, the register fo
 
 ### Other Uses for LDR
 
-`LDR Rd, =value` is a pseudo-instruction that loads a 32-bit constant, string address, or imported-function offset from the literal pool — a data area within the code section — using PC-relative addressing. It lets a full 32-bit constant be loaded in one instruction.
+`LDR Rd, =value` is a pseudo-instruction that loads a 32-bit constant, string address, or imported-function offset from the literal pool (a data area within the code section) using PC-relative addressing. It lets a full 32-bit constant be loaded in one instruction.
 
 ```asm
 01: .text:0100B134 35 4B  LDR R3, =0x68DB8BAD   ; actually LDR R3, [PC, #0xD4]
@@ -191,7 +191,7 @@ Basic operations are `ADD`, `SUB`, `MUL`, `AND`, `ORR`, `EOR`.
 !!! note "The S suffix"
     ARM arithmetic instructions do not set condition flags by default. The `S` suffix (`ADDS`, `ANDS`, `ORRS`) makes the instruction update the flags. This differs from x86, where arithmetic updates flags implicitly.
 
-`MUL` keeps only the low 32 bits of the product; full 64-bit results use `SMULL`/`UMULL`. ARM (ARMv7-A) has no native divide instruction — division calls a software routine such as `__rt_udiv`. (`SDIV`/`UDIV` exist on ARMv7-R and ARMv7-M.)
+`MUL` keeps only the low 32 bits of the product; full 64-bit results use `SMULL`/`UMULL`. ARM (ARMv7-A) has no native divide instruction; division calls a software routine such as `__rt_udiv`. (`SDIV`/`UDIV` exist on ARMv7-R and ARMv7-M.)
 
 ## Branching and Conditional Execution
 
@@ -229,7 +229,7 @@ Any suffix appended to a branch makes it conditional (`BLT` = branch if less tha
 | `CBNZ Rn, label` | Branch to label if `Rn` is non-zero (Thumb-2)        |
 | `CMN` / `TEQ`    | Addition / exclusive-or forms, uncommon               |
 
-Instruction-level conditional execution can eliminate branches entirely:
+Instruction-level conditional execution can eliminate branches entirely.
 
 ```asm
 01: 00 00 50 E3  CMP R0, #0          ; if (a == NULL)
@@ -271,7 +271,7 @@ The core has separate instruction (i-cache) and data (d-cache) caches that are n
 
 ### Synchronization Primitives
 
-ARM has no `cmpxchg`. Instead `LDREX` and `STREX` acquire exclusive access to a memory address before load/store, together implementing compare-and-exchange — this is how `InterlockedCompareExchange` is built on Windows. The barrier instructions `DMB`, `DSB`, and `ISB` synchronize memory access and instruction fetch, and appear in lock implementations because memory access and fetches can occur out of order.
+ARM has no `cmpxchg`. Instead `LDREX` and `STREX` acquire exclusive access to a memory address before load/store, together implementing compare-and-exchange; this is how `InterlockedCompareExchange` is built on Windows. The barrier instructions `DMB`, `DSB`, and `ISB` synchronize memory access and instruction fetch, and appear in lock implementations because memory access and fetches can occur out of order.
 
 ## System Services and Mechanisms
 
@@ -291,7 +291,7 @@ SVC 0                            SVC 1
                                  BX LR
 ```
 
-On entering SVC, the return address is copied to `R14_svc`, a banked register — one with meaning only in a particular processor mode. `R13_svc` and `R14_svc` hold different values than their USR counterparts.
+On entering SVC, the return address is copied to `R14_svc`, a banked register, one with meaning only in a particular processor mode. `R13_svc` and `R14_svc` hold different values than their USR counterparts.
 
 Software breakpoints are implemented via the `BKPT` instruction (triggers the prefetch abort handler) or via an undefined instruction (triggers the undefined-instruction handler); the ARM encoding reserves a guaranteed-undefined range.
 
@@ -311,13 +311,13 @@ FE FF FF EA 1C F1 9F E5 00 00 A0 E1 18 01 9F E5
 
 The chapter's walk-through decompiles an unknown Thumb-2 function, deriving facts before inferring types:
 
-- **State**: Thumb-2, from the `PUSH`/`POP` prologue/epilogue, 16/32-bit instruction sizes, and `.W` suffixes.
-- **Prototype**: four arguments (`R0`–`R3`) and a Boolean return (`R0`), from the ABI. `R0`/`R1` are structure pointers, evident from base-plus-offset loads at non-sequential offsets (`0x10`, `0x18`, `0x1C`).
-- **Field types**: an `LDRH` implies a `short` field; an equality `CMP` between two fields implies both are integers of the same type; `AND`/`ORR` against integer arguments imply integer fields.
+- **State.** Thumb-2, from the `PUSH`/`POP` prologue/epilogue, 16/32-bit instruction sizes, and `.W` suffixes.
+- **Prototype.** Four arguments (`R0`–`R3`) and a Boolean return (`R0`), from the ABI. `R0`/`R1` are structure pointers, evident from base-plus-offset loads at non-sequential offsets (`0x10`, `0x18`, `0x1C`).
+- **Field types.** An `LDRH` implies a `short` field; an equality `CMP` between two fields implies both are integers of the same type; `AND`/`ORR` against integer arguments imply integer fields.
 
 Chained loads recover nested structures: a load using a previously loaded field as a new base reveals a pointer member. A multiply-by-24 scaling (`R2*3*8`, where `R2` is an index) reveals an array whose element size is `0x18`.
 
 !!! note "Adjacent AND on two fields"
-    An `AND` applied across two adjacent integer fields (each in its own register/memory location) usually indicates a 64-bit value split into two 32-bit halves — a common pattern for handling 64-bit constants on 32-bit architectures.
+    An `AND` applied across two adjacent integer fields (each in its own register/memory location) usually indicates a 64-bit value split into two 32-bit halves, a common pattern for handling 64-bit constants on 32-bit architectures.
 
 Approaching an unknown function: state the certain facts first (state, preserved registers, prototype, exit paths), then use them to infer structure field types (width and signedness) from the instructions and conditional codes that touch each field.

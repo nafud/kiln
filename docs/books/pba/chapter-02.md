@@ -36,13 +36,13 @@ Inspect with `readelf -h`.
 
 ### `e_ident`
 
-16-byte array. Starts with a 4-byte magic value: `0x7f` followed by ASCII `E`, `L`, `F` — lets tools identify ELF files immediately. Then:
+16-byte array. Starts with a 4-byte magic value: `0x7f` followed by ASCII `E`, `L`, `F`, which lets tools identify ELF files immediately. Then:
 
 | Byte | Values | Meaning |
 |---|---|---|
 | `EI_CLASS` | `ELFCLASS32` (1), `ELFCLASS64` (2) | 32-bit or 64-bit architecture |
 | `EI_DATA` | `ELFDATA2LSB` (1), `ELFDATA2MSB` (2) | Little- or big-endian |
-| `EI_VERSION` | `EV_CURRENT` (1) — only valid value | ELF specification version |
+| `EI_VERSION` | `EV_CURRENT` (1), the only valid value | ELF specification version |
 | `EI_OSABI` | 0 = UNIX System V ABI (default) | Nonzero signals ABI/OS-specific extensions |
 | `EI_ABIVERSION` | Usually 0 | Version of the ABI in `EI_OSABI` |
 | `EI_PAD` | Zeroed | Padding, bytes 9–15, reserved |
@@ -66,7 +66,7 @@ Inspect with `readelf -h`.
 
 Code and data are logically divided into contiguous, nonoverlapping *sections*. Sections have no predetermined structure; each is described by a section header in the section header table.
 
-The section view exists **for the linker** (link time). It is optional: files that don't need linking may omit the table (`e_shoff = 0`). Execution uses a different organization — *segments* (Section 2.4).
+The section view exists **for the linker** (link time). It is optional: files that don't need linking may omit the table (`e_shoff = 0`). Execution uses a different organization, *segments* (Section 2.4).
 
 ```c
 typedef struct {
@@ -87,10 +87,10 @@ typedef struct {
 |---|---|
 | `sh_name` | Index into `.shstrtab`; 0 = unnamed |
 | `sh_type` | See table below |
-| `sh_flags` | `SHF_WRITE` (writable at runtime), `SHF_ALLOC` (loaded into memory at execution — actual loading uses the segment view), `SHF_EXECINSTR` (contains executable instructions) |
+| `sh_flags` | `SHF_WRITE` (writable at runtime), `SHF_ALLOC` (loaded into memory at execution; actual loading uses the segment view), `SHF_EXECINSTR` (contains executable instructions) |
 | `sh_addr` | Virtual address; 0 if not loaded at runtime. Present because the linker needs runtime addresses for relocations |
 | `sh_offset`, `sh_size` | File offset (bytes from file start) and size |
-| `sh_link` | Section header table index of a related section — e.g. the string table for a symbol table, or the symbol table for a relocation section |
+| `sh_link` | Section header table index of a related section, e.g. the string table for a symbol table, or the symbol table for a relocation section |
 | `sh_info` | Type-dependent; for relocation sections, index of the section the relocations apply to |
 | `sh_addralign` | Required alignment of the base address; 0 and 1 mean no requirement |
 | `sh_entsize` | Entry size for table sections (symbol tables, relocation tables); 0 if unused |
@@ -106,7 +106,7 @@ typedef struct {
 | `SHT_NULL` | First entry of every section header table; fully zeroed, no associated section |
 
 !!! warning "Malware"
-    `sh_name` contents are not trustworthy when analyzing malware — section names may be intentionally misleading.
+    `sh_name` contents are not trustworthy when analyzing malware; section names may be intentionally misleading.
 
 ## 2.3 Sections
 
@@ -114,11 +114,11 @@ List with `readelf --sections --wide`.
 
 ### `.init` and `.fini`
 
-Executable code run before control transfers to the entry point (`.init` — think constructor) and after the main program completes (`.fini` — destructor).
+Executable code run before control transfers to the entry point (`.init`, think constructor) and after the main program completes (`.fini`, destructor).
 
 ### `.text`
 
-Main code section: `SHT_PROGBITS`, flags `AX` — executable, **not** writable. Executable sections should almost never be writable: it would let an attacker exploiting a vulnerability overwrite code directly.
+Main code section: `SHT_PROGBITS`, flags `AX`, executable and **not** writable. Executable sections should almost never be writable: it would let an attacker exploiting a vulnerability overwrite code directly.
 
 Besides user code, gcc places standard functions here: `_start`, `register_tm_clones`, `frame_dummy`, etc. The binary's entry point is `_start`, not `main`: `_start` moves `main`'s address into `rdi` (first x64 parameter register) and calls `__libc_start_main`, which in turn calls `main`.
 
@@ -130,11 +130,11 @@ Besides user code, gcc places standard functions here: `_start`, `register_tm_cl
 | `.data` | Default values of initialized variables | `SHT_PROGBITS` | Yes |
 | `.bss` | Space reserved for uninitialized (zero-initialized) variables | `SHT_NOBITS` | Yes |
 
-`.bss` ("block started by symbol") occupies no bytes on disk — it is a directive to allocate a zeroed block at load time. Compilers occasionally emit constant data in code sections (Visual Studio does; modern gcc/clang generally don't), which complicates disassembly.
+`.bss` ("block started by symbol") occupies no bytes on disk; it is a directive to allocate a zeroed block at load time. Compilers occasionally emit constant data in code sections (Visual Studio does; modern gcc/clang generally don't), which complicates disassembly.
 
 ### Lazy Binding: `.plt`, `.got`, and `.got.plt`
 
-Relocations for shared-library functions are typically deferred until a reference is first invoked — *lazy binding*. The dynamic linker thus performs only the relocations actually needed at runtime. Default on Linux; `export LD_BIND_NOW=1` forces immediate resolution (e.g. for real-time guarantees).
+Relocations for shared-library functions are typically deferred until a reference is first invoked (*lazy binding*). The dynamic linker thus performs only the relocations actually needed at runtime. Default on Linux; `export LD_BIND_NOW=1` forces immediate resolution (e.g. for real-time guarantees).
 
 Implemented via the *Procedure Linkage Table* (`.plt`, executable code) and the *Global Offset Table* (`.got.plt`, data). The PLT consists of stubs of fixed format: one default stub, then one per library function, each pushing an incremented identifier.
 
@@ -152,13 +152,13 @@ Resolution of a first call to `puts`:
 - Security: code sections stay non-writable. The GOT is data, so it may be writable; corrupting GOT addresses is a far weaker attack primitive than injecting code.
 - Shareability: one physical copy of a library is mapped at different virtual addresses in different processes. Addresses can't be patched into shared code, but each process has a private GOT.
 
-Data references to relocatable symbols also go through the GOT — directly, without a PLT step. Hence the split: `.got` for data references, `.got.plt` for resolved function addresses used by the PLT.
+Data references to relocatable symbols also go through the GOT, directly and without a PLT step. Hence the split: `.got` for data references, `.got.plt` for resolved function addresses used by the PLT.
 
 !!! note "RELRO"
     `.got.plt` is runtime-writable; `.got` is not when RELRO (*relocations read-only*, `ld -z relro`) is enabled. RELRO keeps entries that must stay writable for lazy binding in `.got.plt` and all others in read-only `.got`.
 
 !!! note "`.plt.got`"
-    An alternative PLT that uses read-only `.got` entries instead of `.got.plt`. Emitted with `ld -z now` ("now binding" — same effect as `LD_BIND_NOW=1`, but known at link time), allowing GOT entries in `.got` for security and 8-byte stubs instead of 16-byte `.plt` stubs.
+    An alternative PLT that uses read-only `.got` entries instead of `.got.plt`. Emitted with `ld -z now` ("now binding"; the same effect as `LD_BIND_NOW=1`, but known at link time), allowing GOT entries in `.got` for security and 8-byte stubs instead of 16-byte `.plt` stubs.
 
 ### `.rel.*` and `.rela.*`
 
@@ -177,13 +177,13 @@ A road map for the OS and dynamic linker when loading: a table of `Elf64_Dyn` st
 
 | Tag | Meaning |
 |---|---|
-| `DT_NEEDED` | A dependency, e.g. `libc.so.6` — must be loaded to run the binary |
+| `DT_NEEDED` | A dependency, e.g. `libc.so.6`, which must be loaded to run the binary |
 | `DT_VERNEED`, `DT_VERNEEDNUM` | Start address and entry count of the version dependency table |
 | `DT_STRTAB`, `DT_SYMTAB`, `DT_PLTGOT`, `DT_RELA` | Pointers to the dynamic string table, dynamic symbol table, `.got.plt`, and dynamic relocation section |
 
 ### `.init_array` and `.fini_array`
 
-Arrays of function pointers: constructors called in turn before `main`, destructors after. Unlike `.init`'s single startup function, these are data sections holding arbitrarily many pointers — mark C functions with `__attribute__((constructor))` to register them. Easy to modify, hence a convenient hook point for inserting initialization/finalization code. Older gcc emits `.ctors`/`.dtors` instead.
+Arrays of function pointers: constructors called in turn before `main`, destructors after. Unlike `.init`'s single startup function, these are data sections holding arbitrarily many pointers; mark C functions with `__attribute__((constructor))` to register them. Easy to modify, hence a convenient hook point for inserting initialization/finalization code. Older gcc emits `.ctors`/`.dtors` instead.
 
 ### String and symbol tables
 
@@ -216,9 +216,9 @@ typedef struct {
 
 | Field | Notes |
 |---|---|
-| `p_type` | `PT_LOAD`: loaded into memory at process setup — usually at least two, one non-writable (code) and one writable (data). `PT_INTERP`: contains `.interp` (interpreter path). `PT_DYNAMIC`: contains `.dynamic`. `PT_PHDR`: the program header table itself |
-| `p_flags` | Runtime permissions: `PF_X` (executable; `readelf` shows `E`), `PF_W` (writable — data segments only, never code), `PF_R` (readable) |
-| `p_offset`, `p_vaddr`, `p_filesz` | Analogous to `sh_offset`, `sh_addr`, `sh_size`. For loadable segments, `p_vaddr ≡ p_offset (mod page size)` — page size typically 4,096 bytes |
+| `p_type` | `PT_LOAD`: loaded into memory at process setup; usually at least two, one non-writable (code) and one writable (data). `PT_INTERP`: contains `.interp` (interpreter path). `PT_DYNAMIC`: contains `.dynamic`. `PT_PHDR`: the program header table itself |
+| `p_flags` | Runtime permissions: `PF_X` (executable; `readelf` shows `E`), `PF_W` (writable; data segments only, never code), `PF_R` (readable) |
+| `p_offset`, `p_vaddr`, `p_filesz` | Analogous to `sh_offset`, `sh_addr`, `sh_size`. For loadable segments, `p_vaddr ≡ p_offset (mod page size)`, page size typically 4,096 bytes |
 | `p_paddr` | Physical load address on some systems; unused (zero) on modern OSes, which execute everything in virtual memory |
 | `p_memsz` | May exceed `p_filesz` (e.g. `.bss`: zeros aren't stored on disk); the loader appends the extra bytes and zero-initializes them |
 | `p_align` | 0 or 1 = no requirement; otherwise a power of 2, with `p_vaddr ≡ p_offset (mod p_align)` |

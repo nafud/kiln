@@ -161,7 +161,7 @@ raw bytes.
 | Key   | Action                                            |
 | ----- | ------------------------------------------------- |
 | `V`   | Hex/disasm view (Enter to open, `q` to leave)     |
-| `VV`  | Graph mode — control-flow graph of the function   |
+| `VV`  | Graph mode, the control-flow graph of the function |
 | `Vv`  | Function/analysis menu (rename, set types, xrefs) |
 | `v`   | Visual panels (split dashboard view)              |
 | `Vpp` | Visual debugger layout                            |
@@ -238,7 +238,7 @@ dashboard.
 
 !!! warning "Write mode required"
     Open with `r2 -w <file>` (or `oo+` mid-session) before any write. Writes hit
-    the file on disk — work on a copy.
+    the file on disk, so work on a copy.
 
 ```bash
 wx <hexbytes>          # Write raw hex at the current offset

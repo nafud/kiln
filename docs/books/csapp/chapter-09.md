@@ -2,22 +2,22 @@
 
 Virtual memory (VM) is an abstraction of main memory built from hardware exceptions, hardware address translation, main memory, disk files, and kernel software. It gives each process a large, uniform, private address space and provides three capabilities:
 
-1. **Caching** — treats main memory as a cache for an address space stored on disk; only active areas reside in DRAM.
-2. **Memory management** — gives every process a uniform address space.
-3. **Protection** — isolates each process's address space from corruption by others.
+1. **Caching.** Treats main memory as a cache for an address space stored on disk; only active areas reside in DRAM.
+2. **Memory management.** Gives every process a uniform address space.
+3. **Protection.** Isolates each process's address space from corruption by others.
 
 ## 9.1 Physical and Virtual Addressing
 
 - Main memory: array of M contiguous byte-size cells; each byte has a unique **physical address (PA)** starting at 0.
-- **Physical addressing**: CPU uses PAs directly. Used by early PCs, DSPs, embedded microcontrollers, Cray supercomputers.
-- **Virtual addressing**: CPU generates a **virtual address (VA)**, converted to a PA before reaching main memory. The conversion is **address translation**, performed on the fly by the **memory management unit (MMU)** on the CPU chip, using a lookup table in main memory managed by the OS.
+- **Physical addressing.** CPU uses PAs directly. Used by early PCs, DSPs, embedded microcontrollers, Cray supercomputers.
+- **Virtual addressing.** CPU generates a **virtual address (VA)**, converted to a PA before reaching main memory. The conversion is **address translation**, performed on the fly by the **memory management unit (MMU)** on the CPU chip, using a lookup table in main memory managed by the OS.
 
 ## 9.2 Address Spaces
 
 - An **address space** is an ordered set of nonnegative integer addresses; **linear** if consecutive (assumed throughout).
-- **Virtual address space**: N = 2ⁿ addresses {0, …, N−1}; an *n-bit* address space. Modern systems: 32- or 64-bit.
-- **Physical address space**: {0, …, M−1} for M bytes of physical memory; assume M = 2ᵐ.
-- Key idea: each byte of main memory has a VA from the virtual address space *and* a PA from the physical address space — one data object, multiple independent addresses.
+- **Virtual address space.** N = 2ⁿ addresses {0, …, N−1}; an *n-bit* address space. Modern systems: 32- or 64-bit.
+- **Physical address space.** {0, …, M−1} for M bytes of physical memory; assume M = 2ᵐ.
+- Key idea: each byte of main memory has a VA from the virtual address space *and* a PA from the physical address space; one data object, multiple independent addresses.
 
 ## 9.3 VM as a Tool for Caching
 
@@ -36,7 +36,7 @@ Virtual memory (VM) is an abstraction of main memory built from hardware excepti
 - Terminology: **SRAM cache** = L1/L2/L3; **DRAM cache** = VM's page cache in main memory.
 - DRAM ≈ 10× slower than SRAM; disk ≈ 100,000× slower than DRAM; first byte of a disk sector ≈ 100,000× slower than successive bytes. Misses served from disk are enormously expensive, which drives the whole design:
   - Pages are large: 4 KB–2 MB.
-  - Fully associative — any VP can go in any PP.
+  - Fully associative; any VP can go in any PP.
   - Sophisticated OS replacement algorithms (vs. simple hardware policies for SRAM).
   - Always write-back, never write-through.
 
@@ -60,7 +60,7 @@ Reference to a word in a cached VP: hardware uses the VA to locate the PTE, sees
   2. Copies the requested page from disk into the freed PP; updates its PTE.
   3. Returns, restarting the faulting instruction, which now hits.
 - VM terminology: blocks = **pages**; transferring pages = **swapping**/**paging** (swapped/paged in and out).
-- **Demand paging**: wait until a miss to swap a page in. All modern systems use it.
+- **Demand paging.** Wait until a miss to swap a page in. All modern systems use it.
 
 ### 9.3.5 Allocating Pages
 
@@ -69,23 +69,23 @@ Reference to a word in a cached VP: hardware uses the VA to locate the PTE, sees
 ### 9.3.6 Locality to the Rescue
 
 - Programs tend to work on a **working set** (**resident set**) of active pages. After the initial overhead of paging it in, references hit with no further disk traffic.
-- If the working set exceeds physical memory: **thrashing** — pages swap in and out continuously. When a program crawls, suspect thrashing.
+- If the working set exceeds physical memory: **thrashing**, where pages swap in and out continuously. When a program crawls, suspect thrashing.
 
 ## 9.4 VM as a Tool for Memory Management
 
-- The OS keeps a **separate page table — hence a separate virtual address space — per process**. Multiple VPs (from different processes) can map to the same shared PP.
+- The OS keeps a **separate page table, hence a separate virtual address space, per process**. Multiple VPs (from different processes) can map to the same shared PP.
 - Some early systems (DEC PDP-11/70) had virtual address spaces *smaller* than physical memory; VM was still valuable for management and protection.
 - Consequences:
-  - **Simplifies linking**: every process uses the same memory-image format regardless of physical placement (64-bit Linux: code segment starts at 0x400000, data follows after an alignment gap, stack at the top of the user space).
-  - **Simplifies loading**: the loader allocates VPs for code/data areas, marks them invalid, and points PTEs into the object file — no copying; pages fault in on first reference. Mapping contiguous VPs to an arbitrary file location = **memory mapping** (`mmap`).
-  - **Simplifies sharing**: map different processes' VPs to the same PPs (kernel code, C standard library).
-  - **Simplifies allocation**: k contiguous *virtual* pages can map to k *arbitrary* physical pages; no contiguity needed in DRAM.
+  - **Simplifies linking.** Every process uses the same memory-image format regardless of physical placement (64-bit Linux: code segment starts at 0x400000, data follows after an alignment gap, stack at the top of the user space).
+  - **Simplifies loading.** The loader allocates VPs for code/data areas, marks them invalid, and points PTEs into the object file, with no copying; pages fault in on first reference. Mapping contiguous VPs to an arbitrary file location = **memory mapping** (`mmap`).
+  - **Simplifies sharing.** Map different processes' VPs to the same PPs (kernel code, C standard library).
+  - **Simplifies allocation.** Any k contiguous *virtual* pages can map to k *arbitrary* physical pages; no contiguity needed in DRAM.
 
 ## 9.5 VM as a Tool for Memory Protection
 
 - Permission bits added to each PTE, checked on every translation. Example scheme:
-  - **SUP**: page requires kernel (supervisor) mode.
-  - **READ**, **WRITE**: read/write access control.
+  - **SUP.** Page requires kernel (supervisor) mode.
+  - **READ**, **WRITE**. Read/write access control.
 - A violating instruction triggers a general protection fault → kernel sends SIGSEGV to the process. Reported by Linux shells as a "segmentation fault."
 
 ## 9.6 Address Translation
@@ -104,14 +104,14 @@ Symbols:
 - **PTBR** (page table base register) points to the current page table.
 - n-bit VA = (n−p)-bit **VPN** ∥ p-bit **VPO**. VPN indexes the page table (VPN 0 → PTE 0, …). PA = **PPN** (from PTE) ∥ **VPO**. Since pages are P bytes on both sides, **PPO = VPO**.
 
-**Page hit (all hardware):**
+**Page hit (all hardware).**
 1. CPU sends VA to MMU.
 2. MMU computes the PTE address (PTEA) and requests it from cache/main memory.
 3. Cache/main memory returns the PTE.
 4. MMU builds the PA and sends it to cache/main memory.
 5. Cache/main memory returns the data word to the CPU.
 
-**Page fault (hardware + kernel):**
+**Page fault (hardware + kernel).**
 1–3. Same as above.
 4. Valid bit = 0 → MMU triggers an exception; control transfers to the kernel's page fault handler.
 5. Handler picks a victim PP; pages it out to disk if modified.
@@ -124,16 +124,16 @@ Most systems use **physically addressed** SRAM caches: translation happens befor
 
 ### 9.6.2 TLB
 
-- Worst-case PTE fetch costs tens–hundreds of cycles from memory (a few from L1). The **translation lookaside buffer (TLB)** — a small, virtually addressed cache inside the MMU, one PTE per line, high associativity — usually eliminates even that.
+- Worst-case PTE fetch costs tens–hundreds of cycles from memory (a few from L1). The **translation lookaside buffer (TLB)** (a small, virtually addressed cache inside the MMU, one PTE per line, high associativity) usually eliminates even that.
 - With T = 2ᵗ sets: **TLBI** = t low-order bits of the VPN; **TLBT** = remaining VPN bits.
 
-**TLB hit (all steps inside the on-chip MMU — fast):**
+**TLB hit (all steps inside the on-chip MMU, fast).**
 1. CPU generates a VA.
 2–3. MMU fetches the PTE from the TLB.
 4. MMU translates and sends the PA to cache/main memory.
 5. Cache/main memory returns the data word.
 
-**TLB miss:** MMU fetches the PTE from the L1 cache (or memory); the fetched PTE is stored in the TLB, possibly evicting an entry.
+**TLB miss.** MMU fetches the PTE from the L1 cache (or memory); the fetched PTE is stored in the TLB, possibly evicting an entry.
 
 ### 9.6.3 Multi-Level Page Tables
 
@@ -142,7 +142,7 @@ Most systems use **physically addressed** SRAM caches: translation happens befor
   - Each level-1 PTE covers a 4 MB chunk (1,024 pages); 1,024 L1 PTEs cover the 4 GB space.
   - L1 PTE = null if its whole chunk is unallocated; else points to a level-2 page table whose PTEs each map one 4 KB page.
   - Each L1/L2 table is 4-byte × 1,024 = 4 KB = exactly one page.
-- Savings: (1) null L1 PTE → the L2 table need not exist (most of a typical address space is unallocated); (2) only the L1 table must stay resident — L2 tables are paged in/out on demand.
+- Savings: (1) null L1 PTE → the L2 table need not exist (most of a typical address space is unallocated); (2) only the L1 table must stay resident; L2 tables are paged in/out on demand.
 - k-level translation: VA = VPN₁ ∥ … ∥ VPNₖ ∥ VPO; VPNᵢ indexes the level-i table; level-j PTEs (j < k) point to level-(j+1) tables; level-k PTEs hold a PPN or disk address. PA = PPN ∥ VPO (PPO = VPO). The MMU must access k PTEs, but the TLB caches PTEs from all levels, so in practice multi-level translation is not significantly slower than single-level.
 
 ### 9.6.4 End-to-End Example
@@ -168,18 +168,18 @@ Other paths: TLB miss → fetch PTE from the page table; invalid PTE → page fa
 - **CR3** holds the physical address of the L1 table; part of the process context, restored on context switch.
 - 36-bit VPN split into four 9-bit chunks, each indexing one level. Reach per entry: L1 PTE = 512 GB, L2 = 1 GB, L3 = 2 MB, L4 = 4 KB page. PPN = 40 bits, PPO = VPO = 12 bits.
 - Level 1–3 PTE fields (P = 1 always under Linux): P (child table present), R/W and U/S (permissions for all reachable pages), WT, CD (cache policy for child table), A (reference bit, set by MMU, cleared by software), PS (4 KB vs. 4 MB pages; L1 only), 40-bit base address of the child table (forces 4 KB alignment), XD (disable instruction fetch from reachable pages).
-- Level 4 PTE additionally: **D** (dirty bit, set by MMU on writes) and **G** (global — don't evict from TLB on task switch); base address points to a 4 KB physical page.
-- Permission bits: R/W (read-only vs. read/write), U/S (user vs. kernel-only), XD (no-execute — lets the kernel restrict execution to the code segment, mitigating buffer-overflow attacks).
+- Level 4 PTE additionally: **D** (dirty bit, set by MMU on writes) and **G** (global; don't evict from TLB on task switch); base address points to a 4 KB physical page.
+- Permission bits: R/W (read-only vs. read/write), U/S (user vs. kernel-only), XD (no-execute; lets the kernel restrict execution to the code segment, mitigating buffer-overflow attacks).
 - A and D bits support the kernel's replacement policy and write-back decision; cleared via a kernel-mode instruction.
 - Cache/VPO orchestration: with 64 sets × 64-byte blocks, CI + CO = 12 bits = VPO exactly. While the MMU queries the TLB with the VPN, L1 uses the VPO bits to read the set's 8 tags and words; when the PPN arrives, the cache matches it against those tags. The sizing is deliberate.
 
 ### 9.7.2 Linux Virtual Memory System
 
 - Per-process virtual memory layout: code (from 0x400000), data, bss, heap (grows up via `brk`), shared-library region, user stack (grows down from below the kernel region), kernel virtual memory on top.
-- Kernel VM regions shared by all processes: kernel code/data; plus a **direct mapping of a contiguous VP range onto all of physical DRAM** — gives the kernel a window onto any physical location (page tables, memory-mapped I/O).
+- Kernel VM regions shared by all processes: kernel code/data; plus a **direct mapping of a contiguous VP range onto all of physical DRAM**, which gives the kernel a window onto any physical location (page tables, memory-mapped I/O).
 - Kernel VM regions per process: page tables, kernel stack for this process's context, address-space bookkeeping structures.
-- **Areas (segments)**: contiguous chunks of *existing* allocated VM whose pages are related (code, data, shared libraries, stack). Any VP not in some area does not exist and costs nothing. Kernel data structures:
-  - `task_struct` per process → `mm_struct` → `pgd` (base of the L1 table — loaded into CR3 when the process runs) and `mmap` (list of `vm_area_struct`s).
+- **Areas (segments).** Contiguous chunks of *existing* allocated VM whose pages are related (code, data, shared libraries, stack). Any VP not in some area does not exist and costs nothing. Kernel data structures:
+  - `task_struct` per process → `mm_struct` → `pgd` (base of the L1 table, loaded into CR3 when the process runs) and `mmap` (list of `vm_area_struct`s).
   - `vm_area_struct`: `vm_start`, `vm_end`, `vm_prot` (page permissions), `vm_flags` (shared vs. private, etc.), `vm_next`.
 - **Page fault handling** for faulting address A:
   1. Legal address? Search area structs for `vm_start ≤ A < vm_end` (a tree over the list makes this fast). No area → **segmentation fault**, process terminated.
@@ -188,16 +188,16 @@ Other paths: TLB miss → fetch PTE from the page table; invalid PTE → page fa
 
 ## 9.8 Memory Mapping
 
-- Linux initializes an area's contents by associating it with an **object on disk**:
-  1. **Regular file**: area mapped to a contiguous file section, split into page-size pieces holding initial page contents; demand paging defers all loading until first touch; area longer than the section is zero-padded.
-  2. **Anonymous file** (kernel-created, all zeros): first touch finds a victim, zeroes it, and marks the page resident — **demand-zero pages**; nothing is transferred from disk.
+- Linux initializes an area's contents by associating it with an **object on disk**.
+  1. **Regular file.** Area mapped to a contiguous file section, split into page-size pieces holding initial page contents; demand paging defers all loading until first touch; area longer than the section is zero-padded.
+  2. **Anonymous file** (kernel-created, all zeros): first touch finds a victim, zeroes it, and marks the page resident (**demand-zero pages**); nothing is transferred from disk.
 - Once initialized, pages swap to/from the kernel's **swap file** (**swap space**). Swap space bounds the total VPs allocatable by all running processes.
 
 ### 9.8.1 Shared Objects, Private Objects, Copy-on-Write
 
 - An object can be mapped **shared** or **private** into an area (shared area / private area).
-- **Shared**: writes are visible to other processes that mapped it and propagate to the file on disk. The kernel keeps a single physical copy; each mapping's PTEs point at it (VAs may differ per process).
-- **Private (copy-on-write)**: one physical copy initially; PTEs flagged read-only; area flagged private COW. A write faults; the handler notices the COW flag, copies the page to a new PP, redirects the PTE, restores write permission, and re-executes the write. Writes are invisible to other processes and never reach the disk object. Copying is deferred to the last possible moment, conserving physical memory.
+- **Shared.** Writes are visible to other processes that mapped it and propagate to the file on disk. The kernel keeps a single physical copy; each mapping's PTEs point at it (VAs may differ per process).
+- **Private (copy-on-write).** One physical copy initially; PTEs flagged read-only; area flagged private COW. A write faults; the handler notices the COW flag, copies the page to a new PP, redirects the PTE, restores write permission, and re-executes the write. Writes are invisible to other processes and never reach the disk object. Copying is deferred to the last possible moment, conserving physical memory.
 
 ### 9.8.2 fork
 
@@ -220,15 +220,15 @@ int munmap(void *start, size_t length);   /* 0, or -1 */
 ```
 
 - Maps `length` bytes of the object `fd`, starting at file offset `offset`, into a new area preferably at `start` (a hint; use NULL).
-- `prot`: PROT_EXEC, PROT_READ, PROT_WRITE, PROT_NONE — the area's `vm_prot` bits.
+- `prot`: PROT_EXEC, PROT_READ, PROT_WRITE, PROT_NONE, the area's `vm_prot` bits.
 - `flags`: MAP_ANON (demand-zero backing), MAP_PRIVATE (COW), MAP_SHARED.
 - `munmap` deletes the region; later references segfault.
 
 ## 9.9 Dynamic Memory Allocation
 
-- A **dynamic memory allocator** manages the **heap**: a demand-zero area starting after bss, growing upward; kernel variable **brk** marks its top.
+- A **dynamic memory allocator** manages the **heap**, a demand-zero area starting after bss, growing upward; kernel variable **brk** marks its top.
 - Heap = collection of blocks, each contiguous and either **allocated** or **free**. Allocated blocks stay allocated until freed explicitly (by the program) or implicitly (by the allocator).
-- **Explicit allocators**: application frees (C `malloc`/`free`; C++ `new`/`delete`). **Implicit allocators** (**garbage collectors**): allocator detects and frees unused blocks (Lisp, ML, Java).
+- **Explicit allocators.** Application frees (C `malloc`/`free`; C++ `new`/`delete`). **Implicit allocators** (**garbage collectors**): allocator detects and frees unused blocks (Lisp, ML, Java).
 
 ### 9.9.1 malloc and free
 
@@ -257,13 +257,13 @@ Constraints on an explicit allocator:
 - Never modify or move allocated blocks (no compaction).
 
 Goals in tension:
-- **Throughput**: requests completed per unit time. Reasonable target: allocate in time linear in the number of free blocks; free in constant time.
-- **Peak utilization**: with aggregate payload Pₖ after request Rₖ and heap size Hₖ (monotonically nondecreasing), Uₖ = (maxᵢ≤ₖ Pᵢ)/Hₖ; maximize Uₙ₋₁. Throughput is easy to buy at utilization's expense; balancing the two is the design challenge.
+- **Throughput.** Requests completed per unit time. Reasonable target: allocate in time linear in the number of free blocks; free in constant time.
+- **Peak utilization.** With aggregate payload Pₖ after request Rₖ and heap size Hₖ (monotonically nondecreasing), Uₖ = (maxᵢ≤ₖ Pᵢ)/Hₖ; maximize Uₙ₋₁. Throughput is easy to buy at utilization's expense; balancing the two is the design challenge.
 
 ### 9.9.4 Fragmentation
 
-- **Internal**: allocated block larger than its payload (minimum block size, alignment padding). Quantifiable from past requests alone: sum of (block size − payload).
-- **External**: enough aggregate free memory, but no single free block large enough. Depends also on *future* requests, hence hard to quantify; allocators use heuristics favoring few large free blocks over many small ones.
+- **Internal.** Allocated block larger than its payload (minimum block size, alignment padding). Quantifiable from past requests alone: sum of (block size − payload).
+- **External.** Enough aggregate free memory, but no single free block large enough. Depends also on *future* requests, hence hard to quantify; allocators use heuristics favoring few large free blocks over many small ones.
 
 ### 9.9.5 Implementation Issues
 
@@ -275,7 +275,7 @@ A practical allocator must decide: **free block organization**, **placement** (w
   - Allocated, 24 (0x18) bytes: header 0x00000018 | 0x1 = **0x00000019**. Free, 40 (0x28) bytes: **0x00000028**.
 - The free list is *implicit*: free blocks are linked by the size fields in the headers of all blocks; traversing the heap traverses the free set. Requires a marked end block (terminating header: allocated, size 0).
 - Advantage: simplicity. Disadvantage: any free-list search (e.g., placement) is linear in the *total* number of blocks.
-- Alignment + block format ⇒ a **minimum block size** (here: 2 words — header plus one word of alignment), imposed even on 1-byte requests.
+- Alignment + block format ⇒ a **minimum block size** (here: 2 words, header plus one word of alignment), imposed even on 1-byte requests.
 
 ### 9.9.7 Placing Allocated Blocks
 
@@ -287,7 +287,7 @@ A practical allocator must decide: **free block organization**, **placement** (w
 
 ### 9.9.8 Splitting
 
-On a fit: use the whole block (fast; internal fragmentation) or split it — first part becomes the allocated block, remainder a new free block.
+On a fit: use the whole block (fast; internal fragmentation) or split it; the first part becomes the allocated block, the remainder a new free block.
 
 ### 9.9.9 Getting Additional Heap Memory
 
@@ -295,8 +295,8 @@ If no fit: coalesce free blocks; if still no fit, request more memory via `sbrk`
 
 ### 9.9.10 Coalescing
 
-- **False fragmentation**: adjacent free blocks chopped into unusable pieces; merging them is **coalescing**.
-- **Immediate** coalescing (at each free): constant time, but can thrash — repeated coalesce/split cycles on some request patterns.
+- **False fragmentation.** Adjacent free blocks chopped into unusable pieces; merging them is **coalescing**.
+- **Immediate** coalescing (at each free): constant time, but can thrash, with repeated coalesce/split cycles on some request patterns.
 - **Deferred** coalescing (e.g., scan the heap when an allocation fails): fast allocators often use some form of it. This text assumes immediate coalescing.
 
 ### 9.9.11 Boundary Tags
@@ -310,11 +310,11 @@ If no fit: coalesce free blocks; if still no fit, request more memory via `sbrk`
 
 - Design: implicit free list, immediate boundary-tag coalescing, first fit, minimum block size 16 bytes, maximum block size 2³² = 4 GB; 64-bit clean (runs in 32- and 64-bit modes).
 - Memory model (`memlib.c`): `mem_init` models the heap as a large double-word-aligned byte array; `mem_sbrk(incr)` extends the model heap like `sbrk` but rejects shrinking.
-- Interface: `mm_init` (0/−1), `mm_malloc`, `mm_free` — same semantics as the system versions.
-- **Heap invariant**: [padding word] [prologue block: 8-byte allocated, header+footer only, never freed] [regular blocks…] [epilogue: size-0 allocated header]. Prologue and epilogue eliminate coalescing edge cases. Static `heap_listp` points to the prologue block.
+- Interface: `mm_init` (0/−1), `mm_malloc`, `mm_free`, with the same semantics as the system versions.
+- **Heap invariant.** [padding word] [prologue block: 8-byte allocated, header+footer only, never freed] [regular blocks…] [epilogue: size-0 allocated header]. Prologue and epilogue eliminate coalescing edge cases. Static `heap_listp` points to the prologue block.
 - Block pointers (`bp`) point to the first payload byte; headers/footers are computed relative to `bp`.
 
-Constants and macros:
+Constants and macros.
 
 ```c
 #define WSIZE      4         /* word, header/footer size (bytes) */
@@ -337,45 +337,45 @@ Composable, e.g. size of the next block: `GET_SIZE(HDRP(NEXT_BLKP(bp)))`.
 
 Function logic:
 
-- **`mm_init`**: get 4 words from `mem_sbrk`; write alignment padding, prologue header/footer `PACK(DSIZE,1)`, epilogue header `PACK(0,1)`; advance `heap_listp` to the prologue block; `extend_heap(CHUNKSIZE/WSIZE)` to create the initial free block.
-- **`extend_heap(words)`**: round `words` up to even (double-word alignment); `mem_sbrk(size)`; overwrite the old epilogue: write the new free block's header/footer `PACK(size,0)` and a new epilogue header after it; return `coalesce(bp)` (the previous heap likely ended in a free block).
-- **`mm_free(bp)`**: rewrite header and footer with `PACK(size, 0)`; `coalesce(bp)`.
-- **`coalesce(bp)`** — read prev's footer and next's header allocated bits; four cases:
+- **`mm_init`.** Get 4 words from `mem_sbrk`; write alignment padding, prologue header/footer `PACK(DSIZE,1)`, epilogue header `PACK(0,1)`; advance `heap_listp` to the prologue block; `extend_heap(CHUNKSIZE/WSIZE)` to create the initial free block.
+- **`extend_heap(words)`.** Round `words` up to even (double-word alignment); `mem_sbrk(size)`; overwrite the old epilogue: write the new free block's header/footer `PACK(size,0)` and a new epilogue header after it; return `coalesce(bp)` (the previous heap likely ended in a free block).
+- **`mm_free(bp)`.** Rewrite header and footer with `PACK(size, 0)`; `coalesce(bp)`.
+- **`coalesce(bp)`.** Read prev's footer and next's header allocated bits; four cases:
   1. both allocated → return `bp`;
   2. next free → size += next's size; update current header, (combined) footer;
   3. prev free → size += prev's size; update current footer, prev's header; `bp = PREV_BLKP(bp)`;
   4. both free → size += both; update prev's header, next's footer; `bp = PREV_BLKP(bp)`.
-- **`mm_malloc(size)`**: return NULL if `size == 0`. Adjust: `asize = 2*DSIZE` if `size <= DSIZE`, else `DSIZE * ((size + DSIZE + (DSIZE-1)) / DSIZE)` (add header/footer overhead, round up to 8). `find_fit(asize)`; on success `place(bp, asize)` and return. Else `extend_heap(MAX(asize, CHUNKSIZE)/WSIZE)`, then `place` and return (NULL if extension fails).
+- **`mm_malloc(size)`.** Return NULL if `size == 0`. Adjust: `asize = 2*DSIZE` if `size <= DSIZE`, else `DSIZE * ((size + DSIZE + (DSIZE-1)) / DSIZE)` (add header/footer overhead, round up to 8). `find_fit(asize)`; on success `place(bp, asize)` and return. Else `extend_heap(MAX(asize, CHUNKSIZE)/WSIZE)`, then `place` and return (NULL if extension fails).
 - **`find_fit(asize)`** (first fit): scan from `heap_listp` via `NEXT_BLKP` until `GET_SIZE(HDRP(bp)) == 0` (epilogue); return the first block that is free and ≥ `asize`; else NULL.
-- **`place(bp, asize)`**: if remainder `csize - asize >= 2*DSIZE` (minimum block size), write the allocated block's header/footer with `asize`, then write the remainder's header/footer as free — the split must happen *after* placing, before moving to the next block. Otherwise allocate the whole block.
+- **`place(bp, asize)`.** If remainder `csize - asize >= 2*DSIZE` (minimum block size), write the allocated block's header/footer with `asize`, then write the remainder's header/footer as free; the split must happen *after* placing, before moving to the next block. Otherwise allocate the whole block.
 
 ### 9.9.13 Explicit Free Lists
 
-- Implicit lists: allocation linear in *total* blocks — unsuited to general-purpose allocators.
+- Implicit lists: allocation linear in *total* blocks, unsuited to general-purpose allocators.
 - Free blocks' bodies are unused, so link them into a **doubly linked list** with `pred`/`succ` pointers stored in the payload area. Allocation becomes linear in the number of *free* blocks.
 - Ordering policies:
-  - **LIFO** (insert freed block at head): insertion is constant time; with boundary tags, coalescing — and hence the whole free — is constant time too.
+  - **LIFO** (insert freed block at head): insertion is constant time; with boundary tags, coalescing, and hence the whole free, is constant time too.
   - **Address order** (each block's address < successor's): freeing needs a linear search for the predecessor, but utilization is better, approaching best fit.
 - Cost: free blocks must hold the pointers plus header (and possibly footer) → larger minimum block size → more potential internal fragmentation.
 
 ### 9.9.14 Segregated Free Lists
 
-**Segregated storage**: partition block sizes into **size classes** (e.g., powers of 2, or one class per small size and powers of 2 above) and keep one free list per class, ordered by increasing size.
+**Segregated storage.** Partition block sizes into **size classes** (e.g., powers of 2, or one class per small size and powers of 2 above) and keep one free list per class, ordered by increasing size.
 
-**Simple segregated storage** — each class's list holds blocks of one uniform size (the class maximum); no splitting, no coalescing:
+**Simple segregated storage.** Each class's list holds blocks of one uniform size (the class maximum); no splitting, no coalescing:
 - Allocate: pop the head of the matching list; if empty, get a page-multiple chunk from the OS and carve it into equal blocks. Free: push onto the list head.
-- Constant-time allocate and free; minimal overhead — block size inferred from address, so no header or footer needed; singly linked suffices; minimum block size = one word (the `succ` pointer).
+- Constant-time allocate and free; minimal overhead (block size inferred from address, so no header or footer needed); singly linked suffices; minimum block size = one word (the `succ` pointer).
 - Susceptible to internal fragmentation (no splitting) and, worse, unbounded external fragmentation (no coalescing).
 
-**Segregated fits** — each list holds variable sizes within its class, as explicit or implicit lists:
+**Segregated fits.** Each list holds variable sizes within its class, as explicit or implicit lists:
 - Allocate: first-fit search of the matching list; on failure try the next larger class; if all fail, `sbrk`. Optionally split, putting the fragment on the appropriate list. Free: coalesce, insert into the appropriate list.
 - Fast (searches limited to part of the heap) and memory-efficient: first fit over segregated lists approximates best fit over the whole heap. Popular for production allocators, including GNU malloc.
 
-**Buddy systems** — segregated fits with power-of-2 classes only:
+**Buddy systems.** Segregated fits with power-of-2 classes only:
 - Heap of 2ᵐ words; one free list per size 2ᵏ, 0 ≤ k ≤ m. Requests round up to a power of 2.
 - Allocate 2ᵏ: find the first free 2ʲ, k ≤ j ≤ m; split in half recursively until j = k, putting each remaining half (**buddy**) on its list. Free: coalesce with free buddies until an allocated buddy stops it.
 - A block and its buddy differ in exactly one address bit (size-32 block at xxx…x00000 ↔ buddy at xxx…x10000), so buddy addresses are trivially computable.
-- Fast search and coalescing; power-of-2 rounding causes bad internal fragmentation — suitable only for workloads with power-of-2 block sizes.
+- Fast search and coalescing; power-of-2 rounding causes bad internal fragmentation; suitable only for workloads with power-of-2 block sizes.
 
 ## 9.10 Garbage Collection
 
@@ -383,15 +383,15 @@ Function logic:
 
 ### 9.10.1 Basics
 
-- Memory as a directed **reachability graph**: nodes = root nodes (registers, stack variables, global variables — locations outside the heap containing pointers into it) + heap nodes (one per allocated block); edge p → q iff a location in block p points into block q.
+- Memory as a directed **reachability graph**, where nodes = root nodes (registers, stack variables, global variables; locations outside the heap containing pointers into it) + heap nodes (one per allocated block); edge p → q iff a location in block p points into block q.
 - A node is **reachable** if some path from a root reaches it. Unreachable nodes are garbage; the collector's job is to maintain (a representation of) the graph and periodically free unreachable nodes.
-- ML/Java collectors control pointer creation and keep an *exact* graph. C/C++ collectors cannot: they are **conservative** — every reachable block is classified reachable, but some unreachable blocks may be too.
+- ML/Java collectors control pointer creation and keep an *exact* graph. C/C++ collectors cannot: they are **conservative**; every reachable block is classified reachable, but some unreachable blocks may be too.
 - Collectors may run on demand or concurrently. On-demand integration with malloc: when `malloc` finds no fit, it invokes the collector, which calls `free` on garbage blocks; `malloc` retries, then asks the OS, and finally returns NULL.
 
 ### 9.10.2 Mark&Sweep
 
-- **Mark phase**: mark every reachable allocated block (using a spare low-order header bit). **Sweep phase**: free every unmarked allocated block.
-- Helpers (with `typedef void *ptr`): `isPtr(p)` — if p points into an allocated block, return the block's start, else NULL; `blockMarked(b)`; `blockAllocated(b)`; `markBlock(b)`; `length(b)` (words, excluding header); `unmarkBlock(b)`; `nextBlock(b)`.
+- **Mark phase.** Mark every reachable allocated block (using a spare low-order header bit). **Sweep phase.** Free every unmarked allocated block.
+- Helpers (with `typedef void *ptr`): `isPtr(p)` (if p points into an allocated block, return the block's start, else NULL); `blockMarked(b)`; `blockAllocated(b)`; `markBlock(b)`; `length(b)` (words, excluding header); `unmarkBlock(b)`; `nextBlock(b)`.
 
 ```c
 void mark(ptr p) {                     void sweep(ptr b, ptr end) {
@@ -410,7 +410,7 @@ void mark(ptr p) {                     void sweep(ptr b, ptr end) {
 
 ### 9.10.3 Conservative Mark&Sweep for C
 
-- Works in place (no block motion) — appropriate for C. The hard part is `isPtr`:
+- Works in place (no block motion), appropriate for C. The hard part is `isPtr`:
   1. C memory is untyped: no way to tell whether a word *is* a pointer.
   2. Even for a known pointer, it may point into the middle of a payload.
 - Middle-pointer solution: keep allocated blocks in a **balanced binary tree** ordered by address (two extra header fields, `left`/`right`); `isPtr` binary-searches, using each block's size field to test whether p falls within its extent.
@@ -420,16 +420,16 @@ void mark(ptr p) {                     void sweep(ptr b, ptr end) {
 
 Memory bugs manifest at a distance in time and space from their cause.
 
-1. **Dereferencing bad pointers** — holes in the address space → segmentation exception; read-only areas → protection exception. Classic: `scanf("%d", val)` instead of `&val` passes the contents of `val` as an address.
-2. **Reading uninitialized memory** — bss is zeroed by the loader; heap memory is not. Assuming `malloc`'d memory is zero (e.g., accumulating into `y[i] +=` without zeroing) is a bug; zero explicitly or use `calloc`.
-3. **Stack buffer overflows** — writing to a stack buffer without bounding input size (`gets`); use `fgets`.
-4. **Assuming pointers and their referents are the same size** — e.g., `malloc(n * sizeof(int))` for an array of `int *`. Runs on platforms where sizes coincide; on ones where pointers are wider, writes past the block — often smashing the boundary-tag footer, so the crash appears much later, in `free`/coalescing.
-5. **Off-by-one errors** — `for (i = 0; i <= n; i++)` over an n-element array overwrites the word past the end.
-6. **Referencing a pointer instead of its referent** — `*size--` decrements the pointer, not the integer: unary `*` and `--` share precedence and associate right-to-left. Intent requires `(*size)--`; parenthesize when in doubt.
-7. **Misunderstanding pointer arithmetic** — pointer arithmetic is in units of the referenced type. `p += sizeof(int)` on an `int *` advances 4 elements, scanning every fourth integer; correct is `p++`.
-8. **Referencing nonexistent variables** — returning the address of a local: the pointer outlives the stack frame; later writes through it corrupt some other function's frame.
-9. **Referencing data in free heap blocks** — reading a freed block that may already be reallocated and overwritten.
-10. **Memory leaks** — allocating without freeing. Gradually fills the heap; especially serious in daemons and servers, which never terminate.
+1. **Dereferencing bad pointers.** Holes in the address space → segmentation exception; read-only areas → protection exception. Classic: `scanf("%d", val)` instead of `&val` passes the contents of `val` as an address.
+2. **Reading uninitialized memory.** Bss is zeroed by the loader; heap memory is not. Assuming `malloc`'d memory is zero (e.g., accumulating into `y[i] +=` without zeroing) is a bug; zero explicitly or use `calloc`.
+3. **Stack buffer overflows.** Writing to a stack buffer without bounding input size (`gets`); use `fgets`.
+4. **Assuming pointers and their referents are the same size.** For example, `malloc(n * sizeof(int))` for an array of `int *`. Runs on platforms where sizes coincide; on ones where pointers are wider, writes past the block, often smashing the boundary-tag footer, so the crash appears much later, in `free`/coalescing.
+5. **Off-by-one errors.** `for (i = 0; i <= n; i++)` over an n-element array overwrites the word past the end.
+6. **Referencing a pointer instead of its referent.** `*size--` decrements the pointer, not the integer: unary `*` and `--` share precedence and associate right-to-left. Intent requires `(*size)--`; parenthesize when in doubt.
+7. **Misunderstanding pointer arithmetic.** Pointer arithmetic is in units of the referenced type. `p += sizeof(int)` on an `int *` advances 4 elements, scanning every fourth integer; correct is `p++`.
+8. **Referencing nonexistent variables.** Returning the address of a local: the pointer outlives the stack frame; later writes through it corrupt some other function's frame.
+9. **Referencing data in free heap blocks.** Reading a freed block that may already be reallocated and overwritten.
+10. **Memory leaks.** Allocating without freeing. Gradually fills the heap; especially serious in daemons and servers, which never terminate.
 
 ## 9.12 Summary
 

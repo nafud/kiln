@@ -15,5 +15,5 @@ Notes for *Reverse Engineering for Beginners* by Dennis Yurichev.
      chapter page links to its matching solutions under
      writeups/challenges-re/ with relative links, and vice versa (see
      chapter-01.md for the established pattern). Do not add a
-     cross-link until both pages exist — a link to a missing page breaks
+     cross-link until both pages exist; a link to a missing page breaks
      the --strict build. -->

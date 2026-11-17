@@ -36,7 +36,7 @@ The PCR is always reachable from kernel mode through a segment or coprocessor re
 | x64          | `GS`                |
 | ARM          | system coprocessor  |
 
-On x64 the PRCB begins at offset `0x180` of the PCR, and `CurrentThread` is at `+0x8` of the PRCB — hence `gs:[0x188]`.
+On x64 the PRCB begins at offset `0x180` of the PCR, and `CurrentThread` is at `+0x8` of the PRCB, hence `gs:[0x188]`.
 
 ```asm
 PsGetCurrentThread:
@@ -77,8 +77,8 @@ typedef struct _KSERVICE_TABLE_DESCRIPTOR {
 | `KiServiceTable`      | Non-GUI syscall array        |
 | `W32pServiceTable`    | GUI (win32k) syscall array   |
 
-- **x86:** `Base` is a plain array of function pointers.
-- **x64 / ARM:** `Base` is an array of 32-bit integers. The top 20 bits encode the offset from `KiServiceTable`; the bottom 4 bits encode the count of stack arguments.
+- **x86.** `Base` is a plain array of function pointers.
+- **x64 / ARM.** `Base` is an array of 32-bit integers. The top 20 bits encode the offset from `KiServiceTable`; the bottom 4 bits encode the count of stack arguments.
 
 ```text
 real_address = KiServiceTable + (KiServiceTable[index] >> 4)
@@ -99,10 +99,10 @@ The concept is uniform; the transition instruction and dispatcher differ by plat
 | x64              | `SYSCALL`    | `KiSystemCall64`     | Entry from `IA32_LSTAR` MSR (`0xC0000082`).                             |
 | ARM              | `SVC` (`SWI`) | `KiSWIException`     | Reached through the exception vector table.                             |
 
-- **INT 2E path:** the stub reads `KUSER_SHARED_DATA.SystemCall` (at `0x7ffe0300`) and calls it. `KUSER_SHARED_DATA` is mapped at `0x7ffe0000` in every process. The IDT entry `0x2e` points at `KiSystemService`.
-- **SYSCALL (x64):** the stub sets `R10 = RCX` (SYSCALL overwrites `RCX` with the return address) and `EAX = syscall number`, then executes `SYSCALL`. `KiSystemCall64` swaps to the kernel stack, saves user context, copies stack arguments, indexes `KiServiceTable`/`W32pServiceTable`, invokes the call, and returns via `SYSRET` (which restores `RIP` from `RCX`).
-- **SYSENTER (x86):** unlike SYSCALL, `SYSENTER` saves no return address in a register. The return address is already on the stack; the stub stores the stack pointer in `EDX` before entering. `SYSEXIT` sets `EIP = EDX` (`ntdll!KiSystemCallRet`) and `ESP = ECX`.
-- **SVC (ARM):** the syscall number is placed in `R12`. `KiSWIException` builds a `_KTRAP_FRAME`, saves the return address (already in `LR`) and syscall number in the thread, then branches to `KiSystemService`; return is via `KiSystemServiceExit`.
+- **INT 2E path.** The stub reads `KUSER_SHARED_DATA.SystemCall` (at `0x7ffe0300`) and calls it. `KUSER_SHARED_DATA` is mapped at `0x7ffe0000` in every process. The IDT entry `0x2e` points at `KiSystemService`.
+- **SYSCALL (x64).** The stub sets `R10 = RCX` (SYSCALL overwrites `RCX` with the return address) and `EAX = syscall number`, then executes `SYSCALL`. `KiSystemCall64` swaps to the kernel stack, saves user context, copies stack arguments, indexes `KiServiceTable`/`W32pServiceTable`, invokes the call, and returns via `SYSRET` (which restores `RIP` from `RCX`).
+- **SYSENTER (x86).** Unlike SYSCALL, `SYSENTER` saves no return address in a register. The return address is already on the stack; the stub stores the stack pointer in `EDX` before entering. `SYSEXIT` sets `EIP = EDX` (`ntdll!KiSystemCallRet`) and `ESP = ECX`.
+- **SVC (ARM).** The syscall number is placed in `R12`. `KiSWIException` builds a `_KTRAP_FRAME`, saves the return address (already in `LR`) and syscall number in the thread, then branches to `KiSystemService`; return is via `KiSystemServiceExit`.
 
 ## Faults, Traps, and Interrupts
 
@@ -146,7 +146,7 @@ IRQL is a per-processor number (type `KIRQL`, a `UCHAR`) that orders interrupt h
 | `DISPATCH_LEVEL`  | 2     | Thread dispatcher and DPCs; **code here cannot wait**     |
 | (hardware / IPI)  | >2    | Device interrupts; `IPI_LEVEL` for inter-processor signals |
 
-IRQL maps onto hardware. On x86/x64 the LAPIC exposes a writable **task priority register (TPR)** and a read-only **processor priority register (PPR)**; the CPU delivers only interrupts whose priority exceeds the PPR. `KeRaiseIrql`/`KeLowerIrql` program the TPR. On x64, `CR8` is a shadow of the LAPIC TPR:
+IRQL maps onto hardware. On x86/x64 the LAPIC exposes a writable **task priority register (TPR)** and a read-only **processor priority register (PPR)**; the CPU delivers only interrupts whose priority exceeds the PPR. `KeRaiseIrql`/`KeLowerIrql` program the TPR. On x64, `CR8` is a shadow of the LAPIC TPR.
 
 ```asm
 KzRaiseIrql:  mov rax, cr8      ; return old IRQL
@@ -184,7 +184,7 @@ An MDL describes the set of physical pages backing a virtual address range. Each
 Two common uses:
 
 - Map kernel memory into a process's user space (or vice versa).
-- Remap read-only pages (e.g., a code section) at a second virtual address **with write permission** — a kernel-mode equivalent of `VirtualProtect`.
+- Remap read-only pages (e.g., a code section) at a second virtual address **with write permission**, a kernel-mode equivalent of `VirtualProtect`.
 
 ## Processes and Threads
 
@@ -192,8 +192,8 @@ A thread is defined by two structures; likewise a process. In each pair the `K`-
 
 | Object  | `E`-structure (housekeeping)                    | `K`-structure (scheduling)                          |
 | ------- | ----------------------------------------------- | --------------------------------------------------- |
-| Thread  | `ETHREAD` — thread id, owning process, debug state | `KTHREAD` (`Tcb` at `+0`) — stack, target processor, alertable state |
-| Process | `EPROCESS` — pid, token, thread list, `ActiveProcessLinks` | `KPROCESS` (`Pcb` at `+0`) — directory table base, ideal processor, times |
+| Thread  | `ETHREAD` (thread id, owning process, debug state) | `KTHREAD` (`Tcb` at `+0`; stack, target processor, alertable state) |
+| Process | `EPROCESS` (pid, token, thread list, `ActiveProcessLinks`) | `KPROCESS` (`Pcb` at `+0`; directory table base, ideal processor, times) |
 
 The scheduler operates on threads. User-mode analogues store per-process/per-thread data: the **PEB** (`ntdll!_PEB`: base load address, loaded modules, heaps) and the **TEB** (`ntdll!_TEB`: thread scheduling data and process pointers).
 
@@ -203,7 +203,7 @@ The scheduler operates on threads. User-mode analogues store per-process/per-thr
 | TEB (user)                      | `fs:18h`      | `gs:30h`     | coprocessor 15 (c13)       |
 
 !!! warning "Rootkit relevance"
-    Rootkits modify undocumented fields directly — e.g., unlinking a process from `EPROCESS.ActiveProcessLinks` to hide it. Because the structures are opaque, hardcoded offsets break across builds.
+    Rootkits modify undocumented fields directly; e.g., unlinking a process from `EPROCESS.ActiveProcessLinks` to hide it. Because the structures are opaque, hardcoded offsets break across builds.
 
 ## Execution Context
 
@@ -243,7 +243,7 @@ Linked lists underlie most dynamic kernel data structures (loaded-module list, a
 | ---------------------------- | ---------- | ------------------------------------------- |
 | Singly-linked                | `Next`     | One forward pointer                         |
 | Sequenced singly-linked      | `Next`     | Singly-linked with atomic operations        |
-| Circular doubly-linked       | `LIST_ENTRY` | Forward (`Flink`) and backward (`Blink`) — the common case |
+| Circular doubly-linked       | `LIST_ENTRY` | Forward (`Flink`) and backward (`Blink`), the common case |
 
 ```c
 typedef struct _LIST_ENTRY {
@@ -257,7 +257,7 @@ A `LIST_ENTRY` acts as either a list head (stores no payload) or a list entry (e
 !!! note "List routines are always inlined"
     `InitializeListHead`, `InsertHeadList`, `InsertTailList`, `RemoveHeadList`, `RemoveTailList`, `RemoveEntryList`, and `IsListEmpty` are inlined by the compiler. They never appear as a `call`/branch target, so they must be recognized by their code pattern.
 
-`InitializeListHead` sets both pointers to the head — recognizable as two write-only stores at `+0` and `+Blink` using one register:
+`InitializeListHead` sets both pointers to the head, recognizable as two write-only stores at `+0` and `+Blink` using one register.
 
 ```asm
 ; x64
@@ -266,7 +266,7 @@ mov [r11+8], r11        ; Blink = head
 mov [r11], r11          ; Flink = head
 ```
 
-`CONTAINING_RECORD` recovers the base of the enclosing structure from a pointer to one of its fields:
+`CONTAINING_RECORD` recovers the base of the enclosing structure from a pointer to one of its fields.
 
 ```c
 #define CONTAINING_RECORD(address, type, field) \
@@ -339,7 +339,7 @@ DPCs run at `DISPATCH_LEVEL`, in **arbitrary** thread context, on a specific pro
 
 - Init with `KeInitializeDpc`, queue with `KeInsertQueueDpc`. Each core keeps its queues in `KPRCB.DpcData[2]` (`[0]` normal, `[1]` threaded); each `KDPC_DATA` tracks `DpcListHead`, `DpcLock`, `DpcQueueDepth`, `DpcCount`.
 - Three processing paths: the idle loop (`KiIdleLoop` → `KiRetireDpcList`); on IRQL drop to `DISPATCH_LEVEL` (`KiDispatchInterrupt`); and a per-processor DPC thread created by `KiStartDpcThread` (`KiExecuteDpc`).
-- A DPC **cannot wait** and **cannot take a page fault**: `KeWaitForSingleObject` and `KeDelayExecutionThread` are forbidden, since the dispatcher itself runs at `DISPATCH_LEVEL`.
+- A DPC **cannot wait** and **cannot take a page fault**; `KeWaitForSingleObject` and `KeDelayExecutionThread` are forbidden, since the dispatcher itself runs at `DISPATCH_LEVEL`.
 
 !!! warning "DPC watchdog"
     A DPC that runs too long bugchecks with `DPC_WATCHDOG_VIOLATION` (`0x133`). Query the timer with `KeQueryDpcWatchdogInformation`.
@@ -359,7 +359,7 @@ A timer signals that an interval has elapsed, once or periodically, optionally f
 ```
 
 - `KeInitializeTimer`, then `KeSetTimer` (one-shot) or `KeSetTimerEx` (recurring). Cancel with `KeCancelTimer`.
-- Timers queue into the PRCB's `TimerTable` (`_KTIMER_TABLE`). On each clock interrupt the system checks for expiring entries and requests a DPC interrupt to process them — so timers are serviced at `DISPATCH_LEVEL`.
+- Timers queue into the PRCB's `TimerTable` (`_KTIMER_TABLE`). On each clock interrupt the system checks for expiring entries and requests a DPC interrupt to process them, so timers are serviced at `DISPATCH_LEVEL`.
 - OS examples: `ExpTimeRefreshDpcRoutine` (time sync / license check), `ExpCenturyDpcRoutine` (century rollover).
 
 ### Process, Thread, and Image Callbacks
@@ -375,7 +375,7 @@ Drivers register notifications through documented APIs: `PsSetCreateProcessNotif
 
 Notify a driver that an IRP completed, was cancelled, or failed. Run in arbitrary context and set with `IoSetCompletionRoutine[Ex]`.
 
-`IoSetCompletionRoutine` is **forced-inline** — it never appears in an import table or as a call. Recognize it by a write to the `CompletionRoutine` field of an `IO_STACK_LOCATION`. Its three boolean parameters map to `Control` flags `SL_INVOKE_ON_SUCCESS`, `SL_INVOKE_ON_ERROR`, `SL_INVOKE_ON_CANCEL`. The I/O manager invokes the routine from `IopfCompleteRequest`.
+`IoSetCompletionRoutine` is **forced-inline**; it never appears in an import table or as a call. Recognize it by a write to the `CompletionRoutine` field of an `IO_STACK_LOCATION`. Its three boolean parameters map to `Control` flags `SL_INVOKE_ON_SUCCESS`, `SL_INVOKE_ON_ERROR`, `SL_INVOKE_ON_CANCEL`. The I/O manager invokes the routine from `IopfCompleteRequest`.
 
 ### I/O Request Packets (IRPs)
 
@@ -402,13 +402,13 @@ An IRP describes an I/O request and is the unit of communication between layered
 !!! note "The 'next' stack location is above the current one"
     The next `IO_STACK_LOCATION` is the array element **immediately above** (lower address than) the current one. `IoGetCurrentIrpStackLocation`, `IoGetNextIrpStackLocation`, and `IoSkipCurrentIrpStackLocation` are pointer arithmetic over this array. On x64, `sizeof(_IO_STACK_LOCATION) == 0x48`.
 
-A driver can also build an IRP from scratch (`IoAllocateIrp`), fill in the major/minor code and stack location, and send it downstream with `IoCallDriver` — a technique rootkits use to reach the file-system driver directly and bypass syscall hooks.
+A driver can also build an IRP from scratch (`IoAllocateIrp`), fill in the major/minor code and stack location, and send it downstream with `IoCallDriver`, a technique rootkits use to reach the file-system driver directly and bypass syscall hooks.
 
 ---
 
 ## Structure of a Driver
 
-A driver is code loaded into kernel space that runs at kernel privilege. It has no main thread; it is a collection of routines the kernel calls under defined circumstances — much like a DLL.
+A driver is code loaded into kernel space that runs at kernel privilege. It has no main thread; it is a collection of routines the kernel calls under defined circumstances, much like a DLL.
 
 | Driver type                    | Role                                                                    |
 | ------------------------------ | ----------------------------------------------------------------------- |
@@ -452,11 +452,11 @@ typedef struct _DEVICE_OBJECT {
 ```
 
 - `DeviceExtension` is a driver-defined structure whose size is passed to `IoCreateDevice`; **recovering its layout is a top analysis priority**.
-- A device can **attach** to another (`IoAttachDevice` family) so IRPs bound for the target are routed to the attacher first — the basis of filter drivers.
+- A device can **attach** to another (`IoAttachDevice` family) so IRPs bound for the target are routed to the attacher first, the basis of filter drivers.
 
 ### IRP Handling
 
-Dispatch routines share one prototype:
+Dispatch routines share one prototype.
 
 ```c
 NTSTATUS XxxDispatch(PDEVICE_OBJECT DeviceObject, PIRP Irp);
@@ -509,7 +509,7 @@ Decode with `DEVICE_TYPE_FROM_CTL_CODE` (`>>16 & 0xffff`) and `METHOD_FROM_CTL_C
 
 ### CR0 and the WP Bit
 
-Kernel code is mapped read-only; patching it faults. On x86/x64 this is enforced by the **WP (write-protect) bit, bit 16 of CR0**, which — when set (the default) — forbids writes to read-only pages even in ring 0. Rootkits toggle it to hook kernel code:
+Kernel code is mapped read-only; patching it faults. On x86/x64 this is enforced by the **WP (write-protect) bit, bit 16 of CR0**, which, when set (the default), forbids writes to read-only pages even in ring 0. Rootkits toggle it to hook kernel code.
 
 ```asm
 mov eax, cr0
@@ -525,7 +525,7 @@ Alternatives that avoid touching CR0 use MDLs to remap the target pages writable
 
 ### Accessing the Service Table
 
-`KiServiceTable` is not exported, so hooking rootkits reach it through the exported `KeServiceDescriptorTable` (a `KSERVICE_TABLE_DESCRIPTOR` whose `Base` is the table). On **x64 this symbol is not exported either.** To locate a specific call, rootkits either hardcode the syscall index or disassemble the `Nt*`/`Zw*` stub to recover it — both brittle across service packs.
+`KiServiceTable` is not exported, so hooking rootkits reach it through the exported `KeServiceDescriptorTable` (a `KSERVICE_TABLE_DESCRIPTOR` whose `Base` is the table). On **x64 this symbol is not exported either.** To locate a specific call, rootkits either hardcode the syscall index or disassemble the `Nt*`/`Zw*` stub to recover it, both brittle across service packs.
 
 !!! example "Reading a syscall number from a stub (x86, Win 7)"
     The first instruction of `ZwQuerySystemInformation` is `b8 05010000` (`mov eax, 105h`). `0xb8` is the `MOV EAX` opcode; the following dword is the syscall number, so reading the byte at offset `+1` yields the index used to overwrite the corresponding `KiServiceTable` entry.
@@ -549,9 +549,9 @@ Demonstrates the standard software-driver skeleton plus a service-table overwrit
 
 - **`DriverEntry`** creates a device `\Device\fsodhfn2m` with a symbolic link `\DosDevices\fsodhfn2m`, registers one handler for `IRP_MJ_READ`, `IRP_MJ_CLOSE`, and `IRP_MJ_DEVICE_CONTROL`, and sets an unload routine (delete link, delete device).
 - **The IOCTL handler** accepts code `0x22c004`, which decodes to `FILE_DEVICE_UNKNOWN`, function `1`, `METHOD_BUFFERED`, `FILE_READ_DATA | FILE_WRITE_DATA`. Input arrives in `Irp->AssociatedIrp.SystemBuffer`.
-- **The operation:** raise IRQL to `DISPATCH_LEVEL`, build an MDL over `KiServiceTable` and map it **writable** at a second address (`IoAllocateMdl` → `MmProbeAndLockPages` → `MmMapLockedPagesSpecifyCache`), then overwrite entries from a user-supplied array laid out as `[count][addr₁][addr₂]…`. Finally unmap/unlock/free the MDL and lower IRQL.
+- **The operation.** Raise IRQL to `DISPATCH_LEVEL`, build an MDL over `KiServiceTable` and map it **writable** at a second address (`IoAllocateMdl` → `MmProbeAndLockPages` → `MmMapLockedPagesSpecifyCache`), then overwrite entries from a user-supplied array laid out as `[count][addr₁][addr₂]…`. Finally unmap/unlock/free the MDL and lower IRQL.
 
-The net effect is an IOCTL that lets user mode replace arbitrary native syscall pointers — trivially exploitable for ring-0 code execution, and unsafe on multiprocessor systems.
+The net effect is an IOCTL that lets user mode replace arbitrary native syscall pointers, trivially exploitable for ring-0 code execution, and unsafe on multiprocessor systems.
 
 ## Walk-Through: x64 File-Deletion Rootkit (Sample B)
 

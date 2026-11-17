@@ -12,6 +12,6 @@ the book chapters they come from.
      Beginners (Yurichev); each solutions page links to the matching
      chapter under books/re4b/ with relative links, and vice
      versa (see re4b-ch01.md for the established pattern).
-     Do not add a cross-link until both pages exist — a link to a missing
+     Do not add a cross-link until both pages exist; a link to a missing
      page breaks the --strict build. -->
 

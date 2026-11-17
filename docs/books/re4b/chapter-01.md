@@ -1,6 +1,6 @@
 # Chapter 1. Code Patterns (1.1–1.11)
 
-Notes on *Reverse Engineering for Beginners* (Dennis Yurichev), Chapter 1, sections 1.1 through 1.11.5. The chapter builds a working knowledge of assembly by compiling minimal C functions and reading the output across four instruction sets — x86, x86-64, ARM, and MIPS — with GCC, MSVC, Keil, and LLVM. The method is comparative: the same C source is fed to different compilers and architectures, and the divergence in output teaches what each part of the code compiles to.
+Notes on *Reverse Engineering for Beginners* (Dennis Yurichev), Chapter 1, sections 1.1 through 1.11.5. The chapter builds a working knowledge of assembly by compiling minimal C functions and reading the output across four instruction sets (x86, x86-64, ARM, and MIPS) with GCC, MSVC, Keil, and LLVM. The method is comparative: the same C source is fed to different compilers and architectures, and the divergence in output teaches what each part of the code compiles to.
 
 Exercise solutions are kept separately in the [Challenges.re writeups](../../writeups/challenges-re/re4b-ch01.md).
 
@@ -10,7 +10,7 @@ Write a small piece of C, compile it, read the assembly. Repetition imprints the
 
 **Optimization level and debug information.**
 
-A compiler exposes roughly three optimization levels. Level zero disables optimization: output is verbose but readable, and debug builds carry a line-to-address mapping between each source line and its machine code. Optimizing builds are the opposite — faster code, entire source lines folded away or absent from the output. A reverse engineer meets both, because some developers ship optimized binaries and some do not, so examples throughout the book appear in both debug and release form where it matters.
+A compiler exposes roughly three optimization levels. Level zero disables optimization: output is verbose but readable, and debug builds carry a line-to-address mapping between each source line and its machine code. Optimizing builds are the opposite, with faster code and entire source lines folded away or absent from the output. A reverse engineer meets both, because some developers ship optimized binaries and some do not, so examples throughout the book appear in both debug and release form where it matters.
 
 ## 1.2 Some Basics
 
@@ -46,7 +46,7 @@ The radix (base) is the count of digits a system uses: decimal 10, binary 2, hex
 
 ### 1.2.3 Converting Between Radices
 
-Positional notation gives each digit a weight by position. The value of a written number is the sum of each digit times its base raised to the digit's position index (rightmost = 0):
+Positional notation gives each digit a weight by position. The value of a written number is the sum of each digit times its base raised to the digit's position index (rightmost = 0).
 
 ```text
 1234    (decimal) = 10^3·1 + 10^2·2 + 10^1·3 + 10^0·4
@@ -78,7 +78,7 @@ MIPS registers have two naming conventions: by number (`$0`–`$31`) or pseudo-n
 
 ### 1.3.4 Empty Functions in Practice
 
-Empty functions are common in real code. A debug logger compiled without `_DEBUG` collapses to nothing yet is still called at every site. A demo build with `#ifndef DEMO` around the real body leaves a callable stub with no effect — enabling a disabled menu item in a cracked demo only invokes the empty function. IDA labels such stubs `nullsub_00`, `nullsub_01`, etc.
+Empty functions are common in real code. A debug logger compiled without `_DEBUG` collapses to nothing yet is still called at every site. A demo build with `#ifndef DEMO` around the real body leaves a callable stub with no effect; enabling a disabled menu item in a cracked demo only invokes the empty function. IDA labels such stubs `nullsub_00`, `nullsub_01`, etc.
 
 ## 1.4 Returning Values
 
@@ -90,7 +90,7 @@ Returning a constant (`int f() { return 123; }`) loads the value into the return
 | ARM | `R0` | `mov r0, #0x7b` |
 | MIPS | `$2` (`$V0`) | `li $2, 123` (LI = Load Immediate) |
 
-The caller reads the result from the return register. `MOV` is a misnomer — data is copied, not moved (other ISAs call this LOAD/STORE). On MIPS the load and jump appear swapped in the listing because of the **branch delay slot**: the instruction textually after a branch or jump executes *before* the transfer takes effect, so branch instructions always trade places with the instruction that logically precedes them. Functions returning only 0 or 1 are ubiquitous (`/bin/true`, `/bin/false`).
+The caller reads the result from the return register. `MOV` is a misnomer; data is copied, not moved (other ISAs call this LOAD/STORE). On MIPS the load and jump appear swapped in the listing because of the **branch delay slot**, where the instruction textually after a branch or jump executes *before* the transfer takes effect, so branch instructions always trade places with the instruction that logically precedes them. Functions returning only 0 or 1 are ubiquitous (`/bin/true`, `/bin/false`).
 
 ## 1.5 Hello, world!
 
@@ -103,7 +103,7 @@ int main() { printf("hello, world\n"); return 0; }
 
 The string literal has type `const char[]` and no name in source, so the compiler assigns an internal label (MSVC: `$SG3830`) and stores it null-terminated in a data segment (`CONST`/`.rodata`). `main` opens with a prologue and closes with an epilogue.
 
-MSVC output, annotated:
+MSVC output, annotated.
 
 ```asm
 push    ebp                     ; prologue: save frame pointer
@@ -120,10 +120,10 @@ Recurring idioms:
 
 | Idiom | Purpose | Alternative forms |
 | --- | --- | --- |
-| `add esp, 4` after a call | Discard pushed argument(s); equivalent to a `POP` without touching a register | `pop ecx` (Intel C++, MSVC) — 1-byte opcode vs 3-byte `add`, clobbers ECX but modifies flags either way |
-| `xor eax, eax` | Set return value to 0 | `mov eax, 0` (5 bytes) or `sub eax, eax` — `xor` is 2 bytes |
+| `add esp, 4` after a call | Discard pushed argument(s); equivalent to a `POP` without touching a register | `pop ecx` (Intel C++, MSVC), a 1-byte opcode vs the 3-byte `add`; clobbers ECX but modifies flags either way |
+| `xor eax, eax` | Set return value to 0 | `mov eax, 0` (5 bytes) or `sub eax, eax`; `xor` is 2 bytes |
 
-GCC (non-optimizing) differs: it aligns the stack with `and esp, 0FFFFFFF0h` (16-byte boundary — the CPU is faster on aligned data), allocates 16 bytes with `sub esp, 10h` (rounded up even though 4 are used), stores the string pointer directly with `mov [esp], eax` instead of `push`, and ends with `leave` (equivalent to `mov esp, ebp` / `pop ebp`). Non-optimizing GCC emits the longer `mov eax, 0`.
+GCC (non-optimizing) differs: it aligns the stack with `and esp, 0FFFFFFF0h` (a 16-byte boundary; the CPU is faster on aligned data), allocates 16 bytes with `sub esp, 10h` (rounded up even though 4 are used), stores the string pointer directly with `mov [esp], eax` instead of `push`, and ends with `leave` (equivalent to `mov esp, ebp` / `pop ebp`). Non-optimizing GCC emits the longer `mov eax, 0`.
 
 **GCC: AT&T syntax.**
 
@@ -141,7 +141,7 @@ GCC (non-optimizing) differs: it aligns the stack with `and esp, 0FFFFFFF0h` (16
 
 **String patching.**
 
-The literal can be found in the binary (Hiew, radare2) and overwritten in place, provided the replacement is no longer than the original (trailing zero bytes are risky to reuse — they may be needed elsewhere). This was the standard MS-DOS-era localization technique and is why old localized software used cramped abbreviations. In radare2: `/ hello` searches, `s <addr>` seeks, `oo+` reopens read-write, `w hola, mundo\x00` writes.
+The literal can be found in the binary (Hiew, radare2) and overwritten in place, provided the replacement is no longer than the original (trailing zero bytes are risky to reuse, since they may be needed elsewhere). This was the standard MS-DOS-era localization technique and is why old localized software used cramped abbreviations. In radare2: `/ hello` searches, `s <addr>` seeks, `oo+` reopens read-write, `w hola, mundo\x00` writes.
 
 ### 1.5.2 x86-64
 
@@ -156,7 +156,7 @@ The register aliasing hierarchy (`RAX` ⊃ `EAX` ⊃ `AX` ⊃ `AH`/`AL`) means `
 
 ### 1.5.3 ARM
 
-Keil (ARM mode), annotated:
+Keil (ARM mode), annotated.
 
 ```asm
 STMFD  SP!, {R4,LR}        ; save R4 and LR to stack (generalized PUSH)
@@ -168,14 +168,14 @@ LDMFD  SP!, {R4,PC}        ; restore R4 and PC from stack (generalized POP)
 
 | Instruction | Role |
 | --- | --- |
-| `STMFD SP!, {...}` | Store Multiple Full Descending — pushes any set of registers; generalizes x86 `PUSH`. `PUSH`/`POP` exist only in Thumb mode. |
+| `STMFD SP!, {...}` | Store Multiple Full Descending. Pushes any set of registers; generalizes x86 `PUSH`. `PUSH`/`POP` exist only in Thumb mode. |
 | `ADR R0, label` | Computes a PC-relative address (position-independent code): adds a fixed offset to PC so the string's absolute address is derived wherever the code loads. |
-| `BL target` | Branch with Link — stores the address after `BL` into LR, then jumps to `target`. The callee returns by jumping to LR. |
-| `LDMFD SP!, {...}` | Load Multiple Full Descending — inverse of `STMFD`. Restoring into `PC` returns from the function, so no separate `BX LR` is needed. |
+| `BL target` | Branch with Link. Stores the address after `BL` into LR, then jumps to `target`. The callee returns by jumping to LR. |
+| `LDMFD SP!, {...}` | Load Multiple Full Descending. The inverse of `STMFD`. Restoring into `PC` returns from the function, so no separate `BX LR` is needed. |
 
 LR (link register) holds the return address in RISC style, versus the stack in CISC x86. The prologue saves LR because `main` itself calls `printf` (which overwrites LR); the epilogue restores it into PC. `BL`'s offset is encoded in 24 bits; since ARM-mode instructions are 4-byte aligned the low 2 bits are implied, giving a 26-bit reach of PC ± ~32 MB. In Thumb mode instructions are 2 bytes, so `BL` is two 16-bit halves (10 high bits + 11 low bits of offset), reach PC ± ~2 MB. `DCB` declares bytes/strings (ARM analogue of x86 `DB`).
 
-Optimizing LLVM may replace `printf` with `puts` when the format string has no `%` conversions — `puts` is cheaper. `MOVT R0, #x` (Move Top) writes the high 16 bits of a register, used with `MOV`/`ADD PC` to build a full address in ARM mode.
+Optimizing LLVM may replace `printf` with `puts` when the format string has no `%` conversions; `puts` is cheaper. `MOVT R0, #x` (Move Top) writes the high 16 bits of a register, used with `MOV`/`ADD PC` to build a full address in ARM mode.
 
 ### 1.5.4 MIPS
 
@@ -187,8 +187,8 @@ The only substantive difference between the 32-bit (x86/ARM) and 64-bit (x64/ARM
 
 ### 1.5.6 Exercises
 
-- [Challenge #48](../../writeups/challenges-re/re4b-ch01.md#challenge-48-messagebeep-wrapper) — win32 function, x86.
-- [Challenge #49](../../writeups/challenges-re/re4b-ch01.md#challenge-49-sleep-wrapper) — Linux function, x64 (AT&T).
+- [Challenge #48](../../writeups/challenges-re/re4b-ch01.md#challenge-48-messagebeep-wrapper), win32 function, x86.
+- [Challenge #49](../../writeups/challenges-re/re4b-ch01.md#challenge-49-sleep-wrapper), Linux function, x64 (AT&T).
 
 ## 1.6 Function Prologue and Epilogue
 
@@ -209,7 +209,7 @@ Prologues and epilogues add per-call overhead, which penalizes recursion.
 
 ## 1.7 An Empty Function: redux
 
-Non-optimizing GCC compiles the empty function *with* prologue and epilogue:
+Non-optimizing GCC compiles the empty function *with* prologue and epilogue.
 
 ```asm
 f: push rbp
@@ -223,7 +223,7 @@ Only `ret` is effective; the frame setup and `nop` are un-optimized artifacts.
 
 ## 1.8 Returning Values: redux
 
-Non-optimizing GCC for `int f() { return 123; }`:
+Non-optimizing GCC for `int f() { return 123; }`.
 
 ```asm
 f: push rbp
@@ -254,11 +254,11 @@ Historical. On early machines memory was split with the heap growing up from a l
 
 **Saving the return address.**
 
-`CALL` = `PUSH address_after_call` + `JMP operand`. `RET` = `POP tmp` + `JMP tmp`. Unbounded recursion (`void f() { f(); }`) overflows the stack; MSVC warns (C4717) but still emits correct code, and with `/Ox` converts the tail call into a `jmp` loop that never overflows. On ARM the return address is in LR; a function that calls another must save LR (typically `PUSH {R4-R7, LR}` in the prologue, `POP {R4-R7, PC}` in the epilogue). A leaf function does not modify LR, so it need not save it and, if small, may avoid the stack entirely — faster, and usable when stack memory is not yet available.
+`CALL` = `PUSH address_after_call` + `JMP operand`. `RET` = `POP tmp` + `JMP tmp`. Unbounded recursion (`void f() { f(); }`) overflows the stack; MSVC warns (C4717) but still emits correct code, and with `/Ox` converts the tail call into a `jmp` loop that never overflows. On ARM the return address is in LR; a function that calls another must save LR (typically `PUSH {R4-R7, LR}` in the prologue, `POP {R4-R7, PC}` in the epilogue). A leaf function does not modify LR, so it need not save it and, if small, may avoid the stack entirely, which is faster and usable when stack memory is not yet available.
 
 **Passing arguments.**
 
-The common x86 convention is **cdecl**: push arguments in reverse order, call, then clean the stack in the caller.
+The common x86 convention is **cdecl**. Push arguments in reverse order, call, then clean the stack in the caller.
 
 ```asm
 push arg3
@@ -279,7 +279,7 @@ Argument layout at the callee's first instruction:
 
 The callee is not told how many arguments were passed; variadic functions like `printf` infer the count from `%` specifiers in the format string. `printf("%d %d %d", 1234)` prints 1234 then two unpredictable stack values. The CRT calls `main` as `push envp / push argv / push argc / call main`, so `argc`/`argv`/`envp` are always present regardless of how `main` is declared.
 
-Nothing forces arguments through the stack. Alternatives: **global variables** (breaks recursion and thread-safety, since the function would clobber its own arguments), and **registers** — as in MS-DOS (`mov ah, 9 / int 21h`), where the carry flag (CF) often carried a boolean error result.
+Nothing forces arguments through the stack. Alternatives: **global variables** (breaks recursion and thread-safety, since the function would clobber its own arguments), and **registers**, as in MS-DOS (`mov ah, 9 / int 21h`), where the carry flag (CF) often carried a boolean error result.
 
 **Local variable storage.**
 
@@ -301,22 +301,22 @@ A function reserves local space by decrementing SP, so allocation cost is consta
 
 ### 1.9.4 Noise in the Stack
 
-"Garbage" or "noise" values are leftovers from earlier function executions, not random in the strict sense but unpredictable. If several functions with the same argument count run in sequence, SP is identical at each entry, so their locals occupy the same addresses and one function sees the previous one's stale values. The C standard does not fix the allocation order of local variables — MSVC 2010 and MSVC 2013 order the same three locals differently, changing which stale values surface.
+"Garbage" or "noise" values are leftovers from earlier function executions, not random in the strict sense but unpredictable. If several functions with the same argument count run in sequence, SP is identical at each entry, so their locals occupy the same addresses and one function sees the previous one's stale values. The C standard does not fix the allocation order of local variables; MSVC 2010 and MSVC 2013 order the same three locals differently, changing which stale values surface.
 
 ### 1.9.5 Exercises
 
-- [Challenge #51](../../writeups/challenges-re/re4b-ch01.md#challenge-51-printf-with-missing-arguments) — `printf` with missing arguments (stack).
-- [Challenge #52](../../writeups/challenges-re/re4b-ch01.md#challenge-52-printf-of-time) — `printf` of `time()` (stack).
+- [Challenge #51](../../writeups/challenges-re/re4b-ch01.md#challenge-51-printf-with-missing-arguments), `printf` with missing arguments (stack).
+- [Challenge #52](../../writeups/challenges-re/re4b-ch01.md#challenge-52-printf-of-time), `printf` of `time()` (stack).
 
 ## 1.10 Almost Empty Function
 
-A wrapper that forwards its arguments unchanged (a thunk):
+A wrapper that forwards its arguments unchanged (a thunk).
 
 ```c
 int main(int argc, char **argv) { return boolector_main(argc, argv); }
 ```
 
-Non-optimizing GCC emits a prologue, redundant argument shuffling, `call boolector_main`, epilogue, `ret`. Optimizing GCC reduces the whole thing to a **tail call**:
+Non-optimizing GCC emits a prologue, redundant argument shuffling, `call boolector_main`, epilogue, `ret`. Optimizing GCC reduces the whole thing to a **tail call**.
 
 ```asm
 main: jmp boolector_main
@@ -332,7 +332,7 @@ int main() { printf("a=%d; b=%d; c=%d", 1, 2, 3); return 0; }
 
 ### 1.11.1 x86
 
-Arguments are pushed in reverse order — the first argument ends up on top of the stack:
+Arguments are pushed in reverse order, so the first argument ends up on top of the stack.
 
 ```asm
 push 3
@@ -343,11 +343,11 @@ call _printf
 add  esp, 16            ; cdecl caller cleanup: 4 args × 4 bytes
 ```
 
-With cdecl in a 32-bit environment, the argument count can often be recovered by dividing the stack-cleanup constant by 4 (here 16/4 = 4). When several calls are adjacent, the compiler may merge their cleanups into a single `add esp, X` after the last one. `printf` returns the number of characters printed (in EAX). Critically, cdecl makes the **caller** restore ESP — after the call, ESP and the pushed arguments are still in place; the callee does not clean up. ECX/EDX may be freely clobbered by the callee (they are volatile).
+With cdecl in a 32-bit environment, the argument count can often be recovered by dividing the stack-cleanup constant by 4 (here 16/4 = 4). When several calls are adjacent, the compiler may merge their cleanups into a single `add esp, X` after the last one. `printf` returns the number of characters printed (in EAX). Critically, cdecl makes the **caller** restore ESP. After the call, ESP and the pushed arguments are still in place; the callee does not clean up. ECX/EDX may be freely clobbered by the callee (they are volatile).
 
 ### 1.11.2 ARM
 
-The first four arguments go in `R0`–`R3`; further arguments go on the stack. To pass eight `int`s plus a format string, the prologue saves LR (`STR LR, [SP,#var_4]!`, pre-indexed, like `PUSH`), reserves 5×4 = 20 bytes for the five stacked arguments, stages four of them in `R0`–`R3` and block-stores them to the stack with `STMIA`/`STMFA` (`STMFA` = Store Multiple Full Ascending = `STMIB`), then loads the register-passed arguments. Optimizing compilers reorder instructions to expose parallelism — two instructions writing different registers (`MOVT R0` and `MOV R2`) can issue together, whereas two touching the same register cannot.
+The first four arguments go in `R0`–`R3`; further arguments go on the stack. To pass eight `int`s plus a format string, the prologue saves LR (`STR LR, [SP,#var_4]!`, pre-indexed, like `PUSH`), reserves 5×4 = 20 bytes for the five stacked arguments, stages four of them in `R0`–`R3` and block-stores them to the stack with `STMIA`/`STMFA` (`STMFA` = Store Multiple Full Ascending = `STMIB`), then loads the register-passed arguments. Optimizing compilers reorder instructions to expose parallelism; two instructions writing different registers (`MOVT R0` and `MOV R2`) can issue together, whereas two touching the same register cannot.
 
 ### 1.11.3 MIPS
 
@@ -370,4 +370,4 @@ On x64, 8 bytes are reserved per stacked argument even for types shorter than 64
 
 ### 1.11.5 By the Way
 
-The variety of passing conventions across x86, x64, fastcall, ARM, and MIPS shows that **the CPU is oblivious to calling conventions** — it does not know or enforce how arguments reach a function. A compiler could pass everything through a dedicated structure with no stack at all. The MIPS `$A0`–`$A3` labels are conventional (O32) only; any register (except perhaps `$ZERO`) could be used. Beginners passing arguments via registers in arbitrary order, or via global variables, still produce working code.
+The variety of passing conventions across x86, x64, fastcall, ARM, and MIPS shows that **the CPU is oblivious to calling conventions**; it does not know or enforce how arguments reach a function. A compiler could pass everything through a dedicated structure with no stack at all. The MIPS `$A0`–`$A3` labels are conventional (O32) only; any register (except perhaps `$ZERO`) could be used. Beginners passing arguments via registers in arbitrary order, or via global variables, still produce working code.

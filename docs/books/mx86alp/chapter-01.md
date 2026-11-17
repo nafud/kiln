@@ -68,9 +68,9 @@ AVX, AVX2, and AVX-512 are not universally supported. SSE2 is guaranteed on ever
 
 ## Miscellaneous Data Types
 
-- **String**: contiguous block of bytes, words, doublewords, or quadwords. Core instructions provide compare, load, move, scan, and store; usable on numeric arrays as well.
-- **Bit field**: contiguous bit sequence starting at *any bit position* within a byte, up to 32 or 64 bits long. Used by bit-extraction/masking instructions.
-- **Bit string**: contiguous bit sequence; instructions exist to clear, set, scan, and test individual bits.
+- **String.** Contiguous block of bytes, words, doublewords, or quadwords. Core instructions provide compare, load, move, scan, and store; usable on numeric arrays as well.
+- **Bit field.** Contiguous bit sequence starting at *any bit position* within a byte, up to 32 or 64 bits long. Used by bit-extraction/masking instructions.
+- **Bit string.** Contiguous bit sequence; instructions exist to clear, set, scan, and test individual bits.
 
 ## General-Purpose Registers
 
@@ -210,13 +210,13 @@ Used by `jcc`, `cmovcc`, `setcc`. "Above/below" = unsigned comparisons; "greater
 
 ## X86-64 vs X86-32 Differences
 
-- **Immediates are 32-bit max** (sign-extended to 64 bits when used with a 64-bit operand). Only `mov` accepts a 64-bit immediate. Consequence: `or rdx,80000000h` sign-extends to `0xFFFFFFFF80000000` — to OR in a plain `0x80000000`, load it via `mov r64,imm64` first.
-- **Relative `jmp`/`call` displacements are also 32-bit**: target must be within ±2 GB of RIP; farther targets require indirect forms (`jmp rax`, `call [rax]`).
+- **Immediates are 32-bit max** (sign-extended to 64 bits when used with a 64-bit operand). Only `mov` accepts a 64-bit immediate. Consequence: `or rdx,80000000h` sign-extends to `0xFFFFFFFF80000000`; to OR in a plain `0x80000000`, load it via `mov r64,imm64` first.
+- **Relative `jmp`/`call` displacements are also 32-bit.** Target must be within ±2 GB of RIP; farther targets require indirect forms (`jmp rax`, `call [rax]`).
 - **32-bit writes zero the upper half** of the 64-bit register; 8-/16-bit writes do not (see GPR section).
 - **Memory operands should use 64-bit registers.** Addressing via 32-bit registers (`mov r10,[eax]`) is legal but confines the operand to the low 4 GB and obfuscates code; avoid.
-- **Byte-register mixing restriction**: AH/BH/CH/DH cannot appear in an instruction that also uses SIL, DIL, BPL, SPL, or R8B–R15B (`mov ah,bl` valid; `mov ah,r8b` invalid).
-- **Invalid in 64-bit mode**: `aaa`, `aad`, `aam`, `aas`, `daa`, `das`, `bound`, `into`, `pusha`/`pushad`, `popa`/`popad`.
-- `lahf`/`sahf` were absent on early x86-64 processors; available on most CPUs since 2006 — confirm via the `cpuid` LAHF/SAHF feature flag.
+- **Byte-register mixing restriction.** AH/BH/CH/DH cannot appear in an instruction that also uses SIL, DIL, BPL, SPL, or R8B–R15B (`mov ah,bl` valid; `mov ah,r8b` invalid).
+- **Invalid in 64-bit mode.** `aaa`, `aad`, `aam`, `aas`, `daa`, `das`, `bound`, `into`, `pusha`/`pushad`, `popa`/`popad`.
+- `lahf`/`sahf` were absent on early x86-64 processors; available on most CPUs since 2006; confirm via the `cpuid` LAHF/SAHF feature flag.
 
 ## Legacy Instruction Sets
 

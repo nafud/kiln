@@ -92,7 +92,7 @@ The base-plus-offset form `[base + offset]` accesses structure members and buffe
 
 Memory access granularity is byte, word, or doubleword. The default is 4 bytes, overridden to 1 or 2 with a prefix (e.g., `C6` for byte, `66` for word).
 
-The array form is `[base + index * scale]`, where scale matches element size:
+The array form is `[base + index * scale]`, where scale matches element size.
 
 ```asm
 01: 8B 34 B5 40 05 ...  mov esi, [_KdLogBuffer + esi*4]  ; 4-byte elements
@@ -229,9 +229,9 @@ A switch is a sequence of if-else comparisons. When cases are dense and consecut
 
 ### Loops
 
-Loops are `Jcc` and `JMP` combinations — equivalent to if-else plus goto. A `for` loop compiles to an initialization, a body, an increment, a compare, and a conditional jump back. The compiler may omit the initial comparison when the counter's starting value makes the first iteration certain. The conditional code again reveals signedness: `JL` means the counter is signed.
+Loops are `Jcc` and `JMP` combinations, equivalent to if-else plus goto. A `for` loop compiles to an initialization, a body, an increment, a compare, and a conditional jump back. The compiler may omit the initial comparison when the counter's starting value makes the first iteration certain. The conditional code again reveals signedness: `JL` means the counter is signed.
 
-The `LOOP` instruction executes a block up to `ECX` times, decrementing `ECX` each iteration:
+The `LOOP` instruction executes a block up to `ECX` times, decrementing `ECX` each iteration.
 
 ```asm
 01: 8B CA     mov ecx, edx
@@ -318,7 +318,7 @@ Most arithmetic is promoted to 64 bits even with 32-bit operands. Writing to a 3
 
 ### Canonical Address
 
-Virtual addresses are 64 bits wide, but current Intel/AMD processors implement only 48. An address is canonical if bits 63 down to the most significant implemented bit are all identical — in practice, bits 48–63 must match bit 47. Dereferencing a non-canonical address raises an exception.
+Virtual addresses are 64 bits wide, but current Intel/AMD processors implement only 48. An address is canonical if bits 63 down to the most significant implemented bit are all identical (in practice, bits 48–63 must match bit 47). Dereferencing a non-canonical address raises an exception.
 
 ```text
 0xfffff801`c9c11000   canonical

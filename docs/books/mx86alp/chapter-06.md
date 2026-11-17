@@ -14,13 +14,13 @@ Function structure:
 
 Register classes:
 
-- **Volatile**: callee may freely modify; caller must not expect the value to survive a call.
-- **Non-volatile**: callee must preserve; if it needs the register, it saves the caller's value (prologue) and restores it (epilogue).
+- **Volatile.** Callee may freely modify; caller must not expect the value to survive a call.
+- **Non-volatile.** Callee must preserve; if it needs the register, it saves the caller's value (prologue) and restores it (epilogue).
 
 Function classes:
 
-- **Leaf**: calls no other function. Often needs no explicit prologue/epilogue; typically works entirely in volatile registers.
-- **Non-leaf**: calls other functions. Must keep RSP and the stack correctly arranged for its callees (alignment, home area on Windows).
+- **Leaf.** Calls no other function. Often needs no explicit prologue/epilogue; typically works entirely in volatile registers.
+- **Non-leaf.** Calls other functions. Must keep RSP and the stack correctly arranged for its callees (alignment, home area on Windows).
 
 ## Visual C++ (Windows x64)
 
@@ -43,7 +43,7 @@ Wide-register volatility: bits 255:128 of YMM0–YMM15 are volatile; with AVX-51
 ### Argument passing
 
 - Arguments 1–4 go in RCX/RDX/R8/R9 or XMM0–XMM3; the register slot is positional, so an FP argument in position 2 consumes XMM1 and leaves RDX unused. Arguments 5+ go on the stack.
-- Sub-64-bit integers occupy the low bits of their register or stack slot; the high bits are undefined — the callee sign- or zero-extends as needed (`movsx`, `movsxd`).
+- Sub-64-bit integers occupy the low bits of their register or stack slot; the high bits are undefined, so the callee sign- or zero-extends as needed (`movsx`, `movsxd`).
 - Scalar FP arguments occupy XMM bits 31:0 (single) or 63:0 (double); remaining bits undefined.
 - Returns: RAX (integer), XMM0 (scalar FP).
 
@@ -53,7 +53,7 @@ The caller allocates 32 bytes of stack (four quadword slots) directly above the 
 
 ### Stack alignment
 
-RSP must be 16-byte aligned outside the prologue. Since `call` pushes an 8-byte return address, alignment depends on the number of prologue pushes plus local allocation. Pattern used throughout the book:
+RSP must be 16-byte aligned outside the prologue. Since `call` pushes an 8-byte return address, alignment depends on the number of prologue pushes plus local allocation. Pattern used throughout the book.
 
 ```asm
 STK_PAD   equ ((NUM_PUSHREG AND 1) XOR 1) * 8   ; 8 if push count even, else 0
@@ -85,7 +85,7 @@ Directives assemble to metadata, not instructions. Any non-volatile register may
 
 - Restore RSP with `lea rsp,[RFP+X]` or `add rsp,X` only (fixed patterns the unwinder can recognize).
 - Restore non-volatile XMM registers, then non-volatile GPRs (reverse push order), then `ret`.
-- No processing logic in the epilogue — not even setting the return value.
+- No processing logic in the epilogue, not even setting the return value.
 
 ### Calling external functions
 
@@ -129,12 +129,12 @@ All XMM/YMM registers are volatile (bits 255:128 of YMM0–YMM15 included); with
 
 ### Red zone
 
-The 128 bytes below RSP are guaranteed untouched by the ABI — signal and interrupt handlers will not clobber them. A leaf function may use the red zone as scratch storage without adjusting RSP. Non-leaf functions have no usable red zone, since their own `call`s write below RSP.
+The 128 bytes below RSP are guaranteed untouched by the ABI; signal and interrupt handlers will not clobber them. A leaf function may use the red zone as scratch storage without adjusting RSP. Non-leaf functions have no usable red zone, since their own `call`s write below RSP.
 
 ### Stack frames and alignment
 
 - Frame pointer is optional. Typical framed prologue: push non-volatiles, `mov rbp,rsp`, `sub rsp,LOCAL`. Epilogue: `mov rsp,rbp` (or `add rsp,LOCAL`), pops in reverse order, `ret`.
-- Splitting the frame — stack arguments at positive RBP offsets, locals at negative — favors 8-bit displacement encodings and lets new values be added without renumbering existing offsets. Cost of a frame pointer: one fewer GPR.
+- Splitting the frame (stack arguments at positive RBP offsets, locals at negative) favors 8-bit displacement encodings and lets new values be added without renumbering existing offsets. Cost of a frame pointer: one fewer GPR.
 - RSP must be 16-byte aligned before any `call`; add 0 or 8 pad bytes to local allocation as required. Defining an explicit `STK_PAD` symbol (even when 0) documents the invariant for future maintenance.
 
 ### Calling external functions
