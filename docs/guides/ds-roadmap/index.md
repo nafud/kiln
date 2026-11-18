@@ -10,7 +10,7 @@ The plan is 26 weeks at 15 to 16 hours a week, about 370 hours in total. A week 
 
 | course | run | weeks | hours |
 |---|---|---|---|
-| The Python Tutorial, chapters 3 to 9, and two reference pages | python.org | 1 to 2 | 6.5 |
+| The Python Tutorial, chapters 3 to 11, and two reference pages | python.org | 1, 2, 4 | 7.5 |
 | 18.01SC Single Variable Calculus, 20 of 101 sessions | MIT OCW Scholar, Fall 2010 | 1 to 3 | 20 |
 | 18.02SC Multivariable Calculus, 13 of 102 sessions | MIT OCW Scholar, Fall 2010 | 4, 7, 14 | 13 |
 | CS50 SQL, weeks 0 and 1 | Harvard | 3 to 4 | 8 |
@@ -92,10 +92,11 @@ Every hour figure is an estimate. MIT states about 150 hours for the whole of 18
 - `18.02SC`{ data-step=ca-06 } [Unit 2, Part A](https://ocw.mit.edu/courses/18-02sc-multivariable-calculus-fall-2010/pages/2.-partial-derivatives/part-a-functions-of-two-variables-tangent-approximation-and-optimization/){ .external-link }, sessions 24 to 26, 28 and 29. Functions of two variables, contour plots, partial derivatives, optimization, least squares.
 - `18.02SC`{ data-step=ca-07 } [Unit 2, Part B](https://ocw.mit.edu/courses/18-02sc-multivariable-calculus-fall-2010/pages/2.-partial-derivatives/part-b-chain-rule-gradient-and-directional-derivatives/){ .external-link }, sessions 32, 35 and 38. The chain rule, the gradient, directional derivatives.
 - `sql`{ data-step=sq-02 } CS50 SQL, [week 1](https://cs50.harvard.edu/sql/weeks/1/){ .external-link }, Relating. The lecture and its problem set. Keys, subqueries, `JOIN`, sets, groups.
+- `python`{ data-step=py-04 } The Python Tutorial, chapters [10](https://docs.python.org/3/tutorial/stdlib.html){ .external-link } and [11](https://docs.python.org/3/tutorial/stdlib2.html){ .external-link }. A brief tour of the standard library, with `random` and `statistics`, dates and times, `doctest` and `unittest`, `logging`, and `deque`, `bisect` and `heapq`.
 - `leetcode`{ data-step=lc-04 } Two pointers, then a running value and bits. [392. Is Subsequence](https://leetcode.com/problems/is-subsequence/), [680. Valid Palindrome II](https://leetcode.com/problems/valid-palindrome-ii/), [121. Best Time to Buy and Sell Stock](https://leetcode.com/problems/best-time-to-buy-and-sell-stock/), [724. Find Pivot Index](https://leetcode.com/problems/find-pivot-index/), [191. Number of 1 Bits](https://leetcode.com/problems/number-of-1-bits/), [338. Counting Bits](https://leetcode.com/problems/counting-bits/). All easy.
 - `leetcode`{ data-step=lq-02 } SQL, filtering and sorting. [1148. Article Views I](https://leetcode.com/problems/article-views-i/), [1683. Invalid Tweets](https://leetcode.com/problems/invalid-tweets/), [620. Not Boring Movies](https://leetcode.com/problems/not-boring-movies/). All easy.
 
-**After this week.** Partial derivatives, the gradient and its relation to level curves, directional derivatives, least squares as a minimization. A running minimum and a prefix sum carried through one pass. Joins, subqueries and grouping in SQL.
+**After this week.** Partial derivatives, the gradient and its relation to level curves, directional derivatives, least squares as a minimization. The standard library's modules for random numbers, dates, tests and logging, and its queue, bisection and heap tools. A running minimum and a prefix sum carried through one pass. Joins, subqueries and grouping in SQL.
 
 ## Week 5
 
